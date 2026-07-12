@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DataProcesses.Core/DataProcesses.Core.csproj" />
+    <Project Path="src/DataProcesses.Desktop/DataProcesses.Desktop.csproj" />
+    <Project Path="src/DataProcesses.Nodes.BuiltIn/DataProcesses.Nodes.BuiltIn.csproj" />
+    <Project Path="src/DataProcesses.Plugin.Abstractions/DataProcesses.Plugin.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DataProcesses.Core.Tests/DataProcesses.Core.Tests.csproj" />
+  </Folder>
+</Solution>

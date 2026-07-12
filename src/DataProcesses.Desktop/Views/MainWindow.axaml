@@ -1,0 +1,112 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DataProcesses.Desktop.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        d:DesignWidth="1280"
+        d:DesignHeight="800"
+        x:Class="DataProcesses.Desktop.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="1280"
+        Height="800"
+        MinWidth="960"
+        MinHeight="600"
+        Title="DataProcesses">
+
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#172033" Padding="16,10">
+            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                <TextBlock Grid.Column="0"
+                           Text="DataProcesses"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           Foreground="White" />
+                <TextBlock Grid.Column="1"
+                           Margin="24,0"
+                           Text="Untitled project"
+                           Foreground="#B8C2D8"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="2" Content="Preferences" />
+            </Grid>
+        </Border>
+
+        <TabControl>
+            <TabItem Header="Flow Editor">
+                <Grid ColumnDefinitions="220,*,280">
+                    <Border Grid.Column="0" BorderBrush="#D5D9E2" BorderThickness="0,0,1,0" Padding="12">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Node Library" FontSize="16" FontWeight="SemiBold" />
+                            <TextBox Watermark="Search nodes" />
+                            <TextBlock Text="Sources" FontWeight="SemiBold" />
+                            <Button Content="Test Signal" HorizontalContentAlignment="Left" />
+                            <TextBlock Text="Processing" FontWeight="SemiBold" />
+                            <Button Content="Filter" HorizontalContentAlignment="Left" />
+                            <Button Content="FFT" HorizontalContentAlignment="Left" />
+                            <TextBlock Text="Outputs" FontWeight="SemiBold" />
+                            <Button Content="Time Series" HorizontalContentAlignment="Left" />
+                            <Button Content="Python Output" HorizontalContentAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Background="#F4F6FA" Padding="24">
+                        <Grid RowDefinitions="Auto,*">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="Run" />
+                                <Button Content="Stop" />
+                                <Button Content="Validate" />
+                                <TextBlock Margin="12,0,0,0"
+                                           Text="Fast Stream: blue circle / JSON Message: orange diamond"
+                                           VerticalAlignment="Center"
+                                           Foreground="#526071" />
+                            </StackPanel>
+                            <Border Grid.Row="1"
+                                    Margin="0,16,0,0"
+                                    BorderBrush="#C7CEDA"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Background="White">
+                                <TextBlock Text="Flow canvas (implementation planned)"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="#6F7A8A" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Column="2" BorderBrush="#D5D9E2" BorderThickness="1,0,0,0" Padding="12">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Inspector" FontSize="16" FontWeight="SemiBold" />
+                            <TextBlock Text="Select a node to edit its settings." TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Dashboard">
+                <Grid RowDefinitions="Auto,*" Margin="16">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Add Dashboard" />
+                        <Button Content="Add Widget" />
+                    </StackPanel>
+                    <Border Grid.Row="1"
+                            Margin="0,16,0,0"
+                            BorderBrush="#C7CEDA"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Background="#F4F6FA">
+                        <TextBlock Text="Dashboard canvas (multiple dashboards supported)"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="#6F7A8A" />
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

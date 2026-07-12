@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose a focused capability, node, dashboard widget, or developer improvement
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Describe the user need before describing a solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Explain the smallest useful outcome and how a user would interact with it.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Flow Editor
+        - Execution engine
+        - Fast Stream contract
+        - JSON Message contract
+        - Built-in node
+        - Dashboard or widget
+        - Plugin SDK
+        - Python interoperability
+        - Documentation or tooling
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: node-contract
+    attributes:
+      label: Node or data contract details
+      description: For a node, list inputs, outputs, data kinds, detailed schemas, settings, and error behavior.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and discussions.
+          required: true
+        - label: This proposal keeps Fast Stream and JSON Message responsibilities explicit.
+          required: true
