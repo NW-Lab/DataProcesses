@@ -11,7 +11,9 @@ public sealed class TestSignalBlockTests
     {
         var plugin = new BuiltInNodePlugin();
 
-        var factory = Assert.Single(plugin.NodeFactories);
+        var factory = Assert.Single(
+            plugin.NodeFactories,
+            factory => string.Equals(factory.Definition.TypeId, TestSignalBlock.TypeId, StringComparison.Ordinal));
 
         Assert.Equal(TestSignalBlock.TypeId, factory.Definition.TypeId);
         Assert.Equal("Test Signal", factory.Definition.DisplayName);

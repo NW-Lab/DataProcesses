@@ -13,6 +13,18 @@ Each built-in Block has one self-contained directory under `Blocks/<BlockName>/`
 
 Mirror the same structure under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`. Keep tests deterministic and use synthetic data only.
 
+## Initial catalog
+
+`BuiltInNodePlugin` explicitly registers the initial catalog below. The entries are contract-level runtime implementations; they do not imply that a corresponding Flow Editor or Dashboard visual component is already available.
+
+| Directory | Type ID | Current role |
+|---|---|---|
+| `TestSignal/` | `dataprocesses.test-signal` | Fast Stream source that emits a deterministic sine-wave frame. |
+| `LowPassFilter/` | `dataprocesses.filter.low-pass` | Stateful first-order Fast Stream smoothing processor. |
+| `FastFourierTransform/` | `dataprocesses.analysis.fft` | Fast Stream to one-sided `SpectrumFrame` analysis processor. |
+| `TimeSeriesDisplay/` | `dataprocesses.dashboard.time-series` | Fast Stream display-state adapter with bounded downsampling. |
+| `PythonOutput/` | `dataprocesses.output.python` | Typed Fast Stream/JSON boundary that emits deferred-delivery status; it does not launch Python yet. |
+
 ## Adding a Block
 
 1. Create `Blocks/<BlockName>/` using a PascalCase name such as `LowPassFilter`, `FastFourierTransform`, or `PythonOutput`.

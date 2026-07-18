@@ -43,6 +43,32 @@ public sealed record FastStreamFrame(
 }
 
 /// <summary>
+/// Frequency-domain magnitudes derived from a regularly sampled Fast Stream frame.
+/// Frequency bin zero is DC and each subsequent bin advances by
+/// <see cref="FrequencyResolutionHertz"/>.
+/// </summary>
+/// <param name="SourceStartTimeUnixNanoseconds">Timestamp of the first source sample.</param>
+/// <param name="SourceSamplePeriodNanoseconds">Sampling interval of the source frame.</param>
+/// <param name="FrequencyResolutionHertz">Distance between adjacent frequency bins.</param>
+/// <param name="ChannelNames">Channel names in magnitude storage order.</param>
+/// <param name="Magnitudes">Channel-major one-sided magnitude spectra.</param>
+/// <param name="SequenceNumber">Monotonic sequence number inherited from the source stream.</param>
+public sealed record SpectrumFrame(
+    long SourceStartTimeUnixNanoseconds,
+    long SourceSamplePeriodNanoseconds,
+    double FrequencyResolutionHertz,
+    IReadOnlyList<string> ChannelNames,
+    IReadOnlyList<ReadOnlyMemory<double>> Magnitudes,
+    long SequenceNumber) : IDataPacket
+{
+    public PortDataKind Kind => PortDataKind.FastStream;
+
+    public int ChannelCount => Magnitudes.Count;
+
+    public int BinCount => Magnitudes.Count == 0 ? 0 : Magnitudes[0].Length;
+}
+
+/// <summary>
 /// Event, command, state, or extensible structured data using a payload envelope.
 /// </summary>
 public sealed record JsonMessage(
