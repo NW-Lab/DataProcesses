@@ -26,7 +26,10 @@ public sealed record NodeDefinition(
     string Category,
     string Version,
     IReadOnlyList<PortDefinition> Ports,
-    NodeType NodeType = NodeType.BasicProcess);
+    NodeType NodeType = NodeType.BasicProcess,
+    string? Title = null,
+    string? Subtitle = null,
+    string? IconPath = null);
 
 public interface INode
 {
@@ -59,6 +62,16 @@ public interface INodeFactory
     NodeDefinition Definition { get; }
 
     INode CreateNode(string nodeId);
+}
+
+/// <summary>
+/// Optional factory contract for Blocks that need their persisted settings when creating a runtime node.
+/// Implementations must validate the JSON they consume and keep unsupported fields compatible unless a
+/// future contract version explicitly changes the settings schema.
+/// </summary>
+public interface IConfiguredNodeFactory : INodeFactory
+{
+    INode CreateNode(string nodeId, string settingsJson);
 }
 
 public interface INodePlugin

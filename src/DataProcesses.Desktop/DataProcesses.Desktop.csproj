@@ -9,6 +9,7 @@
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+    <Content Include="..\DataProcesses.Nodes.BuiltIn\Blocks\**\icon.png" Link="Blocks\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

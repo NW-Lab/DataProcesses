@@ -1,3 +1,4 @@
+using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Desktop.ViewModels;
 using DataProcesses.Engine;
@@ -65,6 +66,136 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal("process.block", Assert.Single(group.Nodes).TypeId);
     }
 
+    [Fact]
+    public void Palette_UsesDefinitionTitleAndSubtitle()
+    {
+        var factory = new TestNodeFactory(
+            "test.signal",
+            "Legacy Name",
+            NodeType.Input,
+            title: "TestSignal",
+            subtitle: "Sin&squeare");
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var paletteNode = Assert.Single(viewModel.Palette.FilteredNodes);
+
+        Assert.Equal("TestSignal", paletteNode.Title);
+        Assert.Equal("Sin&squeare", paletteNode.Subtitle);
+        Assert.Equal("TestSignal", paletteNode.DisplayName);
+    }
+
+    [Fact]
+    public void Palette_SearchMatchesSubtitle()
+    {
+        var factory = new TestNodeFactory(
+            "test.signal",
+            "Legacy Name",
+            NodeType.Input,
+            title: "TestSignal",
+            subtitle: "Sin&squeare");
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        viewModel.Palette.SearchText = "squeare";
+
+        Assert.Equal("test.signal", Assert.Single(viewModel.Palette.FilteredNodes).TypeId);
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_RoundTripsCommonSettings()
+    {
+        var definition = new NodeDefinition(
+            "test.block",
+            "Test Block",
+            "Test",
+            "0.1.0",
+            []);
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", "test.block", 10, 20, "{}", "Custom Name", "Notes", IsEnabled: false),
+            definition);
+
+        Assert.Equal("Custom Name", node.DisplayName);
+        node.Name = "Renamed";
+        node.Description = "Updated notes";
+        node.IsEnabled = true;
+
+        var instance = node.ToNodeInstance();
+
+        Assert.Equal("Renamed", instance.Name);
+        Assert.Equal("Updated notes", instance.Description);
+        Assert.True(instance.IsEnabled);
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_FallsBackToTitleWhenNameIsEmpty()
+    {
+        var definition = new NodeDefinition(
+            "test.signal",
+            "Legacy Name",
+            "Test",
+            "0.1.0",
+            [],
+            Title: "TestSignal",
+            Subtitle: "Sin&squeare");
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", "test.signal", 10, 20, "{}", Name: string.Empty),
+            definition);
+
+        Assert.Equal("TestSignal", node.DisplayName);
+    }
+
+    [Fact]
+    public void CanvasPortViewModel_UsesPayloadLabelForJsonMessagePorts()
+    {
+        var definition = new NodeDefinition(
+            "payload.block",
+            "Payload Block",
+            "Test",
+            "0.1.0",
+            [new PortDefinition("payload", "Payload", PortDirection.Output, PortDataKind.JsonMessage)]);
+        var node = new CanvasNodeViewModel(new NodeInstance("node-1", "payload.block", 0, 0, "{}"), definition);
+
+        var port = Assert.Single(node.Outputs);
+
+        Assert.Equal("P", port.KindLabel);
+        Assert.Equal("payload", port.ShapeClass);
+        Assert.Contains("Payload", port.AccessibleName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CanvasConnectionViewModel_UsesRedDashedPayloadConnection()
+    {
+        var sourceDefinition = new NodeDefinition(
+            "source",
+            "Source",
+            "Test",
+            "0.1.0",
+            [new PortDefinition("out", "Payload Out", PortDirection.Output, PortDataKind.JsonMessage)]);
+        var targetDefinition = new NodeDefinition(
+            "target",
+            "Target",
+            "Test",
+            "0.1.0",
+            [new PortDefinition("in", "Payload In", PortDirection.Input, PortDataKind.JsonMessage)]);
+        var source = new CanvasNodeViewModel(new NodeInstance("source-1", "source", 0, 0, "{}"), sourceDefinition);
+        var target = new CanvasNodeViewModel(new NodeInstance("target-1", "target", 100, 0, "{}"), targetDefinition);
+        var connection = new CanvasConnectionViewModel(
+            new Core.Connection("source-1", "out", "target-1", "in", PortDataKind.JsonMessage),
+            source,
+            Assert.Single(source.Outputs),
+            target,
+            Assert.Single(target.Inputs));
+
+        Assert.Equal("Payload", connection.KindLabel);
+        Assert.Equal("#D92D20", connection.StrokeColor);
+        Assert.Equal("6,4", connection.StrokeDashArray);
+    }
+
     private sealed class TestNodeFactory : INodeFactory
     {
         public TestNodeFactory()
@@ -72,7 +203,12 @@ public sealed class FlowEditorViewModelTests
         {
         }
 
-        public TestNodeFactory(string typeId, string displayName, NodeType nodeType)
+        public TestNodeFactory(
+            string typeId,
+            string displayName,
+            NodeType nodeType,
+            string? title = null,
+            string? subtitle = null)
         {
             Definition = new NodeDefinition(
                 typeId,
@@ -80,7 +216,9 @@ public sealed class FlowEditorViewModelTests
                 "Legacy Category",
                 "0.1.0",
                 [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream)],
-                nodeType);
+                nodeType,
+                Title: title,
+                Subtitle: subtitle);
         }
 
         public NodeDefinition Definition { get; }

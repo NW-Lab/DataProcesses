@@ -14,7 +14,10 @@ public sealed record NodeInstance(
     string TypeId,
     double X,
     double Y,
-    string SettingsJson);
+    string SettingsJson,
+    string? Name = null,
+    string? Description = null,
+    bool IsEnabled = true);
 
 public sealed record Connection(
     string SourceNodeId,
@@ -177,6 +180,11 @@ public static class FlowValidator
     {
         foreach (var node in document.Nodes)
         {
+            if (!node.IsEnabled)
+            {
+                continue;
+            }
+
             if (!definitionsByTypeId.TryGetValue(node.TypeId, out var definition))
             {
                 continue;

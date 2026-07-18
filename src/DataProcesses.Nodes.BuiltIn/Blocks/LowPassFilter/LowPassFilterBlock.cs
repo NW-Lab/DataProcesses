@@ -10,6 +10,7 @@ public static class LowPassFilterBlock
     public const string TypeId = "dataprocesses.filter.low-pass";
     public const string InputPortId = "input";
     public const string OutputPortId = "output";
+    public const string IconPath = "Blocks/LowPassFilter/icon.png";
 
     public static readonly NodeDefinition Definition = new(
         TypeId: TypeId,
@@ -21,5 +22,8 @@ public static class LowPassFilterBlock
             new PortDefinition(InputPortId, "Input", PortDirection.Input, PortDataKind.FastStream),
             new PortDefinition(OutputPortId, "Filtered", PortDirection.Output, PortDataKind.FastStream),
         ],
-        NodeType: NodeType.BasicProcess);
+        NodeType: NodeType.BasicProcess,
+        Title: "Low-pass Filter",
+        Subtitle: "Smooth stream",
+        IconPath: IconPath);
 }

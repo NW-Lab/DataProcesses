@@ -8,7 +8,10 @@ namespace DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
 public static class TestSignalBlock
 {
     public const string TypeId = "dataprocesses.test-signal";
-    public const string OutputPortId = "stream";
+    public const string PayloadInputPortId = "payload-in";
+    public const string StreamOutputPortId = "stream";
+    public const string PayloadOutputPortId = "payload-out";
+    public const string IconPath = "Blocks/TestSignal/icon.png";
 
     public static NodeDefinition Definition { get; } = new(
         TypeId: TypeId,
@@ -18,10 +21,25 @@ public static class TestSignalBlock
         Ports:
         [
             new PortDefinition(
-                OutputPortId,
+                PayloadInputPortId,
+                "Payload In",
+                PortDirection.Input,
+                PortDataKind.JsonMessage,
+                IsRequired: false),
+            new PortDefinition(
+                StreamOutputPortId,
                 "Signal",
                 PortDirection.Output,
                 PortDataKind.FastStream),
+            new PortDefinition(
+                PayloadOutputPortId,
+                "Payload Out",
+                PortDirection.Output,
+                PortDataKind.JsonMessage,
+                IsRequired: false),
         ],
-        NodeType: NodeType.Input);
+            NodeType: NodeType.Input,
+            Title: "TestSignal",
+            Subtitle: "Sin&squeare",
+            IconPath: IconPath);
 }

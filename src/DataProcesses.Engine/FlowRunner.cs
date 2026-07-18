@@ -38,6 +38,7 @@ public sealed class FlowRunner
         }
 
         var orderedNodes = GetTopologicalOrder(document);
+        var enabledNodes = orderedNodes.Where(static node => node.IsEnabled).ToArray();
         var runtimeNodes = new Dictionary<string, INode>(StringComparer.Ordinal);
 
         try
@@ -45,12 +46,14 @@ public sealed class FlowRunner
             State = FlowExecutionState.Starting;
             logs.Add(CreateLog(FlowExecutionLogLevel.Information, "Starting flow."));
 
-            foreach (var node in orderedNodes)
+            foreach (var node in enabledNodes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var factory = factoriesByTypeId[node.TypeId];
-                var runtimeNode = factory.CreateNode(node.Id);
+                var runtimeNode = factory is IConfiguredNodeFactory configuredFactory
+                    ? configuredFactory.CreateNode(node.Id, node.SettingsJson)
+                    : factory.CreateNode(node.Id);
                 runtimeNodes.Add(node.Id, runtimeNode);
             }
 
@@ -59,7 +62,7 @@ public sealed class FlowRunner
                 pair => new FlowNodeContext(pair.Key, document.Connections, runtimeNodes, logs),
                 StringComparer.Ordinal);
 
-            foreach (var node in orderedNodes)
+            foreach (var node in enabledNodes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -70,7 +73,7 @@ public sealed class FlowRunner
             State = FlowExecutionState.Running;
             logs.Add(CreateLog(FlowExecutionLogLevel.Information, "Flow is running."));
 
-            foreach (var node in orderedNodes)
+            foreach (var node in enabledNodes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -81,9 +84,9 @@ public sealed class FlowRunner
             State = FlowExecutionState.Stopping;
             logs.Add(CreateLog(FlowExecutionLogLevel.Information, "Stopping flow."));
 
-            for (var index = orderedNodes.Count - 1; index >= 0; index--)
+            for (var index = enabledNodes.Length - 1; index >= 0; index--)
             {
-                var node = orderedNodes[index];
+                var node = enabledNodes[index];
                 await runtimeNodes[node.Id].StopAsync(cancellationToken).ConfigureAwait(false);
                 logs.Add(CreateLog(FlowExecutionLogLevel.Information, "Stopped node.", node.Id));
             }

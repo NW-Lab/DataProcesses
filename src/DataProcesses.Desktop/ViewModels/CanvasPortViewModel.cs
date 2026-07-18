@@ -24,11 +24,11 @@ public sealed class CanvasPortViewModel(CanvasNodeViewModel node, PortDefinition
 
     public bool IsJsonMessage => DataKind == PortDataKind.JsonMessage;
 
-    public string KindLabel => DataKind == PortDataKind.FastStream ? "S" : "J";
+    public string KindLabel => DataKind == PortDataKind.FastStream ? "S" : "P";
 
-    public string ShapeClass => DataKind == PortDataKind.FastStream ? "fastStream" : "jsonMessage";
+    public string ShapeClass => DataKind == PortDataKind.FastStream ? "fastStream" : "payload";
 
     public string DirectionLabel => IsInput ? "Input" : "Output";
 
-    public string AccessibleName => $"{DirectionLabel}: {DisplayName} ({DataKind})";
+    public string AccessibleName => $"{DirectionLabel}: {DisplayName} ({(IsFastStream ? "Fast Stream" : "Payload")})";
 }

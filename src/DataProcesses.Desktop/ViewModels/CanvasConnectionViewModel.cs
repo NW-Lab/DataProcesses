@@ -35,7 +35,7 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
 
     public PortDataKind DataKind => Connection.DataKind;
 
-    public string KindLabel => DataKind == PortDataKind.FastStream ? "Fast Stream" : "JSON Message";
+    public string KindLabel => DataKind == PortDataKind.FastStream ? "Fast Stream" : "Payload";
 
     public double X1 => SourceNode.X + NodeWidth;
 
@@ -45,7 +45,7 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
 
     public double Y2 => TargetNode.Y + HeaderHeight + GetPortIndex(TargetNode.Inputs, TargetPort.Id) * PortRowHeight + 14;
 
-    public string StrokeColor => DataKind == PortDataKind.FastStream ? "#1D70B8" : "#C45F12";
+    public string StrokeColor => DataKind == PortDataKind.FastStream ? "#1D70B8" : "#D92D20";
 
     public string StrokeDashArray => DataKind == PortDataKind.FastStream ? "" : "6,4";
 

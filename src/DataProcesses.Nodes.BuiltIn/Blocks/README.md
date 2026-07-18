@@ -1,5 +1,7 @@
 # Built-in Block layout
 
+Human-facing Block behavior, common placed-Block settings, port appearance, and connection rules are defined in [../NodeBlockSpecification.md](../NodeBlockSpecification.md). Keep this layout guide focused on repository organization and per-Block ownership.
+
 Each built-in Block has one self-contained directory under `Blocks/<BlockName>/`. A Block is one user-visible processing unit in the Flow Editor; its runtime implementation continues to use the public `INode` contract.
 
 | File or directory | Required | Responsibility |
@@ -9,9 +11,12 @@ Each built-in Block has one self-contained directory under `Blocks/<BlockName>/`
 | `<BlockName>NodeFactory.cs` | Yes | Create runtime instances and expose the Block definition. |
 | `<BlockName>Settings.cs` | When needed | Immutable settings model and validation. |
 | `Resources/` | When needed | Block-local localization keys or non-code assets. |
-| `README.md` | When needed | Explain complex signal-processing or interoperability behavior. |
+| `icon.png` | When needed | 64 x 64 PNG icon shown in the Node Library and on placed canvas Blocks. |
+| `README.md` | When needed | Explain port schema, settings, signal-processing, Payload, or interoperability behavior. |
 
 Mirror the same structure under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`. Keep tests deterministic and use synthetic data only.
+
+Create a Block-local `README.md` whenever the Block defines non-trivial settings, multiple ports, Payload fields, Payload pass-through behavior, timing semantics, numerical behavior, icon behavior, or interoperability behavior. Treat `TestSignal/README.md` as the initial template for future Block specifications.
 
 ## Initial catalog
 
@@ -19,7 +24,7 @@ Mirror the same structure under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/
 
 | Directory | Type ID | Current role |
 |---|---|---|
-| `TestSignal/` | `dataprocesses.test-signal` | Fast Stream source that emits a deterministic sine-wave frame. |
+| `TestSignal/` | `dataprocesses.test-signal` | Configurable Test Signal source with Payload settings input, Fast Stream output, and Payload status output. |
 | `LowPassFilter/` | `dataprocesses.filter.low-pass` | Stateful first-order Fast Stream smoothing processor. |
 | `FastFourierTransform/` | `dataprocesses.analysis.fft` | Fast Stream to one-sided `SpectrumFrame` analysis processor. |
 | `TimeSeriesDisplay/` | `dataprocesses.dashboard.time-series` | Fast Stream display-state adapter with bounded downsampling. |

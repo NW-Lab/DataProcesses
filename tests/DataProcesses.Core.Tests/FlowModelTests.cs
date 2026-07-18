@@ -148,6 +148,20 @@ public sealed class FlowModelTests
     }
 
     [Fact]
+    public void Validate_AllowsMissingRequiredInputOnDisabledNode()
+    {
+        var document = new FlowDocument(
+            Guid.NewGuid(),
+            "Disabled sink",
+            [new NodeInstance("sink-1", SinkDefinition.TypeId, 0, 0, "{}", IsEnabled: false)],
+            []);
+
+        var result = FlowValidator.Validate(document, Definitions);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
     public void Validate_ReturnsInvalid_ForUnknownPort()
     {
         var document = new FlowDocument(

@@ -76,6 +76,7 @@ public sealed class NodePaletteViewModel : ViewModelBase
         }
 
         return node.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+            || node.Subtitle.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
             || node.NodeTypeDisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
             || node.TypeId.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
     }

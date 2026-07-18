@@ -9,6 +9,7 @@ public static class TimeSeriesDisplayBlock
 {
     public const string TypeId = "dataprocesses.dashboard.time-series";
     public const string InputPortId = "input";
+    public const string IconPath = "Blocks/TimeSeriesDisplay/icon.png";
 
     public static readonly NodeDefinition Definition = new(
         TypeId: TypeId,
@@ -19,5 +20,8 @@ public static class TimeSeriesDisplayBlock
         [
             new PortDefinition(InputPortId, "Input", PortDirection.Input, PortDataKind.FastStream),
         ],
-        NodeType: NodeType.Output);
+        NodeType: NodeType.Output,
+        Title: "Time Series",
+        Subtitle: "Trend view",
+        IconPath: IconPath);
 }

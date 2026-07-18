@@ -10,6 +10,7 @@ public static class FastFourierTransformBlock
     public const string TypeId = "dataprocesses.analysis.fft";
     public const string InputPortId = "input";
     public const string OutputPortId = "spectrum";
+    public const string IconPath = "Blocks/FastFourierTransform/icon.png";
 
     public static readonly NodeDefinition Definition = new(
         TypeId: TypeId,
@@ -21,5 +22,8 @@ public static class FastFourierTransformBlock
             new PortDefinition(InputPortId, "Input", PortDirection.Input, PortDataKind.FastStream),
             new PortDefinition(OutputPortId, "Spectrum", PortDirection.Output, PortDataKind.FastStream),
         ],
-        NodeType: NodeType.BasicProcess);
+        NodeType: NodeType.BasicProcess,
+        Title: "FFT",
+        Subtitle: "Spectrum",
+        IconPath: IconPath);
 }

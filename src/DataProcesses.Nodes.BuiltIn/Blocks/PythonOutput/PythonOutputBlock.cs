@@ -13,6 +13,7 @@ public static class PythonOutputBlock
     public const string FastStreamInputPortId = "fast-stream";
     public const string JsonMessageInputPortId = "message";
     public const string StatusOutputPortId = "status";
+    public const string IconPath = "Blocks/PythonOutput/icon.png";
 
     public static readonly NodeDefinition Definition = new(
         TypeId: TypeId,
@@ -25,5 +26,8 @@ public static class PythonOutputBlock
             new PortDefinition(JsonMessageInputPortId, "JSON Message", PortDirection.Input, PortDataKind.JsonMessage, IsRequired: false),
             new PortDefinition(StatusOutputPortId, "Status", PortDirection.Output, PortDataKind.JsonMessage, IsRequired: false),
         ],
-        NodeType: NodeType.Output);
+        NodeType: NodeType.Output,
+        Title: "Python Output",
+        Subtitle: "Deferred bridge",
+        IconPath: IconPath);
 }

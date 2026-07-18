@@ -218,7 +218,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private CanvasNodeViewModel AddNodeAt(PaletteNodeViewModel paletteNode, double x, double y)
     {
         var node = new CanvasNodeViewModel(
-            new NodeInstance(GetNextNodeId(), paletteNode.TypeId, Math.Max(0, x), Math.Max(0, y), "{}"),
+            new NodeInstance(GetNextNodeId(), paletteNode.TypeId, Math.Max(0, x), Math.Max(0, y), "{}", Name: paletteNode.Title),
             paletteNode.Definition);
 
         Nodes.Add(node);

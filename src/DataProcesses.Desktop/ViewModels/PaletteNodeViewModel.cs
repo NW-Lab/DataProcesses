@@ -10,7 +10,17 @@ public sealed class PaletteNodeViewModel(INodeFactory factory) : ViewModelBase
 
     public string TypeId => Definition.TypeId;
 
-    public string DisplayName => Definition.DisplayName;
+    public string DisplayName => Title;
+
+    public string Title => string.IsNullOrWhiteSpace(Definition.Title) ? Definition.DisplayName : Definition.Title;
+
+    public string Subtitle => Definition.Subtitle ?? string.Empty;
+
+    public bool HasSubtitle => !string.IsNullOrWhiteSpace(Subtitle);
+
+    public string IconPath => ResolveIconPath(Definition.IconPath);
+
+    public bool HasIcon => !string.IsNullOrWhiteSpace(IconPath);
 
     public string Category => Definition.Category;
 
@@ -19,6 +29,17 @@ public sealed class PaletteNodeViewModel(INodeFactory factory) : ViewModelBase
     public string NodeTypeDisplayName => GetNodeTypeDisplayName(NodeType);
 
     public string Version => Definition.Version;
+
+    private static string ResolveIconPath(string? iconPath)
+    {
+        if (string.IsNullOrWhiteSpace(iconPath))
+        {
+            return string.Empty;
+        }
+
+        var candidate = Path.Combine(AppContext.BaseDirectory, iconPath.Replace('/', Path.DirectorySeparatorChar));
+        return File.Exists(candidate) ? candidate : string.Empty;
+    }
 
     public static string GetNodeTypeDisplayName(NodeType nodeType)
     {

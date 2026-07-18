@@ -57,4 +57,18 @@ public sealed class BuiltInNodePluginTests
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[TimeSeriesDisplayBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[PythonOutputBlock.TypeId]);
     }
+
+    [Fact]
+    public void BuiltInCatalog_DefinesPresentationMetadataForEveryBlock()
+    {
+        var plugin = new BuiltInNodePlugin();
+
+        foreach (var factory in plugin.NodeFactories)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(factory.Definition.Title));
+            Assert.False(string.IsNullOrWhiteSpace(factory.Definition.Subtitle));
+            Assert.False(string.IsNullOrWhiteSpace(factory.Definition.IconPath));
+            Assert.EndsWith("icon.png", factory.Definition.IconPath, StringComparison.Ordinal);
+        }
+    }
 }

@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using DataProcesses.Nodes.BuiltIn;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
 using DataProcesses.Plugin.Abstractions;
@@ -17,16 +19,147 @@ public sealed class TestSignalBlockTests
 
         Assert.Equal(TestSignalBlock.TypeId, factory.Definition.TypeId);
         Assert.Equal("Test Signal", factory.Definition.DisplayName);
+        Assert.Equal("TestSignal", factory.Definition.Title);
+        Assert.Equal("Sin&squeare", factory.Definition.Subtitle);
+        Assert.Equal(TestSignalBlock.IconPath, factory.Definition.IconPath);
     }
 
     [Fact]
     public void TestSignalBlock_DefinesOneFastStreamOutput()
     {
-        var port = Assert.Single(TestSignalBlock.Definition.Ports);
+        Assert.Collection(
+            TestSignalBlock.Definition.Ports,
+            payloadIn =>
+            {
+                Assert.Equal(TestSignalBlock.PayloadInputPortId, payloadIn.Id);
+                Assert.Equal(PortDirection.Input, payloadIn.Direction);
+                Assert.Equal(PortDataKind.JsonMessage, payloadIn.DataKind);
+                Assert.False(payloadIn.IsRequired);
+            },
+            stream =>
+            {
+                Assert.Equal(TestSignalBlock.StreamOutputPortId, stream.Id);
+                Assert.Equal(PortDirection.Output, stream.Direction);
+                Assert.Equal(PortDataKind.FastStream, stream.DataKind);
+            },
+            payloadOut =>
+            {
+                Assert.Equal(TestSignalBlock.PayloadOutputPortId, payloadOut.Id);
+                Assert.Equal(PortDirection.Output, payloadOut.Direction);
+                Assert.Equal(PortDataKind.JsonMessage, payloadOut.DataKind);
+                Assert.False(payloadOut.IsRequired);
+            });
+    }
 
-        Assert.Equal(TestSignalBlock.OutputPortId, port.Id);
-        Assert.Equal(PortDirection.Output, port.Direction);
-        Assert.Equal(PortDataKind.FastStream, port.DataKind);
+    [Fact]
+    public async Task StartAsync_EmitsEnabledStatusAndDefaultSineFrame()
+    {
+        var context = new RecordingNodeContext();
+        var node = new TestSignalNode(TestSignalSettings.Default);
+        await node.InitializeAsync(context, CancellationToken.None);
+
+        await node.StartAsync(CancellationToken.None);
+
+        Assert.Collection(
+            context.EmittedPackets,
+            statusPacket =>
+            {
+                Assert.Equal(TestSignalBlock.PayloadOutputPortId, statusPacket.OutputPortId);
+                var status = Assert.IsType<JsonMessage>(statusPacket.Packet);
+                Assert.True(status.Payload.GetProperty("enabled").GetBoolean());
+            },
+            streamPacket =>
+            {
+                Assert.Equal(TestSignalBlock.StreamOutputPortId, streamPacket.OutputPortId);
+                var frame = Assert.IsType<FastStreamFrame>(streamPacket.Packet);
+                Assert.Equal(1_000_000, frame.SamplePeriodNanoseconds);
+                Assert.Equal(0, frame.SequenceNumber);
+                Assert.Equal(["signal"], frame.ChannelNames);
+                var samples = Assert.Single(frame.Samples).Span;
+                Assert.Equal(256, samples.Length);
+                Assert.Equal(0, samples[0], precision: 12);
+                Assert.Equal(Math.Sin(2 * Math.PI * 10.0 / 1_000), samples[1], precision: 12);
+            });
+    }
+
+    [Fact]
+    public async Task StartAsync_UsesConfiguredSquareWave()
+    {
+        var context = new RecordingNodeContext();
+        var node = new TestSignalNode(new TestSignalSettings(TestSignalWaveType.Square, FrequencyHertz: 5.0, Amplitude: 2.0));
+        await node.InitializeAsync(context, CancellationToken.None);
+
+        await node.StartAsync(CancellationToken.None);
+
+        var streamPacket = Assert.Single(context.EmittedPackets, packet => packet.OutputPortId == TestSignalBlock.StreamOutputPortId);
+        var frame = Assert.IsType<FastStreamFrame>(streamPacket.Packet);
+        var samples = Assert.Single(frame.Samples).Span;
+        Assert.Equal(2.0, samples[0]);
+        Assert.Equal(2.0, samples[1]);
+    }
+
+    [Fact]
+    public async Task StartAsync_EmitsStatusOnlyWhenSignalIsDisabled()
+    {
+        var context = new RecordingNodeContext();
+        var node = new TestSignalNode(TestSignalSettings.Default with { IsEnabled = false });
+        await node.InitializeAsync(context, CancellationToken.None);
+
+        await node.StartAsync(CancellationToken.None);
+
+        var emitted = Assert.Single(context.EmittedPackets);
+        Assert.Equal(TestSignalBlock.PayloadOutputPortId, emitted.OutputPortId);
+        var status = Assert.IsType<JsonMessage>(emitted.Packet);
+        Assert.False(status.Payload.GetProperty("enabled").GetBoolean());
+    }
+
+    [Fact]
+    public async Task OnPacketAsync_CanDisablePayloadThroughFromSettings()
+    {
+        var context = new RecordingNodeContext();
+        var node = new TestSignalNode(TestSignalSettings.Default with { PayloadThrough = false });
+        await node.InitializeAsync(context, CancellationToken.None);
+        var payload = JsonSerializer.SerializeToElement(new
+        {
+            frequency = 5.0,
+        });
+        var message = new JsonMessage("dataprocesses.test-signal.configure", payload, DateTimeOffset.UtcNow);
+
+        await node.OnPacketAsync(TestSignalBlock.PayloadInputPortId, message, CancellationToken.None);
+
+        Assert.Empty(context.EmittedPackets);
+    }
+
+    [Fact]
+    public async Task OnPacketAsync_UpdatesSettingsAndEmitsStatusWhenEnabledChanges()
+    {
+        var context = new RecordingNodeContext();
+        var node = new TestSignalNode(TestSignalSettings.Default);
+        await node.InitializeAsync(context, CancellationToken.None);
+        var payload = JsonSerializer.SerializeToElement(new
+        {
+            isEnabled = false,
+            waveType = "square",
+            frequency = 5.0,
+            amplitude = 2.0,
+        });
+        var message = new JsonMessage("dataprocesses.test-signal.configure", payload, DateTimeOffset.UtcNow);
+
+        await node.OnPacketAsync(TestSignalBlock.PayloadInputPortId, message, CancellationToken.None);
+
+        Assert.Collection(
+            context.EmittedPackets,
+            throughPacket =>
+            {
+                Assert.Equal(TestSignalBlock.PayloadOutputPortId, throughPacket.OutputPortId);
+                Assert.Same(message, throughPacket.Packet);
+            },
+            statusPacket =>
+            {
+                Assert.Equal(TestSignalBlock.PayloadOutputPortId, statusPacket.OutputPortId);
+                var status = Assert.IsType<JsonMessage>(statusPacket.Packet);
+                Assert.False(status.Payload.GetProperty("enabled").GetBoolean());
+            });
     }
 
     [Fact]
@@ -40,5 +173,17 @@ public sealed class TestSignalBlockTests
         Assert.IsType<TestSignalNode>(first);
         Assert.IsType<TestSignalNode>(second);
         Assert.NotSame(first, second);
+    }
+
+    [Fact]
+    public void Factory_CreatesConfiguredNodeFromSettingsJson()
+    {
+        var factory = new TestSignalNodeFactory();
+
+        var node = factory.CreateNode(
+            "test-signal-1",
+            "{\"waveType\":\"square\",\"frequency\":5.0,\"amplitude\":2.0}");
+
+        Assert.IsType<TestSignalNode>(node);
     }
 }
