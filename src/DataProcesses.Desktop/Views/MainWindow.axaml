@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:DataProcesses.Desktop.ViewModels"
+        xmlns:views="using:DataProcesses.Desktop.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -29,7 +30,7 @@
                            Foreground="White" />
                 <TextBlock Grid.Column="1"
                            Margin="24,0"
-                           Text="Untitled project"
+                           Text="{Binding ProjectTitle}"
                            Foreground="#B8C2D8"
                            VerticalAlignment="Center" />
                 <Button Grid.Column="2" Content="Preferences" />
@@ -38,54 +39,7 @@
 
         <TabControl>
             <TabItem Header="Flow Editor">
-                <Grid ColumnDefinitions="220,*,280">
-                    <Border Grid.Column="0" BorderBrush="#D5D9E2" BorderThickness="0,0,1,0" Padding="12">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Node Library" FontSize="16" FontWeight="SemiBold" />
-                            <TextBox Watermark="Search nodes" />
-                            <TextBlock Text="Sources" FontWeight="SemiBold" />
-                            <Button Content="Test Signal" HorizontalContentAlignment="Left" />
-                            <TextBlock Text="Processing" FontWeight="SemiBold" />
-                            <Button Content="Filter" HorizontalContentAlignment="Left" />
-                            <Button Content="FFT" HorizontalContentAlignment="Left" />
-                            <TextBlock Text="Outputs" FontWeight="SemiBold" />
-                            <Button Content="Time Series" HorizontalContentAlignment="Left" />
-                            <Button Content="Python Output" HorizontalContentAlignment="Left" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Column="1" Background="#F4F6FA" Padding="24">
-                        <Grid RowDefinitions="Auto,*">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Content="Run" />
-                                <Button Content="Stop" />
-                                <Button Content="Validate" />
-                                <TextBlock Margin="12,0,0,0"
-                                           Text="Fast Stream: blue circle / JSON Message: orange diamond"
-                                           VerticalAlignment="Center"
-                                           Foreground="#526071" />
-                            </StackPanel>
-                            <Border Grid.Row="1"
-                                    Margin="0,16,0,0"
-                                    BorderBrush="#C7CEDA"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Background="White">
-                                <TextBlock Text="Flow canvas (implementation planned)"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Foreground="#6F7A8A" />
-                            </Border>
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Column="2" BorderBrush="#D5D9E2" BorderThickness="1,0,0,0" Padding="12">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Inspector" FontSize="16" FontWeight="SemiBold" />
-                            <TextBlock Text="Select a node to edit its settings." TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
+                <views:FlowEditorView DataContext="{Binding FlowEditor}" />
             </TabItem>
 
             <TabItem Header="Dashboard">

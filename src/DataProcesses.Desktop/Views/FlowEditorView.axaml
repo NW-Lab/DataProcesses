@@ -1,0 +1,234 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DataProcesses.Desktop.ViewModels"
+             x:Class="DataProcesses.Desktop.Views.FlowEditorView"
+             x:CompileBindings="False"
+             Focusable="True"
+             KeyDown="FlowEditorKeyDown">
+    <Grid RowDefinitions="Auto,*,180" ColumnDefinitions="260,*,320">
+        <Border Grid.Row="0" Grid.ColumnSpan="3" Background="#172033" Padding="12,8">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+                <Button Grid.Column="0" Content="New" Command="{Binding NewFlowCommand}" />
+                <Button Grid.Column="1" Content="Save" Command="{Binding SaveCommand}" />
+                <Button Grid.Column="2" Content="Load" Command="{Binding LoadCommand}" />
+                <Button Grid.Column="3" Content="Validate" Command="{Binding ValidateCommand}" />
+                <Button Grid.Column="4" Content="Run" Command="{Binding RunCommand}" />
+                <Button Grid.Column="5" Content="Stop" Command="{Binding StopCommand}" />
+                <Button Grid.Column="6" Content="-" Command="{Binding ZoomOutCommand}" />
+                <Button Grid.Column="7" Content="+" Command="{Binding ZoomInCommand}" />
+                <StackPanel Grid.Column="8" Margin="16,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding FlowName}" Foreground="White" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding InteractionStatus}" Foreground="#B8C2D8" FontSize="12" />
+                </StackPanel>
+                <TextBlock Grid.Column="9" Text="{Binding ExecutionState}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold" />
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Grid.Column="0" BorderBrush="#D5D9E2" BorderThickness="0,0,1,0" Padding="12">
+            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+                <TextBlock Text="Node Library" FontSize="16" FontWeight="SemiBold" />
+                <TextBox Grid.Row="1" PlaceholderText="Search nodes" Text="{Binding Palette.SearchText}" />
+                <ScrollViewer Grid.Row="2">
+                    <ItemsControl ItemsSource="{Binding Palette.FilteredNodes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:PaletteNodeViewModel">
+                                <Border Margin="0,0,0,8"
+                                        Padding="10,8"
+                                        Background="#FFFFFF"
+                                        BorderBrush="#94A3B8"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Cursor="Hand">
+                                    <Grid RowDefinitions="Auto,Auto">
+                                        <TextBlock Text="{Binding DisplayName}" Foreground="#0F172A" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Row="1" Text="{Binding Category}" FontSize="12" Foreground="#475569" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Grid.Column="1" Background="#EEF2F7" ClipToBounds="True">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <Canvas x:Name="CanvasRoot"
+                    Width="2400"
+                    Height="1600"
+                        Background="#F7F9FC">
+                    <ItemsControl Width="2400" Height="1600" ItemsSource="{Binding Connections}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:CanvasConnectionViewModel">
+                                  <Path Data="{Binding PathData}"
+                                      Stroke="{Binding StrokeColor}"
+                                      StrokeThickness="3"
+                                      StrokeDashArray="{Binding StrokeDashArray}"
+                                      ToolTip.Tip="{Binding KindLabel}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl Width="2400" Height="1600" ItemsSource="{Binding Nodes}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.Styles>
+                            <Style Selector="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                            </Style>
+                        </ItemsControl.Styles>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:CanvasNodeViewModel">
+                                <Border Width="220"
+                                        MinHeight="116"
+                                        Background="White"
+                                        BorderBrush="#334155"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        PointerPressed="NodePointerPressed"
+                                        PointerMoved="NodePointerMoved"
+                                        PointerReleased="NodePointerReleased">
+                                    <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,*">
+                                        <Border Grid.ColumnSpan="2" Background="#1E293B" CornerRadius="6,6,0,0" Padding="10,8">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding DisplayName}" Foreground="White" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Id}" Foreground="#CBD5E1" FontSize="11" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <ItemsControl Grid.Row="1" Grid.Column="0" Margin="8" ItemsSource="{Binding Inputs}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:CanvasPortViewModel">
+                                                    <Button Margin="0,0,0,4"
+                                                            Padding="0"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            HorizontalAlignment="Left"
+                                                            Command="{Binding DataContext.PortClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="{Binding AccessibleName}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Grid Width="22" Height="22">
+                                                                <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="11">
+                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="Bold" />
+                                                                </Border>
+                                                                <Border IsVisible="{Binding IsJsonMessage}" Background="#C45F12" RenderTransformOrigin="50%,50%">
+                                                                    <Border.RenderTransform>
+                                                                        <RotateTransform Angle="45" />
+                                                                    </Border.RenderTransform>
+                                                                    <TextBlock Text="J" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="Bold">
+                                                                        <TextBlock.RenderTransform>
+                                                                            <RotateTransform Angle="-45" />
+                                                                        </TextBlock.RenderTransform>
+                                                                    </TextBlock>
+                                                                </Border>
+                                                            </Grid>
+                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="12" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <ItemsControl Grid.Row="1" Grid.Column="1" Margin="8" ItemsSource="{Binding Outputs}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:CanvasPortViewModel">
+                                                    <Button Margin="0,0,0,4"
+                                                            Padding="0"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            HorizontalAlignment="Right"
+                                                            Command="{Binding DataContext.PortClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="{Binding AccessibleName}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="12" />
+                                                            <Grid Width="22" Height="22">
+                                                                <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="11">
+                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="Bold" />
+                                                                </Border>
+                                                                <Border IsVisible="{Binding IsJsonMessage}" Background="#C45F12" RenderTransformOrigin="50%,50%">
+                                                                    <Border.RenderTransform>
+                                                                        <RotateTransform Angle="45" />
+                                                                    </Border.RenderTransform>
+                                                                    <TextBlock Text="J" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="Bold">
+                                                                        <TextBlock.RenderTransform>
+                                                                            <RotateTransform Angle="-45" />
+                                                                        </TextBlock.RenderTransform>
+                                                                    </TextBlock>
+                                                                </Border>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Canvas>
+            </ScrollViewer>
+        </Border>
+
+        <Border Grid.Row="1" Grid.Column="2" BorderBrush="#D5D9E2" BorderThickness="1,0,0,0" Padding="12">
+            <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="8">
+                <TextBlock Text="Inspector" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Grid.Row="1" Text="{Binding SelectedNode.DisplayName}" FontWeight="SemiBold" />
+                <TextBlock Grid.Row="2" Text="{Binding SelectedNode.TypeId}" Foreground="#526071" TextWrapping="Wrap" />
+                <TextBox Grid.Row="3"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         Text="{Binding SelectedNode.SettingsJson}"
+                         PlaceholderText="Settings JSON" />
+                <TextBlock Grid.Row="4" Text="Project directory" FontWeight="SemiBold" />
+                <TextBox Grid.Row="5" Text="{Binding ProjectDirectory}" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" Grid.ColumnSpan="3" ColumnDefinitions="*,*" Background="#F8FAFC">
+            <Border BorderBrush="#D5D9E2" BorderThickness="0,1,1,0" Padding="12">
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock Text="Validation" FontWeight="SemiBold" />
+                    <ListBox Grid.Row="1" ItemsSource="{Binding ValidationIssues}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:ValidationIssueViewModel">
+                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+            <Border Grid.Column="1" BorderBrush="#D5D9E2" BorderThickness="0,1,0,0" Padding="12">
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock Text="Execution Log" FontWeight="SemiBold" />
+                    <ListBox Grid.Row="1" ItemsSource="{Binding ExecutionLogs}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:ExecutionLogEntryViewModel">
+                                <TextBlock TextWrapping="Wrap">
+                                    <Run Text="{Binding Timestamp}" />
+                                    <Run Text="  " />
+                                    <Run Text="{Binding Level}" />
+                                    <Run Text="  " />
+                                    <Run Text="{Binding NodeId}" />
+                                    <Run Text="  " />
+                                    <Run Text="{Binding Message}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

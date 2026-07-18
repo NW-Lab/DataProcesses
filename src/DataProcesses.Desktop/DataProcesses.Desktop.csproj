@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DataProcesses.Core\DataProcesses.Core.csproj" />
+    <ProjectReference Include="..\DataProcesses.Engine\DataProcesses.Engine.csproj" />
     <ProjectReference Include="..\DataProcesses.Plugin.Abstractions\DataProcesses.Plugin.Abstractions.csproj" />
     <ProjectReference Include="..\DataProcesses.Nodes.BuiltIn\DataProcesses.Nodes.BuiltIn.csproj" />
   </ItemGroup>
