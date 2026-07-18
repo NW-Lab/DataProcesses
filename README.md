@@ -14,13 +14,13 @@ DataProcesses separates block-to-block communication into two explicit paths. **
 | Dashboard | One of multiple layouts for monitoring and interaction |
 | Fast Stream port | Blue circle, `S`, solid connection |
 | JSON Message port | Orange diamond, `J`, dashed connection |
-| Plugin | A separately packaged node provider using the public abstractions assembly |
+| Add-in | A future separately packaged Block provider using the public abstractions assembly |
 
 ## MVP direction
 
 The first milestone targets Windows while preserving a cross-platform architecture for future macOS support. The application is written in C#/.NET and uses Avalonia UI. Planned MVP nodes are **Test Signal**, **Filter**, **FFT**, **Time Series**, and **Python Output**.
 
-The full discussion draft is available in [docs/initial-specification.md](docs/initial-specification.md). Architectural decisions are tracked in [docs/decisions](docs/decisions).
+The full discussion draft is available in [docs/initial-specification.md](docs/initial-specification.md). Architectural decisions are tracked in [docs/decisions](docs/decisions). The external Add-in model is a documented future direction; its loader, package format, trust model, and distribution workflow are intentionally deferred in [ADR 0003](docs/decisions/0003-future-external-add-ins.md).
 
 ## Repository structure
 
@@ -74,4 +74,4 @@ Licensed under the [Apache License 2.0](LICENSE). This license choice can be rev
 
 ## 日本語概要
 
-DataProcessesは、高速な時系列データ処理をノード接続で構成し、複数のダッシュボードで可視化・操作するOSSデスクトップアプリケーションです。初期版はWindowsを対象としつつ、将来のmacOS対応を妨げない構成を採用します。合意済みの詳細仕様は[初期仕様書](docs/initial-specification.md)を参照してください。
+DataProcessesは、高速な時系列データ処理をノード接続で構成し、複数のダッシュボードで可視化・操作するOSSデスクトップアプリケーションです。初期版はWindowsを対象としつつ、将来のmacOS対応を妨げない構成を採用します。外部開発者がBlockを提供するアドイン機構は将来方針として記録し、現時点では実装を保留しています。合意済みの詳細仕様は[初期仕様書](docs/initial-specification.md)および[ADR 0003](docs/decisions/0003-future-external-add-ins.md)を参照してください。

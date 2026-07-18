@@ -4,7 +4,7 @@ DataProcesses is a pre-alpha, cross-platform C#/.NET desktop application for bui
 
 ## Architecture boundaries
 
-Keep `DataProcesses.Plugin.Abstractions` small, stable, and independent of Avalonia and implementation projects. Put graph validation, execution rules, and persistence-neutral domain behavior in `DataProcesses.Core`. Keep desktop presentation and Avalonia-specific code in `DataProcesses.Desktop`. Implement built-in nodes through the same contracts intended for third-party plugins.
+Keep `DataProcesses.Plugin.Abstractions` small, stable, and independent of Avalonia and implementation projects. Put graph validation, execution rules, and persistence-neutral domain behavior in `DataProcesses.Core`. Keep desktop presentation and Avalonia-specific code in `DataProcesses.Desktop`. Implement built-in nodes through the same contracts intended for future third-party Add-ins. Use **Add-in** in product and documentation language; retain `INodePlugin` as the current code-level contract. Do not implement external assembly discovery or loading without superseding ADR 0003.
 
 Do not introduce a dependency from abstractions or core projects to the desktop project. Prefer explicit contracts and dependency injection over static global state. Do not add packages when a small implementation using the platform libraries is clear and maintainable.
 
@@ -18,7 +18,7 @@ Mirror tests under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`
 
 ## Data paths and terminology
 
-Use the product terms **Flow Editor**, **App Settings (Preferences)**, **Fast Stream**, **JSON Message**, **node**, **port**, **dashboard**, and **widget** consistently.
+Use the product terms **Flow Editor**, **App Settings (Preferences)**, **Fast Stream**, **JSON Message**, **node**, **port**, **dashboard**, **widget**, and **Add-in** consistently.
 
 Fast Stream transports high-rate numeric frames as typed timing metadata and channel buffers. Never serialize Fast Stream frames to CSV or JSON between processing nodes. Avoid per-sample allocation, boxing, LINQ, and copying in hot paths; process frames or spans and preserve cancellation and backpressure semantics.
 
@@ -30,7 +30,7 @@ Port compatibility must validate direction, data family, and detailed schema. In
 
 Keep nullable reference types enabled and preserve warnings-as-errors. Prefer immutable records for contracts and configuration snapshots. Validate constructor and public method inputs. Use asynchronous APIs only for genuinely asynchronous work and pass `CancellationToken` through execution boundaries.
 
-Public contract changes require tests, documentation, and a compatibility note. Before adding or modifying a plugin contract, explain the intended versioning and migration path. Do not expose Avalonia, serializer-specific, or dependency-injection-container types through the public plugin API.
+Public contract changes require tests, documentation, and a compatibility note. Before adding or modifying the add-in contract, explain the intended versioning and migration path. Do not expose Avalonia, serializer-specific, or dependency-injection-container types through the public add-in API.
 
 ## Avalonia UI
 
