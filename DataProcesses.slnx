@@ -7,5 +7,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DataProcesses.Core.Tests/DataProcesses.Core.Tests.csproj" />
+    <Project Path="tests/DataProcesses.Nodes.BuiltIn.Tests/DataProcesses.Nodes.BuiltIn.Tests.csproj" />
   </Folder>
 </Solution>

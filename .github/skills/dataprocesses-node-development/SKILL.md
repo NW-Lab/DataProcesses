@@ -10,9 +10,16 @@ Build nodes through the public abstractions while preserving the Fast Stream and
 ## Prepare
 
 1. Read `docs/initial-specification.md`, the accepted ADRs, `.github/copilot-instructions.md`, and the nearest path-specific instructions.
-2. Inspect `src/DataProcesses.Plugin.Abstractions`, one similar built-in node, and its tests before editing.
-3. State the node responsibility in one sentence. Split unrelated responsibilities into separate nodes.
-4. Read [references/node-contract-checklist.md](references/node-contract-checklist.md) when defining ports, settings, timing, or acceptance tests.
+2. Inspect `src/DataProcesses.Plugin.Abstractions`, one similar built-in Block, and its tests before editing.
+3. Read `src/DataProcesses.Nodes.BuiltIn/Blocks/README.md` and ADR 0002 before adding or reorganizing a built-in Block.
+4. State the Block responsibility in one sentence. Split unrelated responsibilities into separate Blocks.
+5. Read [references/node-contract-checklist.md](references/node-contract-checklist.md) when defining ports, settings, timing, or acceptance tests.
+
+## Place a built-in Block
+
+For a built-in Block, create `src/DataProcesses.Nodes.BuiltIn/Blocks/<BlockName>/` with a PascalCase name. Keep `<BlockName>Block.cs` for the stable definition and ports, `<BlockName>Node.cs` for `INode` execution, and `<BlockName>NodeFactory.cs` for construction. Add immutable settings, local resources, and focused documentation only inside that Block directory when needed.
+
+Mirror tests under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`. Add the factory explicitly to `BuiltInNodePlugin`. Do not add reflection-based discovery or place implementation files directly in `DataProcesses.Nodes.BuiltIn` without an accepted ADR.
 
 ## Select the data family
 
@@ -28,7 +35,7 @@ Specify stable node and port identifiers, display resource keys, port directions
 
 Treat identifiers and persistence-facing names as compatibility commitments. Do not expose Avalonia, serializer-specific, or container-specific types through the plugin API. Propose an ADR before making a breaking public-contract or project-schema change.
 
-## Implement the node
+## Implement the Block
 
 Keep processing independent of the UI. Make configuration immutable while a run is active. Validate configuration before execution. Pass cancellation through execution boundaries and dispose owned resources deterministically.
 
@@ -50,4 +57,4 @@ dotnet test --configuration Release
 
 ## Finish
 
-Update user-facing documentation, localization resources, examples, and an ADR when the change alters architecture or compatibility. Summarize the contract, implementation, tests, measured performance where relevant, and remaining risks. Do not claim completion when build or tests fail.
+Update user-facing documentation, localization resources, examples, the Block layout guide, and an ADR when the change alters architecture or compatibility. Summarize the contract, implementation, registration, tests, measured performance where relevant, and remaining risks. Do not claim completion when build or tests fail.

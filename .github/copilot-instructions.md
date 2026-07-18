@@ -8,6 +8,14 @@ Keep `DataProcesses.Plugin.Abstractions` small, stable, and independent of Avalo
 
 Do not introduce a dependency from abstractions or core projects to the desktop project. Prefer explicit contracts and dependency injection over static global state. Do not add packages when a small implementation using the platform libraries is clear and maintainable.
 
+## Built-in Block layout
+
+Treat a **Block** as one user-visible processing unit and `INode` as its runtime contract. Place every built-in Block in `src/DataProcesses.Nodes.BuiltIn/Blocks/<BlockName>/`, using a PascalCase directory name. Do not place Block implementation files directly in the project root.
+
+Each Block directory must contain separate `<BlockName>Block.cs`, `<BlockName>Node.cs`, and `<BlockName>NodeFactory.cs` files. Keep stable type and port identifiers in the `Block` definition, runtime execution in the `Node`, and construction in the `NodeFactory`. Add optional immutable settings, local resources, and focused documentation inside the same directory only when needed.
+
+Mirror tests under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`. Register every built-in Block factory explicitly in `BuiltInNodePlugin`; do not introduce hidden reflection-based discovery without an accepted ADR. Read `src/DataProcesses.Nodes.BuiltIn/Blocks/README.md` and ADR 0002 before adding or reorganizing a Block.
+
 ## Data paths and terminology
 
 Use the product terms **Flow Editor**, **App Settings (Preferences)**, **Fast Stream**, **JSON Message**, **node**, **port**, **dashboard**, and **widget** consistently.
@@ -46,4 +54,4 @@ Keep docs and examples synchronized with code. Never commit build artifacts, cre
 
 Read the relevant nearby code, tests, specification section, ADR, and path-specific instructions before editing. Make the smallest coherent change. If requirements are ambiguous, state assumptions and propose a narrow default. Do not redesign unrelated code.
 
-When adding a node, load the `dataprocesses-node-development` Agent Skill. When asked for a repeatable implementation plan, use the matching prompt in `.github/prompts/` where available.
+When adding a Block, load the `dataprocesses-node-development` Agent Skill. When asked for a repeatable implementation plan, use the matching prompt in `.github/prompts/` where available.

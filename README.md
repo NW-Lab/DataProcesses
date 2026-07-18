@@ -29,9 +29,11 @@ src/
   DataProcesses.Desktop/              Avalonia desktop application
   DataProcesses.Core/                 Flow model and execution-domain logic
   DataProcesses.Plugin.Abstractions/  Stable public contracts for node plugins
-  DataProcesses.Nodes.BuiltIn/        Built-in node implementations
+  DataProcesses.Nodes.BuiltIn/        Built-in Block catalog and implementations
+    Blocks/<BlockName>/               One self-contained directory per Block
 tests/
-  DataProcesses.Core.Tests/           Unit tests
+  DataProcesses.Core.Tests/           Unit tests for core behavior
+  DataProcesses.Nodes.BuiltIn.Tests/  Mirrored tests for built-in Blocks
 docs/                                 Specifications and decisions
 .github/                              Copilot guidance and contribution automation
 ```
@@ -57,6 +59,8 @@ dotnet run --project src/DataProcesses.Desktop
 ## Development principles
 
 All connections are typed and validated before execution. Domain and plugin contracts do not depend on UI types. Fast Stream hot paths avoid JSON serialization, CSV parsing, blocking I/O, and unnecessary per-sample allocation. New behavior should arrive with tests and, when it changes an architectural boundary, an Architecture Decision Record.
+
+Each built-in Block has a dedicated directory under [`src/DataProcesses.Nodes.BuiltIn/Blocks`](src/DataProcesses.Nodes.BuiltIn/Blocks). The directory convention and registration steps are defined in the [Built-in Block layout guide](src/DataProcesses.Nodes.BuiltIn/Blocks/README.md) and [ADR 0002](docs/decisions/0002-built-in-block-layout.md).
 
 Repository-wide guidance for GitHub Copilot is maintained in [`.github/copilot-instructions.md`](.github/copilot-instructions.md). Reusable agent skills are stored in [`.github/skills`](.github/skills).
 

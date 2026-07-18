@@ -1,25 +1,12 @@
 using DataProcesses.Plugin.Abstractions;
 
-namespace DataProcesses.Nodes.BuiltIn;
+namespace DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
 
 public sealed class TestSignalNode : INode
 {
-    private const string OutputPortId = "stream";
     private INodeContext? _context;
 
-    public NodeDefinition Definition { get; } = new(
-        TypeId: "dataprocesses.test-signal",
-        DisplayName: "Test Signal",
-        Category: "Sources",
-        Version: "0.1.0",
-        Ports:
-        [
-            new PortDefinition(
-                OutputPortId,
-                "Signal",
-                PortDirection.Output,
-                PortDataKind.FastStream),
-        ]);
+    public NodeDefinition Definition => TestSignalBlock.Definition;
 
     public ValueTask InitializeAsync(
         INodeContext context,
@@ -58,25 +45,12 @@ public sealed class TestSignalNode : INode
             Samples: [samples.AsMemory()],
             SequenceNumber: 0);
 
-        await context.EmitAsync(OutputPortId, frame, cancellationToken);
+        await context.EmitAsync(TestSignalBlock.OutputPortId, frame, cancellationToken);
     }
 
     public ValueTask StopAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         return ValueTask.CompletedTask;
-    }
-}
-
-public sealed class TestSignalNodeFactory : INodeFactory
-{
-    private static readonly TestSignalNode Prototype = new();
-
-    public NodeDefinition Definition => Prototype.Definition;
-
-    public INode CreateNode(string nodeId)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(nodeId);
-        return new TestSignalNode();
     }
 }
