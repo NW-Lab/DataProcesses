@@ -32,7 +32,7 @@ All five Blocks are registered by `BuiltInNodePlugin` and have mirrored contract
 | **Time Series** (`dataprocesses.dashboard.time-series`) | Fast Stream input: `input` | Retains a latest display snapshot, downsampling each channel to at most 512 points. A visual dashboard renderer is not implemented yet. |
 | **Python Output** (`dataprocesses.output.python`) | Optional Fast Stream input: `fast-stream`; optional JSON Message input: `message`; optional JSON Message output: `status` | Validates typed input, records a receipt, and emits a deferred-delivery status message. It deliberately does not start or communicate with a Python process yet. |
 
-The full discussion draft is available in [docs/initial-specification.md](docs/initial-specification.md). Architectural decisions are tracked in [docs/decisions](docs/decisions). The external Add-in model is a documented future direction; its loader, package format, trust model, and distribution workflow are intentionally deferred in [ADR 0003](docs/decisions/0003-future-external-add-ins.md).
+The full discussion draft is available in [docs/initial-specification.md](docs/initial-specification.md). Architectural decisions are tracked in [docs/decisions](docs/decisions). Local setup, Visual Studio startup, bug diagnosis, and validation are documented in [docs/development-workflow.md](docs/development-workflow.md). The external Add-in model is a documented future direction; its loader, package format, trust model, and distribution workflow are intentionally deferred in [ADR 0003](docs/decisions/0003-future-external-add-ins.md).
 
 ## Repository structure
 

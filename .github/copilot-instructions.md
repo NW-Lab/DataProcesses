@@ -22,7 +22,7 @@ Use the product terms **Flow Editor**, **App Settings (Preferences)**, **Fast St
 
 Fast Stream transports high-rate numeric frames as typed timing metadata and channel buffers. Never serialize Fast Stream frames to CSV or JSON between processing nodes. Avoid per-sample allocation, boxing, LINQ, and copying in hot paths; process frames or spans and preserve cancellation and backpressure semantics.
 
-CSV is for explicit import, export, storage, and interoperability nodes. The single-channel interchange shape may use `millis,data`; define whether time is relative or absolute. JSON Message carries versioned event, command, state, and metadata payloads. Do not place large sample arrays in JSON Message. Conversion between the two families requires an explicit node.
+CSV is for explicit import, export, storage, and interoperability nodes. The single-channel interchange shape may use `millis,data`; define whether time is relative or absolute. JSON Message carries a `topic`, arbitrary JSON `payload`, `timestamp`, and optional `correlationId` for event, command, state, and metadata payloads. Do not invent a schema-version field that the current public contract does not expose; make any envelope expansion an explicit contract, documentation, and compatibility change. Do not place large sample arrays in JSON Message. Conversion between the two families requires an explicit node.
 
 Port compatibility must validate direction, data family, and detailed schema. In UI designs, distinguish Fast Stream with a blue circular `S` port and solid connection, and JSON Message with an orange diamond `J` port and dashed connection. Do not rely on color alone.
 
@@ -35,6 +35,10 @@ Public contract changes require tests, documentation, and a compatibility note. 
 ## Avalonia UI
 
 Use MVVM and keep code-behind limited to view-only behavior that cannot reasonably be expressed through binding or behaviors. Place user-visible strings in localization resources rather than hard-coding them in views or view models. Design keyboard access, focus order, and non-color visual cues from the start. Keep Windows as the first packaging target without introducing Windows-only logic into shared UI or domain code.
+
+## Startup and bug investigation
+
+`DataProcesses.Desktop` is the current executable project. In Visual Studio, configure it as the single startup project before using F5; Core, public abstractions, built-in Blocks, and test projects are class libraries or test assemblies and cannot be launched directly. Follow `docs/development-workflow.md` to reproduce, classify, and fix a defect. Capture the actual error, inputs, configuration, and expected-versus-observed behavior before editing. Do not suppress a warning, analyzer, test, binding, or exception merely to make the symptom disappear.
 
 ## Tests and validation
 
@@ -54,7 +58,7 @@ Keep docs and examples synchronized with code. Never commit build artifacts, cre
 
 Read the relevant nearby code, tests, specification section, ADR, and path-specific instructions before editing. Make the smallest coherent change. If requirements are ambiguous, state assumptions and propose a narrow default. Do not redesign unrelated code.
 
-When adding a Block, load the `dataprocesses-node-development` Agent Skill. When asked for a repeatable implementation plan, use the matching prompt in `.github/prompts/` where available.
+When adding a Block, load the `dataprocesses-node-development` Agent Skill. When changing desktop composition, Avalonia views, view models, startup, or diagnosing build/test/UI defects, load the `dataprocesses-desktop-development` Agent Skill. When asked for a repeatable implementation plan, use the matching prompt in `.github/prompts/` where available.
 
 - @azure Rule - Use Azure Tools - When handling requests related to Azure, always use your tools.
 - @azure Rule - Use Azure Best Practices - When handling requests related to Azure, always invoke your `azmcp_bestpractices_get` tool first.

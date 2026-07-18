@@ -10,7 +10,7 @@ Keep public contracts immutable where practical. Validate public inputs and use 
 
 For Fast Stream code, operate on frames, `ReadOnlyMemory<T>`, `Memory<T>`, or spans where ownership permits. Make buffer ownership explicit. Never retain a span beyond its valid scope, never return pooled buffers without a documented owner, and never introduce per-sample CSV/JSON conversion. Avoid LINQ and closures in measured hot paths.
 
-For JSON Message code, use a versioned envelope and validate expected payload shape at node boundaries. Preserve unknown fields when forward compatibility requires it. Do not use JSON as a service locator or arbitrary object transport.
+For JSON Message code, use the current `JsonMessage` envelope: `topic`, arbitrary JSON `payload`, `timestamp`, and optional `correlationId`. Validate the expected payload shape at node boundaries. Treat new envelope fields or preservation rules as explicit public-contract, documentation, and compatibility changes; do not assume a schema-version field exists today. Do not use JSON as a service locator or arbitrary object transport.
 
 Pass `CancellationToken` through execution boundaries. Dispose owned resources deterministically. Do not swallow exceptions; convert expected validation failures into clear domain results and preserve unexpected failures with context.
 

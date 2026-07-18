@@ -17,7 +17,7 @@ For a small bug fix, open a focused pull request directly. For a new node type, 
 
 ## Local setup
 
-Use the SDK selected by `global.json`, then run the following commands from the repository root:
+Use the SDK selected by `global.json`, then run the following commands from the repository root. For Visual Studio startup, debugging, and failure triage, follow [docs/development-workflow.md](docs/development-workflow.md): `DataProcesses.Desktop` is the required startup project.
 
 ```bash
 dotnet restore
@@ -47,7 +47,7 @@ Fast Stream processing should use typed buffers and frame-level operations. Do n
 
 A new node should have one clear responsibility. Define stable port identifiers, directions, data kinds, and detailed schemas. Validate configuration before execution. Handle cancellation and cleanup. Add deterministic tests with known input and expected output. Update documentation when users need to understand the node.
 
-The repository includes GitHub Copilot instructions and a reusable `dataprocesses-node-development` skill. They are guidance, not a substitute for review or tests.
+The repository includes GitHub Copilot instructions, reusable `dataprocesses-node-development` and `dataprocesses-desktop-development` skills, and focused implementation/debugging prompts in `.github/prompts/`. They are guidance, not a substitute for review or tests.
 
 ## Conduct and security
 

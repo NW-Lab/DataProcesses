@@ -25,7 +25,7 @@ Mirror tests under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`
 
 Use **Fast Stream** for high-rate numeric time series or spectra. Process typed frames and buffers; do not serialize frames to CSV or JSON inside the graph.
 
-Use **JSON Message** for events, commands, state changes, metadata, and variable payloads. Define a versioned envelope and validate the payload schema at the receiving boundary.
+Use **JSON Message** for events, commands, state changes, metadata, and variable payloads. Use the current `JsonMessage` envelope (`topic`, JSON `payload`, `timestamp`, and optional `correlationId`) and validate the payload schema at the receiving boundary. Propose an explicit contract and compatibility change before extending that envelope.
 
 Require an explicit conversion node when crossing families. Reject incompatible connections during graph validation rather than relying on runtime casts.
 
@@ -41,7 +41,7 @@ Keep processing independent of the UI. Make configuration immutable while a run 
 
 For Fast Stream, process frames or spans, make buffer ownership explicit, preserve timing metadata, and avoid per-sample allocation, boxing, LINQ, or copying in measured hot paths. For stateful DSP, define reset behavior and how discontinuities, sample-rate changes, empty frames, and invalid numeric values are handled.
 
-For JSON Message, validate expected fields and version, produce actionable errors, and avoid embedding large sample arrays.
+For JSON Message, validate expected fields and payload shape, produce actionable errors, and avoid embedding large sample arrays. Do not assume a schema-version field exists in the current envelope.
 
 ## Test before integrating
 
