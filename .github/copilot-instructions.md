@@ -55,3 +55,7 @@ Keep docs and examples synchronized with code. Never commit build artifacts, cre
 Read the relevant nearby code, tests, specification section, ADR, and path-specific instructions before editing. Make the smallest coherent change. If requirements are ambiguous, state assumptions and propose a narrow default. Do not redesign unrelated code.
 
 When adding a Block, load the `dataprocesses-node-development` Agent Skill. When asked for a repeatable implementation plan, use the matching prompt in `.github/prompts/` where available.
+
+- @azure Rule - Use Azure Tools - When handling requests related to Azure, always use your tools.
+- @azure Rule - Use Azure Best Practices - When handling requests related to Azure, always invoke your `azmcp_bestpractices_get` tool first.
+- @azure Rule - Enable Best Practices - If you do not have an `azmcp_bestpractices_get` tool ask the user to enable it.
