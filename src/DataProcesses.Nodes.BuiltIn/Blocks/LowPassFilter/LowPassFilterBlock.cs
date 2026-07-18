@@ -20,5 +20,6 @@ public static class LowPassFilterBlock
         [
             new PortDefinition(InputPortId, "Input", PortDirection.Input, PortDataKind.FastStream),
             new PortDefinition(OutputPortId, "Filtered", PortDirection.Output, PortDataKind.FastStream),
-        ]);
+        ],
+        NodeType: NodeType.BasicProcess);
 }

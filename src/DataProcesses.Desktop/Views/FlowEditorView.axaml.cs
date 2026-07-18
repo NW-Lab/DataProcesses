@@ -18,6 +18,7 @@ public partial class FlowEditorView : UserControl
     {
         InitializeComponent();
         AddHandler(PointerPressedEvent, FlowEditorPointerPressed, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
+        AddHandler(PointerMovedEvent, FlowEditorPointerMoved, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
         AddHandler(PointerReleasedEvent, FlowEditorPointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
@@ -38,9 +39,21 @@ public partial class FlowEditorView : UserControl
 
         draggingPaletteNode = paletteNode;
         viewModel.SelectPaletteNodeCommand.Execute(paletteNode);
+        PaletteDragPreviewTitle.Text = paletteNode.DisplayName;
+        UpdatePaletteDragPreview(e.GetPosition(CanvasRoot));
         Log($"Palette drag started: {paletteNode.DisplayName} ({paletteNode.TypeId})");
         e.Pointer.Capture(this);
         e.Handled = true;
+    }
+
+    private void FlowEditorPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (draggingPaletteNode is null)
+        {
+            return;
+        }
+
+        UpdatePaletteDragPreview(e.GetPosition(CanvasRoot));
     }
 
     private static PaletteNodeViewModel? FindPaletteNode(object? source)
@@ -98,8 +111,33 @@ public partial class FlowEditorView : UserControl
         }
 
         draggingPaletteNode = null;
+        HidePaletteDragPreview();
         e.Pointer.Capture(null);
         e.Handled = true;
+    }
+
+    private void UpdatePaletteDragPreview(Avalonia.Point position)
+    {
+        var isInsideCanvas = position.X >= 0
+            && position.Y >= 0
+            && position.X <= CanvasRoot.Bounds.Width
+            && position.Y <= CanvasRoot.Bounds.Height;
+
+        PaletteDragPreview.IsVisible = isInsideCanvas;
+
+        if (!isInsideCanvas)
+        {
+            return;
+        }
+
+        Canvas.SetLeft(PaletteDragPreview, Math.Max(0, position.X + 12));
+        Canvas.SetTop(PaletteDragPreview, Math.Max(0, position.Y + 12));
+    }
+
+    private void HidePaletteDragPreview()
+    {
+        PaletteDragPreview.IsVisible = false;
+        PaletteDragPreviewTitle.Text = string.Empty;
     }
 
     private void NodePointerPressed(object? sender, PointerPressedEventArgs e)

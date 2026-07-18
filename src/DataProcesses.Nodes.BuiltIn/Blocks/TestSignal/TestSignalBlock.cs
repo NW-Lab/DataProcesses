@@ -22,5 +22,6 @@ public static class TestSignalBlock
                 "Signal",
                 PortDirection.Output,
                 PortDataKind.FastStream),
-        ]);
+        ],
+        NodeType: NodeType.Input);
 }

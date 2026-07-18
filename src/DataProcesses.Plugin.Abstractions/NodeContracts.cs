@@ -6,6 +6,13 @@ public enum PortDirection
     Output,
 }
 
+public enum NodeType
+{
+    Input,
+    BasicProcess,
+    Output,
+}
+
 public sealed record PortDefinition(
     string Id,
     string DisplayName,
@@ -18,7 +25,8 @@ public sealed record NodeDefinition(
     string DisplayName,
     string Category,
     string Version,
-    IReadOnlyList<PortDefinition> Ports);
+    IReadOnlyList<PortDefinition> Ports,
+    NodeType NodeType = NodeType.BasicProcess);
 
 public interface INode
 {

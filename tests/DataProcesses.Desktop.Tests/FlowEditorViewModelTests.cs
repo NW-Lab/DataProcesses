@@ -26,14 +26,64 @@ public sealed class FlowEditorViewModelTests
         Assert.Same(node, viewModel.SelectedNode);
     }
 
+    [Fact]
+    public void Palette_GroupsNodesByNodeType()
+    {
+        var factories = new INodeFactory[]
+        {
+            new TestNodeFactory("input.block", "Input Block", NodeType.Input),
+            new TestNodeFactory("process.block", "Process Block", NodeType.BasicProcess),
+            new TestNodeFactory("output.block", "Output Block", NodeType.Output),
+        };
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService());
+
+        Assert.Equal(["INPUT", "Basic Process", "OUTPUT"], viewModel.Palette.Groups.Select(static group => group.DisplayName));
+        Assert.All(viewModel.Palette.Groups, group => Assert.Single(group.Nodes));
+    }
+
+    [Fact]
+    public void Palette_SearchMatchesNodeTypeDisplayName()
+    {
+        var factories = new INodeFactory[]
+        {
+            new TestNodeFactory("input.block", "Input Block", NodeType.Input),
+            new TestNodeFactory("process.block", "Process Block", NodeType.BasicProcess),
+            new TestNodeFactory("output.block", "Output Block", NodeType.Output),
+        };
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService());
+
+        viewModel.Palette.SearchText = "Basic";
+
+        var group = Assert.Single(viewModel.Palette.Groups);
+        Assert.Equal("Basic Process", group.DisplayName);
+        Assert.Equal("process.block", Assert.Single(group.Nodes).TypeId);
+    }
+
     private sealed class TestNodeFactory : INodeFactory
     {
-        public NodeDefinition Definition { get; } = new(
-            "test.block",
-            "Test Block",
-            "Sources",
-            "0.1.0",
-            [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream)]);
+        public TestNodeFactory()
+            : this("test.block", "Test Block", NodeType.Input)
+        {
+        }
+
+        public TestNodeFactory(string typeId, string displayName, NodeType nodeType)
+        {
+            Definition = new NodeDefinition(
+                typeId,
+                displayName,
+                "Legacy Category",
+                "0.1.0",
+                [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream)],
+                nodeType);
+        }
+
+        public NodeDefinition Definition { get; }
 
         public INode CreateNode(string nodeId)
         {

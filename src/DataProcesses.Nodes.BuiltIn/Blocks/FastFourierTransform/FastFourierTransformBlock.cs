@@ -20,5 +20,6 @@ public static class FastFourierTransformBlock
         [
             new PortDefinition(InputPortId, "Input", PortDirection.Input, PortDataKind.FastStream),
             new PortDefinition(OutputPortId, "Spectrum", PortDirection.Output, PortDataKind.FastStream),
-        ]);
+        ],
+        NodeType: NodeType.BasicProcess);
 }

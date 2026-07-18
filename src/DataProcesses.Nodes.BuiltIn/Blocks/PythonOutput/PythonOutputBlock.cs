@@ -24,5 +24,6 @@ public static class PythonOutputBlock
             new PortDefinition(FastStreamInputPortId, "Fast Stream", PortDirection.Input, PortDataKind.FastStream, IsRequired: false),
             new PortDefinition(JsonMessageInputPortId, "JSON Message", PortDirection.Input, PortDataKind.JsonMessage, IsRequired: false),
             new PortDefinition(StatusOutputPortId, "Status", PortDirection.Output, PortDataKind.JsonMessage, IsRequired: false),
-        ]);
+        ],
+        NodeType: NodeType.Output);
 }

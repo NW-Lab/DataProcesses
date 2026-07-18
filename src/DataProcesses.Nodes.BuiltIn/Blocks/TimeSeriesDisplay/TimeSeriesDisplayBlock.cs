@@ -18,5 +18,6 @@ public static class TimeSeriesDisplayBlock
         Ports:
         [
             new PortDefinition(InputPortId, "Input", PortDirection.Input, PortDataKind.FastStream),
-        ]);
+        ],
+        NodeType: NodeType.Output);
 }
