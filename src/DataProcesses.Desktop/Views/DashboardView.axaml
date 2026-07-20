@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DataProcesses.Desktop.ViewModels"
+             x:Class="DataProcesses.Desktop.Views.DashboardView"
+             x:CompileBindings="False"
+             Focusable="True">
+    <Grid RowDefinitions="Auto,*" RowSpacing="8">
+        <Border Background="#172033" Padding="12,8">
+            <Grid ColumnDefinitions="220,180,Auto,Auto,Auto,*" ColumnSpacing="8">
+                <ComboBox Grid.Column="0"
+                          ItemsSource="{Binding Dashboards}"
+                          SelectedItem="{Binding SelectedDashboard}"
+                          DisplayMemberBinding="{Binding DisplayName}" />
+                <TextBox Grid.Column="1" Text="{Binding DashboardName}" PlaceholderText="Dashboard name" />
+                <Button Grid.Column="2" Content="Add Dashboard" Command="{Binding AddDashboardCommand}" />
+                <Button Grid.Column="3" Content="Remove Dashboard" Command="{Binding RemoveDashboardCommand}" />
+                <Button Grid.Column="4"
+                        Content="Widget Settings"
+                        IsEnabled="{Binding IsEditMode}"
+                        Click="ShowWidgetSettingsPlaceholderDialog" />
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Background="#EEF2F7" ClipToBounds="True">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <Grid Width="2400" Height="1600">
+                    <Border Background="#F7F9FC" />
+
+                    <Canvas x:Name="GridCanvas"
+                            Width="2400"
+                            Height="1600"
+                            IsVisible="{Binding IsGridVisible}"
+                            IsHitTestVisible="False" />
+
+                    <Canvas x:Name="DashboardCanvas" Width="2400" Height="1600" Background="Transparent">
+                        <ItemsControl ItemsSource="{Binding Widgets}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.Styles>
+                                <Style Selector="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="{Binding PixelX}" />
+                                    <Setter Property="Canvas.Top" Value="{Binding PixelY}" />
+                                </Style>
+                            </ItemsControl.Styles>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:DashboardWidgetViewModel">
+                                    <Border Width="{Binding PixelWidth}"
+                                            Height="{Binding PixelHeight}"
+                                            Background="White"
+                                            BorderBrush="#2B4D87"
+                                            BorderThickness="2"
+                                            CornerRadius="6"
+                                            PointerPressed="WidgetPointerPressed"
+                                            PointerMoved="WidgetPointerMoved"
+                                            PointerReleased="WidgetPointerReleased">
+                                        <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,Auto">
+                                            <Border Grid.ColumnSpan="2" Background="#2B4D87" CornerRadius="4,4,0,0" Padding="10,6">
+                                                <TextBlock Text="{Binding Title}" Foreground="White" FontWeight="SemiBold" />
+                                            </Border>
+
+                                            <TextBlock Grid.Row="1"
+                                                       Margin="10"
+                                                       Text="{Binding WidgetType}"
+                                                       Foreground="#475569"
+                                                       TextWrapping="Wrap" />
+
+                                            <Border Grid.Row="1"
+                                                    Grid.Column="1"
+                                                    Width="18"
+                                                    Height="18"
+                                                    Margin="0,0,6,6"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Bottom"
+                                                    Background="#2B4D87"
+                                                    CornerRadius="3"
+                                                    Cursor="SizeNorthwestSoutheast"
+                                                    PointerPressed="ResizeHandlePressed"
+                                                    PointerMoved="ResizeHandleMoved"
+                                                    PointerReleased="ResizeHandleReleased"
+                                                    ToolTip.Tip="Resize">
+                                                <TextBlock Text=">>"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="White"
+                                                           FontSize="11" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Canvas>
+                </Grid>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

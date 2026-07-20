@@ -7,20 +7,25 @@
              KeyDown="FlowEditorKeyDown">
     <Grid RowDefinitions="Auto,*,180" ColumnDefinitions="260,*,320">
         <Border Grid.Row="0" Grid.ColumnSpan="3" Background="#172033" Padding="12,8">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
-                <Button Grid.Column="0" Content="New" Command="{Binding NewFlowCommand}" />
-                <Button Grid.Column="1" Content="Save" Command="{Binding SaveCommand}" />
-                <Button Grid.Column="2" Content="Load" Command="{Binding LoadCommand}" />
-                <Button Grid.Column="3" Content="Validate" Command="{Binding ValidateCommand}" />
-                <Button Grid.Column="4" Content="Run" Command="{Binding RunCommand}" />
-                <Button Grid.Column="5" Content="Stop" Command="{Binding StopCommand}" />
-                <Button Grid.Column="6" Content="-" Command="{Binding ZoomOutCommand}" />
-                <Button Grid.Column="7" Content="+" Command="{Binding ZoomInCommand}" />
-                <StackPanel Grid.Column="8" Margin="16,0,0,0" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="220,180,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+                <ComboBox Grid.Column="0"
+                          ItemsSource="{Binding Flows}"
+                          SelectedItem="{Binding SelectedFlow}"
+                          DisplayMemberBinding="{Binding DisplayName}" />
+                <TextBox Grid.Column="1" Text="{Binding FlowName}" PlaceholderText="Flow name" />
+                <Button Grid.Column="2" Content="Add Flow" Command="{Binding AddFlowCommand}" />
+                <Button Grid.Column="3" Content="Remove Flow" Command="{Binding RemoveFlowCommand}" />
+                <Button Grid.Column="4" Content="New" Command="{Binding NewFlowCommand}" />
+                <Button Grid.Column="5" Content="Save" Command="{Binding SaveCommand}" />
+                <Button Grid.Column="6" Content="Load" Command="{Binding LoadCommand}" />
+                <Button Grid.Column="7" Content="Validate" Command="{Binding ValidateCommand}" />
+                <Button Grid.Column="8" Content="-" Command="{Binding ZoomOutCommand}" />
+                <Button Grid.Column="9" Content="+" Command="{Binding ZoomInCommand}" />
+                <StackPanel Grid.Column="10" Margin="16,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding FlowName}" Foreground="White" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding InteractionStatus}" Foreground="#B8C2D8" FontSize="12" />
                 </StackPanel>
-                <TextBlock Grid.Column="9" Text="{Binding ExecutionState}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="11" Text="{Binding ExecutionState}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold" />
             </Grid>
         </Border>
 

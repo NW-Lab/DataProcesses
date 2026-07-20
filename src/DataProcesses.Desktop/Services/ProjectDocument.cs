@@ -6,8 +6,8 @@ public sealed record ProjectDocument(
     int SchemaVersion,
     Guid Id,
     string Name,
-    IReadOnlyList<ProjectFlowReference> Flows,
-    IReadOnlyList<ProjectDashboardReference> Dashboards);
+    IReadOnlyList<ProjectFlowReference>? Flows,
+    IReadOnlyList<ProjectDashboardReference>? Dashboards);
 
 public sealed record ProjectFlowReference(
     Guid Id,
@@ -22,4 +22,5 @@ public sealed record ProjectDashboardReference(
 public sealed record LoadedProject(
     ProjectDocument Project,
     IReadOnlyList<FlowDocument> Flows,
+    IReadOnlyList<DashboardDocument> Dashboards,
     string ProjectDirectory);

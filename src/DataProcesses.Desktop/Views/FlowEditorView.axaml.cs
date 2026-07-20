@@ -31,6 +31,11 @@ public partial class FlowEditorView : UserControl
             return;
         }
 
+        if (!viewModel.IsCanvasEditingEnabled)
+        {
+            return;
+        }
+
         var properties = e.GetCurrentPoint(sender as Control).Properties;
         if (!properties.IsLeftButtonPressed)
         {
@@ -93,6 +98,14 @@ public partial class FlowEditorView : UserControl
             return;
         }
 
+        if (!viewModel.IsCanvasEditingEnabled)
+        {
+            draggingPaletteNode = null;
+            HidePaletteDragPreview();
+            e.Pointer.Capture(null);
+            return;
+        }
+
         var position = e.GetPosition(CanvasRoot);
         Log($"Palette drop released from {source}: {draggingPaletteNode.DisplayName} at {position.X:0.0}, {position.Y:0.0}");
 
@@ -147,10 +160,15 @@ public partial class FlowEditorView : UserControl
             return;
         }
 
+        if (DataContext is not FlowEditorViewModel viewModel || !viewModel.IsCanvasEditingEnabled)
+        {
+            return;
+        }
+
         draggingNode = node;
         lastPointerPosition = e.GetPosition(CanvasRoot);
         Log($"Node drag started: {node.DisplayName} ({node.Id})");
-        (DataContext as FlowEditorViewModel)?.SelectNodeCommand.Execute(node);
+        viewModel.SelectNodeCommand.Execute(node);
         e.Pointer.Capture(sender as IInputElement);
         e.Handled = true;
     }
@@ -190,7 +208,7 @@ public partial class FlowEditorView : UserControl
             return;
         }
 
-        if (e.Key == Key.Delete)
+        if (e.Key == Key.Delete && viewModel.IsCanvasEditingEnabled)
         {
             viewModel.DeleteSelectedCommand.Execute(null);
             e.Handled = true;

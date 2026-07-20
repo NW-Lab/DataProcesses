@@ -11,10 +11,28 @@ namespace DataProcesses.Desktop.ViewModels;
 
 public sealed class FlowEditorViewModel : ViewModelBase
 {
+    private sealed record FlowWorkspaceState(
+        FlowDocument Document,
+        IReadOnlyList<ValidationIssueViewModel> ValidationIssues,
+        IReadOnlyList<ExecutionLogEntryViewModel> ExecutionLogs,
+        FlowExecutionState ExecutionState,
+        bool IsDirty);
+
     private readonly IReadOnlyDictionary<string, INodeFactory> factoriesByTypeId;
     private readonly FlowRunner runner;
     private readonly ProjectFileService projectFileService;
-    private readonly Guid flowId = Guid.NewGuid();
+    private readonly Func<IReadOnlyList<DashboardDocument>> getDashboardDocuments;
+    private readonly Action<IReadOnlyList<DashboardDocument>> loadDashboardDocuments;
+    private readonly Action markDashboardsClean;
+    private readonly List<FlowDocument> additionalFlows = [];
+    private readonly Dictionary<Guid, FlowWorkspaceState> flowWorkspaceById = [];
+    private Guid flowId = Guid.NewGuid();
+    private FlowListItemViewModel? selectedFlow;
+    private bool isLoadingFlows;
+    private bool isSaving;
+    private bool isApplyingFlowState;
+    private bool isCanvasEditingEnabled = true;
+    private bool isDebugExecution;
     private CanvasNodeViewModel? selectedNode;
     private PaletteNodeViewModel? selectedPaletteNode;
     private CanvasPortViewModel? pendingConnectionSource;
@@ -34,7 +52,10 @@ public sealed class FlowEditorViewModel : ViewModelBase
     public FlowEditorViewModel(
         IEnumerable<INodeFactory> factories,
         FlowRunner runner,
-        ProjectFileService projectFileService)
+        ProjectFileService projectFileService,
+        Func<IReadOnlyList<DashboardDocument>>? getDashboardDocuments = null,
+        Action<IReadOnlyList<DashboardDocument>>? loadDashboardDocuments = null,
+        Action? markDashboardsClean = null)
     {
         ArgumentNullException.ThrowIfNull(factories);
         ArgumentNullException.ThrowIfNull(runner);
@@ -44,6 +65,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
         factoriesByTypeId = factoryList.ToDictionary(static factory => factory.Definition.TypeId, StringComparer.Ordinal);
         this.runner = runner;
         this.projectFileService = projectFileService;
+        this.getDashboardDocuments = getDashboardDocuments ?? (() => Array.Empty<DashboardDocument>());
+        this.loadDashboardDocuments = loadDashboardDocuments ?? (_ => { });
+        this.markDashboardsClean = markDashboardsClean ?? (() => { });
         Palette = new NodePaletteViewModel(factoryList);
         Inspector = new InspectorViewModel();
 
@@ -58,8 +82,14 @@ public sealed class FlowEditorViewModel : ViewModelBase
         SaveCommand = new AsyncRelayCommand(SaveAsync);
         LoadCommand = new AsyncRelayCommand(LoadAsync);
         NewFlowCommand = new RelayCommand(NewFlow);
+        AddFlowCommand = new RelayCommand(AddFlow);
+        RemoveFlowCommand = new RelayCommand(RemoveSelectedFlow);
         ZoomInCommand = new RelayCommand(() => Zoom = Math.Min(2, Zoom + 0.1));
         ZoomOutCommand = new RelayCommand(() => Zoom = Math.Max(0.4, Zoom - 0.1));
+
+        var initialFlow = new FlowListItemViewModel(flowId, FlowName);
+        Flows.Add(initialFlow);
+        SelectedFlow = initialFlow;
     }
 
     public NodePaletteViewModel Palette { get; }
@@ -73,6 +103,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
     public ObservableCollection<ValidationIssueViewModel> ValidationIssues { get; } = [];
 
     public ObservableCollection<ExecutionLogEntryViewModel> ExecutionLogs { get; } = [];
+
+    public ObservableCollection<FlowListItemViewModel> Flows { get; } = [];
 
     public IRelayCommand<PaletteNodeViewModel> AddNodeCommand { get; }
 
@@ -95,6 +127,10 @@ public sealed class FlowEditorViewModel : ViewModelBase
     public IAsyncRelayCommand LoadCommand { get; }
 
     public IRelayCommand NewFlowCommand { get; }
+
+    public IRelayCommand AddFlowCommand { get; }
+
+    public IRelayCommand RemoveFlowCommand { get; }
 
     public IRelayCommand ZoomInCommand { get; }
 
@@ -148,7 +184,39 @@ public sealed class FlowEditorViewModel : ViewModelBase
     public string FlowName
     {
         get => flowName;
-        set => SetProperty(ref flowName, value);
+        set
+        {
+            if (SetProperty(ref flowName, value) && SelectedFlow is not null)
+            {
+                SelectedFlow.Name = value;
+                if (!isLoadingFlows && !isApplyingFlowState)
+                {
+                    MarkCurrentFlowDirty();
+                }
+            }
+        }
+    }
+
+    public FlowListItemViewModel? SelectedFlow
+    {
+        get => selectedFlow;
+        set
+        {
+            if (ReferenceEquals(selectedFlow, value))
+            {
+                return;
+            }
+
+            if (!isLoadingFlows)
+            {
+                PersistCurrentFlow();
+            }
+
+            if (SetProperty(ref selectedFlow, value) && value is not null)
+            {
+                LoadFlowById(value.Id);
+            }
+        }
     }
 
     public string ProjectName
@@ -185,13 +253,63 @@ public sealed class FlowEditorViewModel : ViewModelBase
         ? "No pending connection"
         : $"Connecting from {pendingConnectionSource.Node.DisplayName}.{pendingConnectionSource.DisplayName}";
 
+    public bool IsCanvasEditingEnabled
+    {
+        get => isCanvasEditingEnabled;
+        private set => SetProperty(ref isCanvasEditingEnabled, value);
+    }
+
+    public void ApplyWorkspaceMode(WorkspaceRunMode mode)
+    {
+        IsCanvasEditingEnabled = mode == WorkspaceRunMode.Edit;
+
+        if (mode == WorkspaceRunMode.Edit)
+        {
+            isDebugExecution = false;
+            InteractionStatus = "Edit mode: drag a Block from the Node Library onto the canvas.";
+        }
+        else
+        {
+            InteractionStatus = mode == WorkspaceRunMode.RunDebug
+                ? "Debug run mode: editing is locked while execution runs."
+                : "Run mode: editing is locked while execution runs.";
+        }
+    }
+
+    public async Task StartExecutionAsync(bool debugMode)
+    {
+        if (ExecutionState is FlowExecutionState.Starting or FlowExecutionState.Running)
+        {
+            return;
+        }
+
+        isDebugExecution = debugMode;
+        await RunAsync().ConfigureAwait(true);
+    }
+
+    public void StopExecution()
+    {
+        if (ExecutionState is FlowExecutionState.Starting or FlowExecutionState.Running)
+        {
+            StopRun();
+        }
+
+        isDebugExecution = false;
+    }
+
     public void MoveNode(CanvasNodeViewModel node, double deltaX, double deltaY)
     {
+        if (!IsCanvasEditingEnabled)
+        {
+            return;
+        }
+
         ArgumentNullException.ThrowIfNull(node);
 
         node.X += deltaX / Zoom;
         node.Y += deltaY / Zoom;
         RefreshConnections();
+        MarkCurrentFlowDirty();
     }
 
     public CanvasNodeViewModel PlacePaletteNode(PaletteNodeViewModel paletteNode, double canvasX, double canvasY)
@@ -205,6 +323,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private void AddNode(PaletteNodeViewModel? paletteNode)
     {
+        if (!IsCanvasEditingEnabled)
+        {
+            return;
+        }
+
         if (paletteNode is null)
         {
             return;
@@ -224,6 +347,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
         Nodes.Add(node);
         SelectNode(node);
         RefreshConnections();
+        MarkCurrentFlowDirty();
         return node;
     }
 
@@ -242,6 +366,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private void DeleteSelected()
     {
+        if (!IsCanvasEditingEnabled)
+        {
+            return;
+        }
+
         if (SelectedNode is null)
         {
             return;
@@ -253,10 +382,16 @@ public sealed class FlowEditorViewModel : ViewModelBase
         RebuildConnections(GetDocument().Connections.Where(connection =>
             !string.Equals(connection.SourceNodeId, node.Id, StringComparison.Ordinal)
             && !string.Equals(connection.TargetNodeId, node.Id, StringComparison.Ordinal)).ToArray());
+        MarkCurrentFlowDirty();
     }
 
     private void HandlePortClick(CanvasPortViewModel? port)
     {
+        if (!IsCanvasEditingEnabled)
+        {
+            return;
+        }
+
         if (port is null)
         {
             return;
@@ -294,6 +429,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
         var connections = Connections.Select(static connectionViewModel => connectionViewModel.Connection).Append(connection).ToArray();
         RebuildConnections(connections);
         Validate();
+        MarkCurrentFlowDirty();
     }
 
     private void Validate()
@@ -312,6 +448,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
         ExecutionLogs.Clear();
         runCancellationTokenSource?.Dispose();
         runCancellationTokenSource = new CancellationTokenSource();
+        InteractionStatus = isDebugExecution
+            ? "Running flow in debug mode."
+            : "Running flow.";
         ExecutionState = FlowExecutionState.Starting;
         var result = await runner.RunAsync(GetDocument(), runCancellationTokenSource.Token).ConfigureAwait(true);
         ExecutionState = result.State;
@@ -336,25 +475,138 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private async Task SaveAsync()
     {
-        await projectFileService.SaveAsync(ProjectDirectory, ProjectName, [GetDocument()], CancellationToken.None).ConfigureAwait(true);
+        PersistCurrentFlow();
+        isSaving = true;
+
+        try
+        {
+            await projectFileService.SaveAsync(
+                ProjectDirectory,
+                ProjectName,
+                [..additionalFlows],
+                getDashboardDocuments(),
+                CancellationToken.None).ConfigureAwait(true);
+
+            MarkAllFlowsClean();
+            markDashboardsClean();
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private async Task LoadAsync()
     {
         var loadedProject = await projectFileService.LoadAsync(ProjectDirectory, CancellationToken.None).ConfigureAwait(true);
         ProjectName = loadedProject.Project.Name;
+        loadDashboardDocuments(loadedProject.Dashboards);
 
-        var flow = loadedProject.Flows.FirstOrDefault();
-        if (flow is null)
+        isLoadingFlows = true;
+        try
         {
-            NewFlow();
-            return;
-        }
+            Flows.Clear();
+            additionalFlows.Clear();
+            flowWorkspaceById.Clear();
 
-        LoadFlow(flow);
+            if (loadedProject.Flows.Count == 0)
+            {
+                InitializeSingleNewFlow();
+                return;
+            }
+
+            additionalFlows.AddRange(loadedProject.Flows);
+            foreach (var flow in loadedProject.Flows)
+            {
+                flowWorkspaceById[flow.Id] = new FlowWorkspaceState(
+                    flow,
+                    [],
+                    [],
+                    FlowExecutionState.Stopped,
+                    false);
+            }
+
+            foreach (var flow in loadedProject.Flows)
+            {
+                Flows.Add(new FlowListItemViewModel(flow.Id, flow.Name));
+            }
+
+            SelectedFlow = Flows[0];
+        }
+        finally
+        {
+            isLoadingFlows = false;
+        }
     }
 
     private void NewFlow()
+    {
+        ResetCurrentFlowState();
+    }
+
+    private void AddFlow()
+    {
+        PersistCurrentFlow();
+
+        var newFlowId = Guid.NewGuid();
+        var newFlowName = $"Flow {Flows.Count + 1}";
+
+        isLoadingFlows = true;
+        try
+        {
+            var item = new FlowListItemViewModel(newFlowId, newFlowName);
+            Flows.Add(item);
+            SelectedFlow = item;
+        }
+        finally
+        {
+            isLoadingFlows = false;
+        }
+
+        flowId = newFlowId;
+        FlowName = newFlowName;
+        ResetCurrentFlowState();
+        MarkCurrentFlowClean();
+    }
+
+    private void RemoveSelectedFlow()
+    {
+        if (Flows.Count <= 1 || SelectedFlow is null)
+        {
+            return;
+        }
+
+        var removedFlowId = SelectedFlow.Id;
+        var removeIndex = Flows.IndexOf(SelectedFlow);
+
+        isLoadingFlows = true;
+        try
+        {
+            Flows.RemoveAt(removeIndex);
+            additionalFlows.RemoveAll(flow => flow.Id == removedFlowId);
+            flowWorkspaceById.Remove(removedFlowId);
+
+            var nextIndex = Math.Max(0, removeIndex - 1);
+            SelectedFlow = Flows[nextIndex];
+        }
+        finally
+        {
+            isLoadingFlows = false;
+        }
+    }
+
+    private void InitializeSingleNewFlow()
+    {
+        flowId = Guid.NewGuid();
+        FlowName = "Untitled flow";
+        var item = new FlowListItemViewModel(flowId, FlowName);
+        Flows.Add(item);
+        SelectedFlow = item;
+        ResetCurrentFlowState();
+        PersistCurrentFlow();
+    }
+
+    private void ResetCurrentFlowState()
     {
         Nodes.Clear();
         Connections.Clear();
@@ -363,9 +615,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
         SelectedNode = null;
         pendingConnectionSource = null;
         SelectedPaletteNode = null;
-        FlowName = "Untitled flow";
         nextNodeX = 80;
         nextNodeY = 80;
+        ExecutionState = FlowExecutionState.Stopped;
         OnPropertyChanged(nameof(PendingConnectionLabel));
     }
 
@@ -380,20 +632,131 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private void LoadFlow(FlowDocument flow)
     {
-        FlowName = flow.Name;
-        Nodes.Clear();
+        isApplyingFlowState = true;
 
-        foreach (var node in flow.Nodes)
+        try
         {
-            if (factoriesByTypeId.TryGetValue(node.TypeId, out var factory))
+            flowId = flow.Id;
+            FlowName = flow.Name;
+            Nodes.Clear();
+
+            foreach (var node in flow.Nodes)
             {
-                Nodes.Add(new CanvasNodeViewModel(node, factory.Definition));
+                if (factoriesByTypeId.TryGetValue(node.TypeId, out var factory))
+                {
+                    Nodes.Add(new CanvasNodeViewModel(node, factory.Definition));
+                }
+            }
+
+            RebuildConnections(flow.Connections);
+            SelectedNode = Nodes.FirstOrDefault();
+
+            if (flowWorkspaceById.TryGetValue(flow.Id, out var workspace))
+            {
+                ValidationIssues.Clear();
+                foreach (var issue in workspace.ValidationIssues)
+                {
+                    ValidationIssues.Add(issue);
+                }
+
+                ExecutionLogs.Clear();
+                foreach (var log in workspace.ExecutionLogs)
+                {
+                    ExecutionLogs.Add(log);
+                }
+
+                ExecutionState = workspace.ExecutionState;
+                if (SelectedFlow is not null)
+                {
+                    SelectedFlow.IsDirty = workspace.IsDirty;
+                }
+            }
+            else
+            {
+                Validate();
+                MarkCurrentFlowClean();
             }
         }
+        finally
+        {
+            isApplyingFlowState = false;
+        }
+    }
 
-        RebuildConnections(flow.Connections);
-        SelectedNode = Nodes.FirstOrDefault();
-        Validate();
+    private void PersistCurrentFlow()
+    {
+        var current = GetDocument();
+        var index = additionalFlows.FindIndex(flow => flow.Id == current.Id);
+
+        if (index >= 0)
+        {
+            additionalFlows[index] = current;
+        }
+        else
+        {
+            additionalFlows.Add(current);
+        }
+
+        PersistWorkspaceState(current);
+    }
+
+    private void LoadFlowById(Guid flowIdToLoad)
+    {
+        var flow = additionalFlows.FirstOrDefault(candidate => candidate.Id == flowIdToLoad);
+        if (flow is null)
+        {
+            return;
+        }
+
+        LoadFlow(flow);
+    }
+
+    private void PersistWorkspaceState(FlowDocument document)
+    {
+        flowWorkspaceById[document.Id] = new FlowWorkspaceState(
+            document,
+            [..ValidationIssues],
+            [..ExecutionLogs],
+            ExecutionState,
+            SelectedFlow?.IsDirty ?? false);
+    }
+
+    private void MarkCurrentFlowDirty()
+    {
+        if (isLoadingFlows || isSaving || SelectedFlow is null)
+        {
+            return;
+        }
+
+        SelectedFlow.IsDirty = true;
+        PersistWorkspaceState(GetDocument());
+    }
+
+    private void MarkCurrentFlowClean()
+    {
+        if (SelectedFlow is null)
+        {
+            return;
+        }
+
+        SelectedFlow.IsDirty = false;
+        PersistWorkspaceState(GetDocument());
+    }
+
+    private void MarkAllFlowsClean()
+    {
+        foreach (var flow in Flows)
+        {
+            flow.IsDirty = false;
+        }
+
+        foreach (var flowDocument in additionalFlows)
+        {
+            if (flowWorkspaceById.TryGetValue(flowDocument.Id, out var workspace))
+            {
+                flowWorkspaceById[flowDocument.Id] = workspace with { IsDirty = false };
+            }
+        }
     }
 
     private void RebuildConnections(IEnumerable<Connection> connections)
