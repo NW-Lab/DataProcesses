@@ -10,13 +10,59 @@ Each built-in Block has one self-contained directory under `Blocks/<BlockName>/`
 | `<BlockName>Node.cs` | Yes | Runtime processing logic; implement `INode`. |
 | `<BlockName>NodeFactory.cs` | Yes | Create runtime instances and expose the Block definition. |
 | `<BlockName>Settings.cs` | When needed | Immutable settings model and validation. |
+| `icon.png` | Recommended | 64 x 64 PNG icon shown in the Node Library and on placed canvas Blocks. |
+| `README.md` | Recommended | Explain port schema, settings, signal-processing, Payload, or interoperability behavior. See template below. |
 | `Resources/` | When needed | Block-local localization keys or non-code assets. |
-| `icon.png` | When needed | 64 x 64 PNG icon shown in the Node Library and on placed canvas Blocks. |
-| `README.md` | When needed | Explain port schema, settings, signal-processing, Payload, or interoperability behavior. |
 
 Mirror the same structure under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`. Keep tests deterministic and use synthetic data only.
 
-Create a Block-local `README.md` whenever the Block defines non-trivial settings, multiple ports, Payload fields, Payload pass-through behavior, timing semantics, numerical behavior, icon behavior, or interoperability behavior. Treat `TestSignal/README.md` as the initial template for future Block specifications.
+## README Template
+
+Create a Block-local `README.md` using the structure below whenever the Block defines non-trivial settings, multiple ports, Payload fields, Payload pass-through behavior, timing semantics, numerical behavior, or interoperability behavior. Use [TestSignal/README.md](TestSignal/README.md) as the reference template.
+
+```markdown
+# <BlockName> Block
+
+<One-sentence summary of what this Block does.>
+
+## Presentation
+
+| Field | Value |
+|---|---|
+| Title | `<TypeId short name>` |
+| Subtitle | `<Optional short descriptor>` |
+| Icon | `icon.png`, 64 x 64 PNG source rendered at 32 x 32 in the Node Library and 28 x 28 on the canvas. |
+
+## Dashboard
+
+<If this Block supports dashboard display, describe default settings and output format.>
+
+## Ports
+
+| ID | Direction | Family | Required | Schema |
+|---|---|---|---:|---|
+| `<port-id>` | Input/Output | Fast Stream/JSON Message | Yes/No | <Brief description of data schema>. |
+
+## Settings
+
+Block-specific settings use this JSON shape:
+
+```json
+{ ... }
+```
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `field` | type | value | Description. |
+
+## Payload input / output
+
+<If applicable, describe JsonMessage envelope structure and field semantics.>
+
+## Fast Stream output / processing
+
+<If applicable, describe frame structure, schema, channel names, and timing semantics.>
+```
 
 ## Initial catalog
 

@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 
 using DataProcesses.Desktop.ViewModels;
@@ -53,12 +54,25 @@ public partial class FlowEditorView : UserControl
 
     private void FlowEditorPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (draggingPaletteNode is null)
+        if (DataContext is not FlowEditorViewModel viewModel)
         {
             return;
         }
 
-        UpdatePaletteDragPreview(e.GetPosition(CanvasRoot));
+        var position = e.GetPosition(CanvasRoot);
+
+        if (draggingPaletteNode is not null)
+        {
+            UpdatePaletteDragPreview(position);
+            return;
+        }
+
+        // Update preview connection line if connecting
+        if (viewModel.ShowPreviewConnection)
+        {
+            viewModel.PreviewConnectionEndX = position.X / viewModel.Zoom;
+            viewModel.PreviewConnectionEndY = position.Y / viewModel.Zoom;
+        }
     }
 
     private static PaletteNodeViewModel? FindPaletteNode(object? source)
@@ -165,6 +179,23 @@ public partial class FlowEditorView : UserControl
             return;
         }
 
+        var properties = e.GetCurrentPoint(sender as Control).Properties;
+
+        // Handle right-click to show context menu
+        if (properties.IsRightButtonPressed)
+        {
+            viewModel.SelectNodeCommand.Execute(node);
+            Log($"Node right-clicked: {node.DisplayName} ({node.Id})");
+            e.Handled = true;
+            return;
+        }
+
+        // Handle left-click drag
+        if (!properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
         draggingNode = node;
         lastPointerPosition = e.GetPosition(CanvasRoot);
         Log($"Node drag started: {node.DisplayName} ({node.Id})");
@@ -213,6 +244,17 @@ public partial class FlowEditorView : UserControl
             viewModel.DeleteSelectedCommand.Execute(null);
             e.Handled = true;
         }
+    }
+
+    private async void CopyExecutionLogClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FlowEditorViewModel viewModel
+            || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
+        {
+            return;
+        }
+
+        await clipboard.SetValueAsync(DataFormat.Text, viewModel.GetExecutionLogsClipboardText()).ConfigureAwait(true);
     }
 
     private static void Log(string message)

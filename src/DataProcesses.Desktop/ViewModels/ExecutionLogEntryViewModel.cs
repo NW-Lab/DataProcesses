@@ -11,4 +11,8 @@ public sealed class ExecutionLogEntryViewModel(FlowExecutionLogEntry entry) : Vi
     public string Message => entry.Message;
 
     public string? NodeId => entry.NodeId;
+
+    public string ClipboardText => string.IsNullOrWhiteSpace(NodeId)
+        ? $"{Timestamp}\t{Level}\t{Message}"
+        : $"{Timestamp}\t{Level}\t{NodeId}\t{Message}";
 }

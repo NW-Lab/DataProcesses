@@ -14,32 +14,16 @@
         Height="800"
         MinWidth="960"
         MinHeight="600"
-        Title="DataProcesses">
+        Title="{Binding ProjectTitle, StringFormat='DataProcesses – {0}'}">
 
     <Design.DataContext>
         <vm:MainViewModel />
     </Design.DataContext>
 
     <DockPanel>
-        <Border DockPanel.Dock="Top" Background="#172033" Padding="16,10">
-            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-                <TextBlock Grid.Column="0"
-                           Text="DataProcesses"
-                           FontSize="20"
-                           FontWeight="SemiBold"
-                           Foreground="White" />
-                <TextBlock Grid.Column="1"
-                           Margin="24,0"
-                           Text="{Binding ProjectTitle}"
-                           Foreground="#B8C2D8"
-                           VerticalAlignment="Center" />
-                <Button Grid.Column="2" Content="Preferences" />
-            </Grid>
-        </Border>
-
         <Grid RowDefinitions="Auto,*">
             <Border Grid.Row="0" Background="#0F1B2D" Padding="12,8">
-                <Grid ColumnDefinitions="Auto,Auto,20,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+                <Grid ColumnDefinitions="Auto,Auto,20,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
                     <Button Grid.Column="0" Content="Flow" Command="{Binding ShowFlowViewCommand}" />
                     <Button Grid.Column="1" Content="Dashboard" Command="{Binding ShowDashboardViewCommand}" />
                 <Button Grid.Column="3"
@@ -77,6 +61,13 @@
                                Foreground="White"
                                VerticalAlignment="Center"
                                FontWeight="SemiBold" />
+                    <Button Grid.Column="8"
+                            Content="Preferences"
+                            Foreground="White"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            HorizontalAlignment="Right"
+                            Margin="8,0,0,0" />
                 </Grid>
             </Border>
 

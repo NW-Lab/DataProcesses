@@ -1,10 +1,20 @@
+using Avalonia.Media.Imaging;
+
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Desktop.ViewModels;
 
-public sealed class PaletteNodeViewModel(INodeFactory factory) : ViewModelBase
+public sealed class PaletteNodeViewModel : ViewModelBase
 {
-    public INodeFactory Factory { get; } = factory;
+    public PaletteNodeViewModel(INodeFactory factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+
+        Factory = factory;
+        IconImage = NodeIconLoader.Load(Definition.IconPath);
+    }
+
+    public INodeFactory Factory { get; }
 
     public NodeDefinition Definition => Factory.Definition;
 
@@ -18,9 +28,11 @@ public sealed class PaletteNodeViewModel(INodeFactory factory) : ViewModelBase
 
     public bool HasSubtitle => !string.IsNullOrWhiteSpace(Subtitle);
 
-    public string IconPath => ResolveIconPath(Definition.IconPath);
+    public string IconPath => NodeIconLoader.ResolvePath(Definition.IconPath);
 
-    public bool HasIcon => !string.IsNullOrWhiteSpace(IconPath);
+    public Bitmap? IconImage { get; }
+
+    public bool HasIcon => IconImage is not null;
 
     public string Category => Definition.Category;
 
@@ -29,17 +41,6 @@ public sealed class PaletteNodeViewModel(INodeFactory factory) : ViewModelBase
     public string NodeTypeDisplayName => GetNodeTypeDisplayName(NodeType);
 
     public string Version => Definition.Version;
-
-    private static string ResolveIconPath(string? iconPath)
-    {
-        if (string.IsNullOrWhiteSpace(iconPath))
-        {
-            return string.Empty;
-        }
-
-        var candidate = Path.Combine(AppContext.BaseDirectory, iconPath.Replace('/', Path.DirectorySeparatorChar));
-        return File.Exists(candidate) ? candidate : string.Empty;
-    }
 
     public static string GetNodeTypeDisplayName(NodeType nodeType)
     {

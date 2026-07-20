@@ -1,4 +1,8 @@
+using System.ComponentModel;
+using System.Globalization;
 using System.Collections.ObjectModel;
+using System.Text;
+using System.Text.Json;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -11,6 +15,9 @@ namespace DataProcesses.Desktop.ViewModels;
 
 public sealed class FlowEditorViewModel : ViewModelBase
 {
+    private const string NodeDashboardWidgetType = "dataprocesses.dashboard.node-block";
+    private const int RunLoopDelayMilliseconds = 100;
+
     private sealed record FlowWorkspaceState(
         FlowDocument Document,
         IReadOnlyList<ValidationIssueViewModel> ValidationIssues,
@@ -33,9 +40,12 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private bool isApplyingFlowState;
     private bool isCanvasEditingEnabled = true;
     private bool isDebugExecution;
+    private long? runStartedUnixNanoseconds;
     private CanvasNodeViewModel? selectedNode;
     private PaletteNodeViewModel? selectedPaletteNode;
     private CanvasPortViewModel? pendingConnectionSource;
+    private double previewConnectionEndX;
+    private double previewConnectionEndY;
     private CancellationTokenSource? runCancellationTokenSource;
     private string flowName = "Untitled flow";
     private string projectName = "Untitled project";
@@ -79,6 +89,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
         ValidateCommand = new RelayCommand(Validate);
         RunCommand = new AsyncRelayCommand(RunAsync);
         StopCommand = new RelayCommand(StopRun, () => ExecutionState is FlowExecutionState.Running or FlowExecutionState.Starting);
+        ClearExecutionLogsCommand = new RelayCommand(ClearExecutionLogs);
         SaveCommand = new AsyncRelayCommand(SaveAsync);
         LoadCommand = new AsyncRelayCommand(LoadAsync);
         NewFlowCommand = new RelayCommand(NewFlow);
@@ -121,6 +132,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
     public IAsyncRelayCommand RunCommand { get; }
 
     public IRelayCommand StopCommand { get; }
+
+    public IRelayCommand ClearExecutionLogsCommand { get; }
 
     public IAsyncRelayCommand SaveCommand { get; }
 
@@ -179,6 +192,22 @@ public sealed class FlowEditorViewModel : ViewModelBase
     {
         get => interactionStatus;
         set => SetProperty(ref interactionStatus, value);
+    }
+
+    public string GetExecutionLogsClipboardText()
+    {
+        if (ExecutionLogs.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        foreach (var log in ExecutionLogs)
+        {
+            builder.AppendLine(log.ClipboardText);
+        }
+
+        return builder.ToString();
     }
 
     public string FlowName
@@ -252,6 +281,30 @@ public sealed class FlowEditorViewModel : ViewModelBase
     public string PendingConnectionLabel => pendingConnectionSource is null
         ? "No pending connection"
         : $"Connecting from {pendingConnectionSource.Node.DisplayName}.{pendingConnectionSource.DisplayName}";
+
+    public bool ShowPreviewConnection => pendingConnectionSource is not null;
+
+    public double PreviewConnectionStartX => pendingConnectionSource?.Node.X + 220 ?? 0;
+
+    public double PreviewConnectionStartY => 
+        pendingConnectionSource?.Node.Y + 46 + 
+        (pendingConnectionSource?.Node.Outputs.Count > 0 ? 
+            pendingConnectionSource.Node.Outputs.TakeWhile(p => !string.Equals(p.Id, pendingConnectionSource.Id)).Count() * 28 + 14 : 14) ?? 0;
+
+    public double PreviewConnectionEndX
+    {
+        get => previewConnectionEndX;
+        set => SetProperty(ref previewConnectionEndX, value);
+    }
+
+    public double PreviewConnectionEndY
+    {
+        get => previewConnectionEndY;
+        set => SetProperty(ref previewConnectionEndY, value);
+    }
+
+    public string PreviewConnectionPath => 
+        FormattableString.Invariant($"M {PreviewConnectionStartX} {PreviewConnectionStartY} L {PreviewConnectionEndX} {PreviewConnectionEndY}");
 
     public bool IsCanvasEditingEnabled
     {
@@ -344,9 +397,10 @@ public sealed class FlowEditorViewModel : ViewModelBase
             new NodeInstance(GetNextNodeId(), paletteNode.TypeId, Math.Max(0, x), Math.Max(0, y), "{}", Name: paletteNode.Title),
             paletteNode.Definition);
 
-        Nodes.Add(node);
+        AddCanvasNode(node);
         SelectNode(node);
         RefreshConnections();
+        SynchronizeDashboardWidgetForNode(node);
         MarkCurrentFlowDirty();
         return node;
     }
@@ -378,10 +432,12 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
         var node = SelectedNode;
         SelectedNode = null;
+        node.PropertyChanged -= CanvasNodePropertyChanged;
         Nodes.Remove(node);
         RebuildConnections(GetDocument().Connections.Where(connection =>
             !string.Equals(connection.SourceNodeId, node.Id, StringComparison.Ordinal)
             && !string.Equals(connection.TargetNodeId, node.Id, StringComparison.Ordinal)).ToArray());
+        RemoveDashboardWidgetForNode(node);
         MarkCurrentFlowDirty();
     }
 
@@ -403,6 +459,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
         {
             pendingConnectionSource = port;
             OnPropertyChanged(nameof(PendingConnectionLabel));
+            OnPropertyChanged(nameof(ShowPreviewConnection));
+            OnPropertyChanged(nameof(PreviewConnectionStartX));
+            OnPropertyChanged(nameof(PreviewConnectionStartY));
+            PreviewConnectionEndX = port.Node.X + 110;
+            PreviewConnectionEndY = port.Node.Y + 60;
             return;
         }
 
@@ -414,6 +475,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
         var source = pendingConnectionSource;
         pendingConnectionSource = null;
         OnPropertyChanged(nameof(PendingConnectionLabel));
+        OnPropertyChanged(nameof(ShowPreviewConnection));
 
         if (!ConnectionValidator.CanConnect(source.Definition, port.Definition))
         {
@@ -448,13 +510,47 @@ public sealed class FlowEditorViewModel : ViewModelBase
         ExecutionLogs.Clear();
         runCancellationTokenSource?.Dispose();
         runCancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = runCancellationTokenSource.Token;
         InteractionStatus = isDebugExecution
             ? "Running flow in debug mode."
             : "Running flow.";
         ExecutionState = FlowExecutionState.Starting;
-        var result = await runner.RunAsync(GetDocument(), runCancellationTokenSource.Token).ConfigureAwait(true);
-        ExecutionState = result.State;
+        runStartedUnixNanoseconds = null;
 
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var result = await runner.RunAsync(GetDocument(), cancellationToken).ConfigureAwait(true);
+                ApplyRunResult(result);
+
+                if (result.State == FlowExecutionState.Faulted)
+                {
+                    ExecutionState = result.State;
+                    InteractionStatus = "Flow run faulted.";
+                    return;
+                }
+
+                ExecutionState = FlowExecutionState.Running;
+                await Task.Delay(RunLoopDelayMilliseconds, cancellationToken).ConfigureAwait(true);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                ExecutionState = FlowExecutionState.Stopped;
+                InteractionStatus = "Flow stopped.";
+                runStartedUnixNanoseconds = null;
+            }
+        }
+    }
+
+    private void ApplyRunResult(FlowRunResult result)
+    {
         ValidationIssues.Clear();
         foreach (var issue in result.ValidationIssues)
         {
@@ -465,12 +561,20 @@ public sealed class FlowEditorViewModel : ViewModelBase
         {
             ExecutionLogs.Add(new ExecutionLogEntryViewModel(log));
         }
+
+        UpdateDashboardWidgetsFromRunResult(result);
     }
 
     private void StopRun()
     {
         runCancellationTokenSource?.Cancel();
         ExecutionState = FlowExecutionState.Stopping;
+    }
+
+    private void ClearExecutionLogs()
+    {
+        ExecutionLogs.Clear();
+        PersistWorkspaceState(GetDocument());
     }
 
     private async Task SaveAsync()
@@ -608,6 +712,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private void ResetCurrentFlowState()
     {
+        UnsubscribeCanvasNodes();
         Nodes.Clear();
         Connections.Clear();
         ValidationIssues.Clear();
@@ -638,13 +743,14 @@ public sealed class FlowEditorViewModel : ViewModelBase
         {
             flowId = flow.Id;
             FlowName = flow.Name;
+            UnsubscribeCanvasNodes();
             Nodes.Clear();
 
             foreach (var node in flow.Nodes)
             {
                 if (factoriesByTypeId.TryGetValue(node.TypeId, out var factory))
                 {
-                    Nodes.Add(new CanvasNodeViewModel(node, factory.Definition));
+                    AddCanvasNode(new CanvasNodeViewModel(node, factory.Definition));
                 }
             }
 
@@ -783,6 +889,231 @@ public sealed class FlowEditorViewModel : ViewModelBase
         {
             connection.Refresh();
         }
+    }
+
+    private void AddCanvasNode(CanvasNodeViewModel node)
+    {
+        node.PropertyChanged += CanvasNodePropertyChanged;
+        Nodes.Add(node);
+    }
+
+    private void UnsubscribeCanvasNodes()
+    {
+        foreach (var node in Nodes)
+        {
+            node.PropertyChanged -= CanvasNodePropertyChanged;
+        }
+    }
+
+    private void CanvasNodePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not CanvasNodeViewModel node || isApplyingFlowState)
+        {
+            return;
+        }
+
+        if (e.PropertyName is nameof(CanvasNodeViewModel.Name)
+            or nameof(CanvasNodeViewModel.IsEnabled)
+            or nameof(CanvasNodeViewModel.ShowOnDashboard)
+            or nameof(CanvasNodeViewModel.DashboardGridWidth)
+            or nameof(CanvasNodeViewModel.DashboardGridHeight))
+        {
+            SynchronizeDashboardWidgetForNode(node);
+            MarkCurrentFlowDirty();
+        }
+        else if (e.PropertyName is nameof(CanvasNodeViewModel.SettingsJson))
+        {
+            MarkCurrentFlowDirty();
+        }
+    }
+
+    private void SynchronizeDashboardWidgetForNode(CanvasNodeViewModel node, string? contentOverride = null)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        var dashboards = getDashboardDocuments().ToList();
+        if (dashboards.Count == 0 && node.ShowOnDashboard)
+        {
+            dashboards.Add(new DashboardDocument(Guid.NewGuid(), "Default dashboard", []));
+        }
+
+        var updatedDashboards = new List<DashboardDocument>(dashboards.Count);
+
+        for (var dashboardIndex = 0; dashboardIndex < dashboards.Count; dashboardIndex++)
+        {
+            var dashboard = dashboards[dashboardIndex];
+            var widgets = dashboard.Widgets
+                .Where(widget => !IsDashboardWidgetForNode(widget, node.Id))
+                .ToList();
+
+            if (node.ShowOnDashboard && dashboardIndex == 0)
+            {
+                var existing = dashboard.Widgets.FirstOrDefault(widget => IsDashboardWidgetForNode(widget, node.Id));
+                var content = contentOverride ?? ReadDashboardWidgetContent(existing?.SettingsJson);
+                var widget = existing is null
+                    ? CreateDashboardWidgetForNode(node, widgets, content)
+                    : existing with
+                    {
+                        SettingsJson = CreateDashboardWidgetSettingsJson(node, content),
+                    };
+
+                widgets.Add(widget);
+            }
+
+            updatedDashboards.Add(dashboard with { Widgets = widgets });
+        }
+
+        loadDashboardDocuments(updatedDashboards);
+    }
+
+    private void RemoveDashboardWidgetForNode(CanvasNodeViewModel node)
+    {
+        var dashboards = getDashboardDocuments();
+        if (dashboards.Count == 0)
+        {
+            return;
+        }
+
+        loadDashboardDocuments(dashboards
+            .Select(dashboard => dashboard with
+            {
+                Widgets = dashboard.Widgets.Where(widget => !IsDashboardWidgetForNode(widget, node.Id)).ToArray(),
+            })
+            .ToArray());
+    }
+
+    private void UpdateDashboardWidgetsFromRunResult(FlowRunResult result)
+    {
+        var latestFastStreamByNode = result.OutputPackets
+            .Where(static output => output.Packet is FastStreamFrame)
+            .GroupBy(static output => output.NodeId, StringComparer.Ordinal)
+            .Select(static group => group.Last())
+            .ToArray();
+
+        foreach (var output in latestFastStreamByNode)
+        {
+            var node = Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, output.NodeId, StringComparison.Ordinal));
+            if (node is null || !node.ShowOnDashboard || output.Packet is not FastStreamFrame frame)
+            {
+                continue;
+            }
+
+            SynchronizeDashboardWidgetForNode(node, FormatFastStreamFrame(frame, GetRunStartedUnixNanoseconds(frame)));
+        }
+    }
+
+    private long GetRunStartedUnixNanoseconds(FastStreamFrame frame)
+    {
+        runStartedUnixNanoseconds ??= frame.StartTimeUnixNanoseconds;
+        return runStartedUnixNanoseconds.Value;
+    }
+
+    private DashboardWidget CreateDashboardWidgetForNode(
+        CanvasNodeViewModel node,
+        IReadOnlyList<DashboardWidget> existingWidgets,
+        string content)
+    {
+        var (gridX, gridY) = FindDashboardPlacement(existingWidgets, node.DashboardGridWidth, node.DashboardGridHeight);
+        return new DashboardWidget(
+            Guid.NewGuid(),
+            NodeDashboardWidgetType,
+            gridX,
+            gridY,
+            node.DashboardGridWidth,
+            node.DashboardGridHeight,
+            flowId.ToString("D", CultureInfo.InvariantCulture),
+            node.Id,
+            CreateDashboardWidgetSettingsJson(node, content));
+    }
+
+    private static (int GridX, int GridY) FindDashboardPlacement(
+        IReadOnlyList<DashboardWidget> existingWidgets,
+        int gridWidth,
+        int gridHeight)
+    {
+        var maxColumns = DashboardViewModel.CanvasWidthPixels / DashboardViewModel.GridSizePixels;
+        var maxRows = DashboardViewModel.CanvasHeightPixels / DashboardViewModel.GridSizePixels;
+
+        for (var y = 0; y <= maxRows - gridHeight; y++)
+        {
+            for (var x = 0; x <= maxColumns - gridWidth; x++)
+            {
+                if (!existingWidgets.Any(widget => Overlaps(x, y, gridWidth, gridHeight, widget)))
+                {
+                    return (x, y);
+                }
+            }
+        }
+
+        return (0, Math.Max(0, maxRows - gridHeight));
+    }
+
+    private static bool Overlaps(int x, int y, int width, int height, DashboardWidget widget)
+    {
+        return x < widget.GridX + widget.GridWidth
+            && x + width > widget.GridX
+            && y < widget.GridY + widget.GridHeight
+            && y + height > widget.GridY;
+    }
+
+    private static bool IsDashboardWidgetForNode(DashboardWidget widget, string nodeId)
+    {
+        return string.Equals(widget.WidgetType, NodeDashboardWidgetType, StringComparison.Ordinal)
+            && string.Equals(widget.SourcePortId, nodeId, StringComparison.Ordinal);
+    }
+
+    private static string CreateDashboardWidgetSettingsJson(CanvasNodeViewModel node, string content)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            title = node.DisplayName,
+            contentKind = "text",
+            content,
+            displayData = new
+            {
+                text = content,
+            },
+            isSourceNodeEnabled = node.IsEnabled,
+        });
+    }
+
+    private static string ReadDashboardWidgetContent(string? settingsJson)
+    {
+        if (string.IsNullOrWhiteSpace(settingsJson))
+        {
+            return string.Empty;
+        }
+
+        using var document = JsonDocument.Parse(settingsJson);
+        return document.RootElement.ValueKind == JsonValueKind.Object
+            && document.RootElement.TryGetProperty("content", out var content)
+            && content.ValueKind == JsonValueKind.String
+            ? content.GetString() ?? string.Empty
+            : string.Empty;
+    }
+
+    private static string FormatFastStreamFrame(FastStreamFrame frame, long runStartedUnixNanoseconds)
+    {
+        if (frame.ChannelCount == 0 || frame.SampleCount == 0)
+        {
+            return "millis,value";
+        }
+
+        var samples = frame.Samples[0].Span;
+        var lines = new List<string>(Math.Min(samples.Length, 8) + 1)
+        {
+            "millis,value",
+        };
+
+        var sampleCount = Math.Min(samples.Length, 8);
+        var startMillis = Math.Max(0, frame.StartTimeUnixNanoseconds - runStartedUnixNanoseconds) / 1_000_000.0;
+        for (var index = 0; index < sampleCount; index++)
+        {
+            var millis = startMillis + (index * frame.SamplePeriodNanoseconds / 1_000_000.0);
+            lines.Add(FormattableString.Invariant($"{millis:0.###},{samples[index]:0.####}"));
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private string GetNextNodeId()

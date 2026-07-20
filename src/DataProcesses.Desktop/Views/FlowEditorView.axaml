@@ -4,8 +4,9 @@
              x:Class="DataProcesses.Desktop.Views.FlowEditorView"
              x:CompileBindings="False"
              Focusable="True"
+             FontSize="13"
              KeyDown="FlowEditorKeyDown">
-    <Grid RowDefinitions="Auto,*,180" ColumnDefinitions="260,*,320">
+    <Grid RowDefinitions="Auto,*,160" ColumnDefinitions="250,*,300">
         <Border Grid.Row="0" Grid.ColumnSpan="3" Background="#172033" Padding="12,8">
             <Grid ColumnDefinitions="220,180,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
                 <ComboBox Grid.Column="0"
@@ -21,9 +22,10 @@
                 <Button Grid.Column="7" Content="Validate" Command="{Binding ValidateCommand}" />
                 <Button Grid.Column="8" Content="-" Command="{Binding ZoomOutCommand}" />
                 <Button Grid.Column="9" Content="+" Command="{Binding ZoomInCommand}" />
-                <StackPanel Grid.Column="10" Margin="16,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding FlowName}" Foreground="White" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding InteractionStatus}" Foreground="#B8C2D8" FontSize="12" />
+                <StackPanel Grid.Column="10" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{Binding FlowName}" Foreground="White" FontWeight="SemiBold" FontSize="13" />
+                    <TextBlock Text="{Binding PendingConnectionLabel}" Foreground="#DDEB36" FontSize="11" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding InteractionStatus}" Foreground="#B8C2D8" FontSize="11" />
                 </StackPanel>
                 <TextBlock Grid.Column="11" Text="{Binding ExecutionState}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold" />
             </Grid>
@@ -31,7 +33,7 @@
 
         <Border Grid.Row="1" Grid.Column="0" BorderBrush="#D5D9E2" BorderThickness="0,0,1,0" Padding="12">
             <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
-                <TextBlock Text="Node Library" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="Node Library" FontSize="14" FontWeight="SemiBold" />
                 <TextBox Grid.Row="1" PlaceholderText="Search nodes" Text="{Binding Palette.SearchText}" />
                 <ScrollViewer Grid.Row="2">
                     <ItemsControl ItemsSource="{Binding Palette.Groups}">
@@ -40,7 +42,7 @@
                                 <StackPanel Margin="0,0,0,12" Spacing="6">
                                     <TextBlock Text="{Binding DisplayName}"
                                                Foreground="#334155"
-                                               FontSize="12"
+                                               FontSize="11"
                                                FontWeight="Bold" />
                                     <ItemsControl ItemsSource="{Binding Nodes}">
                                         <ItemsControl.ItemTemplate>
@@ -60,10 +62,10 @@
                                                                 CornerRadius="6"
                                                                 HorizontalAlignment="Left"
                                                                 VerticalAlignment="Center">
-                                                            <Image IsVisible="{Binding HasIcon}" Source="{Binding IconPath}" Stretch="Uniform" Margin="4" />
+                                                            <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}" Stretch="Uniform" Margin="4" />
                                                         </Border>
                                                         <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="#0F172A" FontWeight="SemiBold" />
-                                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" FontSize="11" Foreground="#475569" />
+                                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" FontSize="10" Foreground="#475569" />
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
@@ -100,6 +102,13 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
+                    <!-- Preview connection line while connecting -->
+                    <Path IsVisible="{Binding ShowPreviewConnection}"
+                          Data="{Binding PreviewConnectionPath}"
+                          Stroke="#DDEB36"
+                          StrokeThickness="2"
+                          StrokeDashArray="4,4" />
+
                     <ItemsControl Width="2400" Height="1600" ItemsSource="{Binding Nodes}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -123,25 +132,24 @@
                                         PointerPressed="NodePointerPressed"
                                         PointerMoved="NodePointerMoved"
                                         PointerReleased="NodePointerReleased">
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Delete" Command="{Binding DataContext.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
                                     <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,*">
                                         <Border Grid.ColumnSpan="2" Background="#1E293B" CornerRadius="6,6,0,0" Padding="10,8">
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                            <Grid>
                                                 <Grid ColumnDefinitions="32,*" ColumnSpacing="8">
                                                     <Border Width="28"
                                                             Height="28"
                                                             Background="#334155"
                                                             CornerRadius="6"
                                                             VerticalAlignment="Center">
-                                                        <Image IsVisible="{Binding HasIcon}" Source="{Binding IconPath}" Stretch="Uniform" Margin="3" />
+                                                        <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}" Stretch="Uniform" Margin="3" />
                                                     </Border>
                                                     <TextBlock Grid.Column="1" Text="{Binding DisplayName}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
                                                 </Grid>
-                                                <Button Grid.Column="1"
-                                                        Content="Settings"
-                                                        Padding="6,2"
-                                                        FontSize="11"
-                                                        Command="{Binding DataContext.SelectNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        CommandParameter="{Binding}" />
                                             </Grid>
                                         </Border>
 
@@ -159,13 +167,13 @@
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <Grid Width="22" Height="22">
                                                                 <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="11">
-                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="Bold" />
+                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="Bold" />
                                                                 </Border>
                                                                 <Border IsVisible="{Binding IsJsonMessage}" Background="#D92D20" CornerRadius="11">
-                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="Bold" />
+                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="Bold" />
                                                                 </Border>
                                                             </Grid>
-                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="12" />
+                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="11" />
                                                         </StackPanel>
                                                     </Button>
                                                 </DataTemplate>
@@ -184,13 +192,13 @@
                                                             CommandParameter="{Binding}"
                                                             ToolTip.Tip="{Binding AccessibleName}">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="12" />
+                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="11" />
                                                             <Grid Width="22" Height="22">
                                                                 <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="11">
-                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="Bold" />
+                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="Bold" />
                                                                 </Border>
                                                                 <Border IsVisible="{Binding IsJsonMessage}" Background="#D92D20" CornerRadius="11">
-                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="Bold" />
+                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="Bold" />
                                                                 </Border>
                                                             </Grid>
                                                         </StackPanel>
@@ -237,65 +245,108 @@
                                        Grid.Column="1"
                                        Text="Release to place"
                                        Foreground="#475569"
-                                       FontSize="11" />
+                                       FontSize="10" />
                         </Grid>
                     </Border>
                 </Canvas>
             </ScrollViewer>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="2" BorderBrush="#D5D9E2" BorderThickness="1,0,0,0" Padding="12">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" RowSpacing="8">
-                <TextBlock Text="Inspector" FontSize="16" FontWeight="SemiBold" />
-                <TextBlock Grid.Row="1" Text="{Binding SelectedNode.TypeId}" Foreground="#526071" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="2" Text="Name" FontWeight="SemiBold" />
-                <TextBox Grid.Row="3" Text="{Binding SelectedNode.Name}" />
-                <TextBlock Grid.Row="4" Text="Description" FontWeight="SemiBold" />
-                <TextBox Grid.Row="5" Text="{Binding SelectedNode.Description}" />
-                <CheckBox Grid.Row="6" Content="Enabled" IsChecked="{Binding SelectedNode.IsEnabled}" />
-                <TextBox Grid.Row="7"
-                         AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         Text="{Binding SelectedNode.SettingsJson}"
-                         PlaceholderText="Block-specific settings JSON" />
-                <TextBlock Grid.Row="8" Text="Project directory" FontWeight="SemiBold" />
-                <TextBox Grid.Row="9" Text="{Binding ProjectDirectory}" />
-            </Grid>
+        <Border Grid.Row="1" Grid.Column="2" BorderBrush="#D5D9E2" BorderThickness="1,0,0,0" Padding="10">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,180,Auto,Auto" RowSpacing="6" Margin="0,0,14,0">
+                    <TextBlock Text="Inspector" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="1" Text="{Binding SelectedNode.TypeId}" Foreground="#526071" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Grid.Row="2" Text="Name" FontWeight="SemiBold" />
+                    <TextBox Grid.Row="3" Text="{Binding SelectedNode.Name}" />
+                    <TextBlock Grid.Row="4" Text="Description" FontWeight="SemiBold" />
+                    <TextBox Grid.Row="5" Text="{Binding SelectedNode.Description}" />
+                    <CheckBox Grid.Row="6" Content="Enabled" IsChecked="{Binding SelectedNode.IsEnabled}" />
+                    <CheckBox Grid.Row="7" Content="Show on Dashboard" IsChecked="{Binding SelectedNode.ShowOnDashboard}" />
+                    <TextBlock Grid.Row="8" Text="TestSignal settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignal}" />
+                    <StackPanel Grid.Row="9" Spacing="5" IsVisible="{Binding SelectedNode.IsTestSignal}">
+                        <TextBlock Text="Wave type" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.TestSignalWaveTypes}"
+                                  SelectedItem="{Binding SelectedNode.TestSignalWaveType}" />
+                        <TextBlock Text="Frequency (Hz)" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="0.001"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.TestSignalFrequencyHertz}" />
+                        <TextBlock Text="Sampling time (ms)" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="0.001"
+                                       Increment="0.1"
+                                       Value="{Binding SelectedNode.TestSignalSamplePeriodMilliseconds}" />
+                    </StackPanel>
+                    <TextBox Grid.Row="12"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Text="{Binding SelectedNode.SettingsJson}"
+                             PlaceholderText="Block-specific settings JSON" />
+                    <TextBlock Grid.Row="13" Text="Project directory" FontWeight="SemiBold" />
+                    <TextBox Grid.Row="14" Text="{Binding ProjectDirectory}" />
+                </Grid>
+            </ScrollViewer>
         </Border>
 
-        <Grid Grid.Row="2" Grid.ColumnSpan="3" ColumnDefinitions="*,*" Background="#F8FAFC">
-            <Border BorderBrush="#D5D9E2" BorderThickness="0,1,1,0" Padding="12">
-                <Grid RowDefinitions="Auto,*">
-                    <TextBlock Text="Validation" FontWeight="SemiBold" />
-                    <ListBox Grid.Row="1" ItemsSource="{Binding ValidationIssues}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="vm:ValidationIssueViewModel">
-                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-            </Border>
-            <Border Grid.Column="1" BorderBrush="#D5D9E2" BorderThickness="0,1,0,0" Padding="12">
-                <Grid RowDefinitions="Auto,*">
-                    <TextBlock Text="Execution Log" FontWeight="SemiBold" />
-                    <ListBox Grid.Row="1" ItemsSource="{Binding ExecutionLogs}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="vm:ExecutionLogEntryViewModel">
-                                <TextBlock TextWrapping="Wrap">
-                                    <Run Text="{Binding Timestamp}" />
-                                    <Run Text="  " />
-                                    <Run Text="{Binding Level}" />
-                                    <Run Text="  " />
-                                    <Run Text="{Binding NodeId}" />
-                                    <Run Text="  " />
-                                    <Run Text="{Binding Message}" />
-                                </TextBlock>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-            </Border>
-        </Grid>
+        <Border Grid.Row="2" Grid.ColumnSpan="3" Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="0,1,0,0">
+            <Grid>
+                <TabControl FontSize="12" Background="#FFFFFF">
+                    <TabItem>
+                        <TabItem.Header>
+                            <TextBlock Text="Validation Issues" Foreground="#0F172A" FontSize="12" FontWeight="SemiBold" />
+                        </TabItem.Header>
+                        <ListBox ItemsSource="{Binding ValidationIssues}" BorderThickness="0" Background="#FFFFFF">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="vm:ValidationIssueViewModel">
+                                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12" Foreground="#1E293B" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </TabItem>
+                    <TabItem>
+                        <TabItem.Header>
+                            <TextBlock Text="Execution Log" Foreground="#0F172A" FontSize="12" FontWeight="SemiBold" />
+                        </TabItem.Header>
+                        <ListBox ItemsSource="{Binding ExecutionLogs}" BorderThickness="0" Background="#FFFFFF">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="vm:ExecutionLogEntryViewModel">
+                                    <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#1E293B">
+                                        <Run Text="{Binding Timestamp}" />
+                                        <Run Text="  " />
+                                        <Run Text="{Binding Level}" />
+                                        <Run Text="  " />
+                                        <Run Text="{Binding NodeId}" />
+                                        <Run Text="  " />
+                                        <Run Text="{Binding Message}" />
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </TabItem>
+                </TabControl>
+                <StackPanel HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Orientation="Horizontal"
+                            Margin="0,3,8,0"
+                            Spacing="6">
+                    <Button Padding="10,3"
+                            FontSize="12"
+                            Background="#E2E8F0"
+                            BorderBrush="#94A3B8"
+                            Click="CopyExecutionLogClicked"
+                            ToolTip.Tip="Copy execution log">
+                        <TextBlock Text="Copy Log" Foreground="#0F172A" FontSize="12" />
+                    </Button>
+                    <Button Padding="10,3"
+                            FontSize="12"
+                            Background="#E2E8F0"
+                            BorderBrush="#94A3B8"
+                            Command="{Binding ClearExecutionLogsCommand}"
+                            ToolTip.Tip="Clear execution log">
+                        <TextBlock Text="Clear Log" Foreground="#0F172A" FontSize="12" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

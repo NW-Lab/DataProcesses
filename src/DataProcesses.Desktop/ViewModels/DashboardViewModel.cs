@@ -167,6 +167,15 @@ public sealed class DashboardViewModel : ViewModelBase
         MarkCurrentDashboardDirty();
     }
 
+    public void MoveWidgetFromDrag(DashboardWidgetViewModel widget, int startGridX, int startGridY, double deltaX, double deltaY)
+    {
+        ArgumentNullException.ThrowIfNull(widget);
+
+        widget.GridX = SnapPixelsToGrid((startGridX * GridSizePixels) + deltaX);
+        widget.GridY = SnapPixelsToGrid((startGridY * GridSizePixels) + deltaY);
+        MarkCurrentDashboardDirty();
+    }
+
     public void ResizeWidgetByPixels(DashboardWidgetViewModel widget, double deltaWidth, double deltaHeight)
     {
         ArgumentNullException.ThrowIfNull(widget);
@@ -176,6 +185,90 @@ public sealed class DashboardViewModel : ViewModelBase
 
         widget.GridWidth = Math.Max(1, newGridWidth);
         widget.GridHeight = Math.Max(1, newGridHeight);
+        MarkCurrentDashboardDirty();
+    }
+
+    public void ResizeWidgetLeftByPixels(DashboardWidgetViewModel widget, double deltaX)
+    {
+        ArgumentNullException.ThrowIfNull(widget);
+
+        var requestedLeft = SnapPixelsToGrid(widget.PixelX + deltaX);
+        var currentRight = widget.GridX + widget.GridWidth;
+        var newGridX = Math.Min(requestedLeft, currentRight - 1);
+
+        widget.GridX = newGridX;
+        widget.GridWidth = currentRight - newGridX;
+        MarkCurrentDashboardDirty();
+    }
+
+    public void ResizeWidgetRightByPixels(DashboardWidgetViewModel widget, double deltaX)
+    {
+        ArgumentNullException.ThrowIfNull(widget);
+
+        widget.GridWidth = Math.Max(1, SnapPixelsToGrid(widget.PixelWidth + deltaX));
+        MarkCurrentDashboardDirty();
+    }
+
+    public void ResizeWidgetTopByPixels(DashboardWidgetViewModel widget, double deltaY)
+    {
+        ArgumentNullException.ThrowIfNull(widget);
+
+        var requestedTop = SnapPixelsToGrid(widget.PixelY + deltaY);
+        var currentBottom = widget.GridY + widget.GridHeight;
+        var newGridY = Math.Min(requestedTop, currentBottom - 1);
+
+        widget.GridY = newGridY;
+        widget.GridHeight = currentBottom - newGridY;
+        MarkCurrentDashboardDirty();
+    }
+
+    public void ResizeWidgetBottomByPixels(DashboardWidgetViewModel widget, double deltaY)
+    {
+        ArgumentNullException.ThrowIfNull(widget);
+
+        widget.GridHeight = Math.Max(1, SnapPixelsToGrid(widget.PixelHeight + deltaY));
+        MarkCurrentDashboardDirty();
+    }
+
+    public void ResizeWidgetLeftFromDrag(DashboardWidgetViewModel widget, int startGridX, int startGridWidth, double deltaX)
+    {
+        ArgumentNullException.ThrowIfNull(widget);
+
+        var requestedLeft = SnapPixelsToGrid((startGridX * GridSizePixels) + deltaX);
+        var currentRight = startGridX + startGridWidth;
+        var newGridX = Math.Min(requestedLeft, currentRight - 1);
+
+        widget.GridX = newGridX;
+        widget.GridWidth = currentRight - newGridX;
+        MarkCurrentDashboardDirty();
+    }
+
+    public void ResizeWidgetRightFromDrag(DashboardWidgetViewModel widget, int startGridWidth, double deltaX)
+    {
+        ArgumentNullException.ThrowIfNull(widget);
+
+        widget.GridWidth = Math.Max(1, SnapPixelsToGrid((startGridWidth * GridSizePixels) + deltaX));
+        MarkCurrentDashboardDirty();
+    }
+
+    public void ResizeWidgetTopFromDrag(DashboardWidgetViewModel widget, int startGridY, int startGridHeight, double deltaY)
+    {
+        ArgumentNullException.ThrowIfNull(widget);
+
+        var requestedTop = SnapPixelsToGrid((startGridY * GridSizePixels) + deltaY);
+        var currentBottom = startGridY + startGridHeight;
+        var newGridY = Math.Min(requestedTop, currentBottom - 1);
+
+        widget.GridY = newGridY;
+        widget.GridHeight = currentBottom - newGridY;
+        MarkCurrentDashboardDirty();
+    }
+
+    public void ResizeWidgetBottomFromDrag(DashboardWidgetViewModel widget, int startGridHeight, double deltaY)
+    {
+        ArgumentNullException.ThrowIfNull(widget);
+
+        widget.GridHeight = Math.Max(1, SnapPixelsToGrid((startGridHeight * GridSizePixels) + deltaY));
         MarkCurrentDashboardDirty();
     }
 
@@ -232,7 +325,9 @@ public sealed class DashboardViewModel : ViewModelBase
                 Dashboards.Add(new DashboardListItemViewModel(document.Id, document.Name));
             }
 
-            SelectedDashboard = Dashboards[0];
+            selectedDashboard = Dashboards[0];
+            OnPropertyChanged(nameof(SelectedDashboard));
+            LoadDashboard(selectedDashboard.Id);
         }
         finally
         {

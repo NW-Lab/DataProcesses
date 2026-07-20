@@ -1,9 +1,12 @@
+using System.Text.Json;
+
 namespace DataProcesses.Desktop.ViewModels;
 
 public sealed class DashboardWidgetViewModel : ViewModelBase
 {
     private const int DefaultGridWidth = 2;
     private const int DefaultGridHeight = 2;
+    private const string DefaultContentKind = "text";
 
     private int gridX;
     private int gridY;
@@ -12,6 +15,12 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     private string? sourceFlowId;
     private string? sourcePortId;
     private string settingsJson = "{}";
+    private string title;
+    private string contentKind = DefaultContentKind;
+    private string content = string.Empty;
+    private string displayDataJson = "{}";
+    private bool isSourceNodeEnabled = true;
+    private bool isInteractionAdornerVisible;
 
     public DashboardWidgetViewModel(
         Guid id,
@@ -30,7 +39,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
         ArgumentException.ThrowIfNullOrWhiteSpace(settingsJson);
 
         Id = id;
-        Title = title;
+        this.title = title;
         WidgetType = widgetType;
         this.gridX = Math.Max(0, gridX);
         this.gridY = Math.Max(0, gridY);
@@ -38,12 +47,62 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
         this.gridHeight = Math.Max(1, gridHeight);
         this.sourceFlowId = sourceFlowId;
         this.sourcePortId = sourcePortId;
-        this.settingsJson = settingsJson;
+        ApplySettingsJson(settingsJson);
     }
 
     public Guid Id { get; }
 
-    public string Title { get; }
+    public string Title
+    {
+        get => title;
+        private set => SetProperty(ref title, value);
+    }
+
+    public string Content
+    {
+        get => content;
+        private set => SetProperty(ref content, value);
+    }
+
+    public string ContentKind
+    {
+        get => contentKind;
+        private set
+        {
+            if (SetProperty(ref contentKind, string.IsNullOrWhiteSpace(value) ? DefaultContentKind : value))
+            {
+                OnPropertyChanged(nameof(IsTextContent));
+            }
+        }
+    }
+
+    public bool IsTextContent => string.Equals(ContentKind, DefaultContentKind, StringComparison.OrdinalIgnoreCase);
+
+    public string DisplayDataJson
+    {
+        get => displayDataJson;
+        private set => SetProperty(ref displayDataJson, string.IsNullOrWhiteSpace(value) ? "{}" : value);
+    }
+
+    public bool IsSourceNodeEnabled
+    {
+        get => isSourceNodeEnabled;
+        private set
+        {
+            if (SetProperty(ref isSourceNodeEnabled, value))
+            {
+                OnPropertyChanged(nameof(HeaderBackground));
+            }
+        }
+    }
+
+    public string HeaderBackground => IsSourceNodeEnabled ? "#2B4D87" : "#94A3B8";
+
+    public bool IsInteractionAdornerVisible
+    {
+        get => isInteractionAdornerVisible;
+        set => SetProperty(ref isInteractionAdornerVisible, value);
+    }
 
     public string WidgetType { get; }
 
@@ -65,7 +124,10 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
         set
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
-            SetProperty(ref settingsJson, value);
+            if (SetProperty(ref settingsJson, value))
+            {
+                ApplyWidgetSettings(value);
+            }
         }
     }
 
@@ -124,4 +186,67 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     public double PixelWidth => GridWidth * DashboardViewModel.GridSizePixels;
 
     public double PixelHeight => GridHeight * DashboardViewModel.GridSizePixels;
+
+    private void ApplySettingsJson(string value)
+    {
+        settingsJson = value;
+        ApplyWidgetSettings(value);
+    }
+
+    private void ApplyWidgetSettings(string value)
+    {
+        var parsedTitle = Title;
+        var parsedContentKind = DefaultContentKind;
+        var parsedContent = string.Empty;
+        var parsedDisplayDataJson = "{}";
+        var parsedIsEnabled = true;
+
+        using var document = JsonDocument.Parse(value);
+        if (document.RootElement.ValueKind == JsonValueKind.Object)
+        {
+            if (document.RootElement.TryGetProperty("title", out var titleElement)
+                && titleElement.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(titleElement.GetString()))
+            {
+                parsedTitle = titleElement.GetString()!;
+            }
+
+            if (document.RootElement.TryGetProperty("contentKind", out var contentKindElement)
+                && contentKindElement.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(contentKindElement.GetString()))
+            {
+                parsedContentKind = contentKindElement.GetString()!;
+            }
+
+            if (document.RootElement.TryGetProperty("content", out var contentElement)
+                && contentElement.ValueKind == JsonValueKind.String)
+            {
+                parsedContent = contentElement.GetString() ?? string.Empty;
+            }
+
+            if (document.RootElement.TryGetProperty("displayData", out var displayDataElement))
+            {
+                parsedDisplayDataJson = displayDataElement.GetRawText();
+                if (string.IsNullOrEmpty(parsedContent)
+                    && displayDataElement.ValueKind == JsonValueKind.Object
+                    && displayDataElement.TryGetProperty("text", out var textElement)
+                    && textElement.ValueKind == JsonValueKind.String)
+                {
+                    parsedContent = textElement.GetString() ?? string.Empty;
+                }
+            }
+
+            if (document.RootElement.TryGetProperty("isSourceNodeEnabled", out var enabledElement)
+                && enabledElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                parsedIsEnabled = enabledElement.GetBoolean();
+            }
+        }
+
+        Title = parsedTitle;
+        ContentKind = parsedContentKind;
+        Content = parsedContent;
+        DisplayDataJson = parsedDisplayDataJson;
+        IsSourceNodeEnabled = parsedIsEnabled;
+    }
 }

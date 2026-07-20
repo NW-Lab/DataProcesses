@@ -22,6 +22,10 @@ public sealed class TestSignalBlockTests
         Assert.Equal("TestSignal", factory.Definition.Title);
         Assert.Equal("Sin&squeare", factory.Definition.Subtitle);
         Assert.Equal(TestSignalBlock.IconPath, factory.Definition.IconPath);
+        var dashboardWidget = Assert.IsType<DashboardWidgetDefinition>(factory.Definition.DashboardWidget);
+        Assert.True(dashboardWidget.IsVisibleByDefault);
+        Assert.Equal(2, dashboardWidget.GridWidth);
+        Assert.Equal(1, dashboardWidget.GridHeight);
     }
 
     [Fact]
@@ -55,7 +59,7 @@ public sealed class TestSignalBlockTests
     public async Task StartAsync_EmitsEnabledStatusAndDefaultSineFrame()
     {
         var context = new RecordingNodeContext();
-        var node = new TestSignalNode(TestSignalSettings.Default);
+        var node = new TestSignalNode(TestSignalSettings.Default, () => DateTimeOffset.UnixEpoch);
         await node.InitializeAsync(context, CancellationToken.None);
 
         await node.StartAsync(CancellationToken.None);
@@ -86,13 +90,14 @@ public sealed class TestSignalBlockTests
     public async Task StartAsync_UsesConfiguredSquareWave()
     {
         var context = new RecordingNodeContext();
-        var node = new TestSignalNode(new TestSignalSettings(TestSignalWaveType.Square, FrequencyHertz: 5.0, Amplitude: 2.0));
+        var node = new TestSignalNode(new TestSignalSettings(TestSignalWaveType.Square, FrequencyHertz: 5.0, Amplitude: 2.0, SamplePeriodMilliseconds: 2.0), () => DateTimeOffset.UnixEpoch);
         await node.InitializeAsync(context, CancellationToken.None);
 
         await node.StartAsync(CancellationToken.None);
 
         var streamPacket = Assert.Single(context.EmittedPackets, packet => packet.OutputPortId == TestSignalBlock.StreamOutputPortId);
         var frame = Assert.IsType<FastStreamFrame>(streamPacket.Packet);
+        Assert.Equal(2_000_000, frame.SamplePeriodNanoseconds);
         var samples = Assert.Single(frame.Samples).Span;
         Assert.Equal(2.0, samples[0]);
         Assert.Equal(2.0, samples[1]);
@@ -141,6 +146,7 @@ public sealed class TestSignalBlockTests
             isEnabled = false,
             waveType = "square",
             frequency = 5.0,
+            samplePeriodMillis = 2.0,
             amplitude = 2.0,
         });
         var message = new JsonMessage("dataprocesses.test-signal.configure", payload, DateTimeOffset.UtcNow);
@@ -182,7 +188,7 @@ public sealed class TestSignalBlockTests
 
         var node = factory.CreateNode(
             "test-signal-1",
-            "{\"waveType\":\"square\",\"frequency\":5.0,\"amplitude\":2.0}");
+            "{\"waveType\":\"square\",\"frequency\":5.0,\"samplePeriodMillis\":2.0,\"amplitude\":2.0}");
 
         Assert.IsType<TestSignalNode>(node);
     }

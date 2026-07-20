@@ -20,6 +20,9 @@ public sealed record PortDefinition(
     PortDataKind DataKind,
     bool IsRequired = true);
 
+/// <summary>
+/// Stable metadata and port contract for a Block type.
+/// </summary>
 public sealed record NodeDefinition(
     string TypeId,
     string DisplayName,
@@ -29,7 +32,20 @@ public sealed record NodeDefinition(
     NodeType NodeType = NodeType.BasicProcess,
     string? Title = null,
     string? Subtitle = null,
-    string? IconPath = null);
+    string? IconPath = null,
+    DashboardWidgetDefinition? DashboardWidget = null);
+
+/// <summary>
+/// Default dashboard widget settings for newly placed Block instances.
+/// The desktop host may let a user override these values per placed Block.
+/// </summary>
+/// <param name="IsVisibleByDefault">Whether a dashboard widget is created by default.</param>
+/// <param name="GridWidth">Default dashboard widget width in grid cells.</param>
+/// <param name="GridHeight">Default dashboard widget height in grid cells.</param>
+public sealed record DashboardWidgetDefinition(
+    bool IsVisibleByDefault = false,
+    int GridWidth = 2,
+    int GridHeight = 2);
 
 public interface INode
 {

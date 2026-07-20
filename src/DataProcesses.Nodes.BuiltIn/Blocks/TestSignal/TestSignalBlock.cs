@@ -41,5 +41,9 @@ public static class TestSignalBlock
             NodeType: NodeType.Input,
             Title: "TestSignal",
             Subtitle: "Sin&squeare",
-            IconPath: IconPath);
+            IconPath: IconPath,
+            DashboardWidget: new DashboardWidgetDefinition(
+                IsVisibleByDefault: true,
+                GridWidth: 2,
+                GridHeight: 1));
 }

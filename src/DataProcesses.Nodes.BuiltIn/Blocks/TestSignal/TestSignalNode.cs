@@ -4,10 +4,18 @@ using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
 
-public sealed class TestSignalNode(TestSignalSettings settings) : INode
+public sealed class TestSignalNode : INode
 {
+    private readonly Func<DateTimeOffset> getTimestamp;
     private INodeContext? _context;
-    private TestSignalSettings _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+
+    private TestSignalSettings _settings;
+
+    public TestSignalNode(TestSignalSettings settings, Func<DateTimeOffset>? getTimestamp = null)
+    {
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        this.getTimestamp = getTimestamp ?? (() => DateTimeOffset.UtcNow);
+    }
 
     public NodeDefinition Definition => TestSignalBlock.Definition;
 
@@ -72,16 +80,18 @@ public sealed class TestSignalNode(TestSignalSettings settings) : INode
             return;
         }
 
+        var timestamp = getTimestamp();
+        var frameStartSeconds = timestamp.ToUnixTimeMilliseconds() / 1_000.0;
         var samples = new double[TestSignalSettings.SampleCount];
 
         for (var index = 0; index < samples.Length; index++)
         {
-            samples[index] = CreateSample(index, _settings);
+            samples[index] = CreateSample(index, _settings, frameStartSeconds);
         }
 
         var frame = new FastStreamFrame(
-            StartTimeUnixNanoseconds: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1_000_000,
-            SamplePeriodNanoseconds: 1_000_000_000L / TestSignalSettings.SampleRateHertz,
+            StartTimeUnixNanoseconds: timestamp.ToUnixTimeMilliseconds() * 1_000_000,
+            SamplePeriodNanoseconds: (long)Math.Round(_settings.SamplePeriodMilliseconds * 1_000_000, MidpointRounding.AwayFromZero),
             ChannelNames: ["signal"],
             Samples: [samples.AsMemory()],
             SequenceNumber: 0);
@@ -95,9 +105,10 @@ public sealed class TestSignalNode(TestSignalSettings settings) : INode
         return ValueTask.CompletedTask;
     }
 
-    private static double CreateSample(int index, TestSignalSettings settings)
+    private static double CreateSample(int index, TestSignalSettings settings, double frameStartSeconds)
     {
-        var radians = 2 * Math.PI * settings.FrequencyHertz * index / TestSignalSettings.SampleRateHertz;
+        var elapsedSeconds = frameStartSeconds + (index * settings.SamplePeriodMilliseconds / 1_000);
+        var radians = 2 * Math.PI * settings.FrequencyHertz * elapsedSeconds;
         return settings.WaveType switch
         {
             TestSignalWaveType.Sine => settings.Amplitude * Math.Sin(radians),
@@ -108,7 +119,7 @@ public sealed class TestSignalNode(TestSignalSettings settings) : INode
 
     private ValueTask EmitEnabledStatusAsync(INodeContext context, CancellationToken cancellationToken)
     {
-        var timestamp = DateTimeOffset.UtcNow;
+        var timestamp = getTimestamp();
         var payload = JsonSerializer.SerializeToElement(new
         {
             enabled = _settings.IsEnabled,

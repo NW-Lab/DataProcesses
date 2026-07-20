@@ -33,7 +33,7 @@
                             IsHitTestVisible="False" />
 
                     <Canvas x:Name="DashboardCanvas" Width="2400" Height="1600" Background="Transparent">
-                        <ItemsControl ItemsSource="{Binding Widgets}">
+                        <ItemsControl Width="2400" Height="1600" ItemsSource="{Binding Widgets}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <Canvas />
@@ -52,40 +52,107 @@
                                             Background="White"
                                             BorderBrush="#2B4D87"
                                             BorderThickness="2"
-                                            CornerRadius="6"
-                                            PointerPressed="WidgetPointerPressed"
-                                            PointerMoved="WidgetPointerMoved"
-                                            PointerReleased="WidgetPointerReleased">
-                                        <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,Auto">
-                                            <Border Grid.ColumnSpan="2" Background="#2B4D87" CornerRadius="4,4,0,0" Padding="10,6">
-                                                <TextBlock Text="{Binding Title}" Foreground="White" FontWeight="SemiBold" />
+                                            CornerRadius="6">
+                                        <Grid RowDefinitions="Auto,*">
+                                                <Border x:Name="MoveHandle"
+                                                    Background="{Binding HeaderBackground}"
+                                                    CornerRadius="4,4,0,0"
+                                                    Padding="8,6"
+                                                    PointerPressed="MoveHandlePressed"
+                                                    PointerMoved="MoveHandleMoved"
+                                                    PointerReleased="MoveHandleReleased"
+                                                    ToolTip.Tip="Drag to move">
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                                                    <Grid Width="18" Height="18">
+                                                        <Border Width="18" Height="18" CornerRadius="3" Background="#DDEB36" IsVisible="{Binding IsInteractionAdornerVisible}">
+                                                            <TextBlock Text="+" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#2B4D87" FontWeight="Bold" />
+                                                        </Border>
+                                                    </Grid>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="White" FontWeight="SemiBold" />
+                                                </Grid>
                                             </Border>
 
                                             <TextBlock Grid.Row="1"
                                                        Margin="10"
-                                                       Text="{Binding WidgetType}"
+                                                       Text="{Binding Content}"
                                                        Foreground="#475569"
-                                                       TextWrapping="Wrap" />
+                                                       TextWrapping="Wrap"
+                                                       IsVisible="{Binding IsTextContent}" />
 
-                                            <Border Grid.Row="1"
-                                                    Grid.Column="1"
-                                                    Width="18"
-                                                    Height="18"
-                                                    Margin="0,0,6,6"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Bottom"
-                                                    Background="#2B4D87"
-                                                    CornerRadius="3"
-                                                    Cursor="SizeNorthwestSoutheast"
+                                                <Border x:Name="ResizeLeftHandle"
+                                                    Grid.RowSpan="2"
+                                                    Width="12"
+                                                    HorizontalAlignment="Left"
+                                                    Background="Transparent"
                                                     PointerPressed="ResizeHandlePressed"
                                                     PointerMoved="ResizeHandleMoved"
                                                     PointerReleased="ResizeHandleReleased"
-                                                    ToolTip.Tip="Resize">
-                                                <TextBlock Text=">>"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="White"
-                                                           FontSize="11" />
+                                                    ToolTip.Tip="Drag to change width">
+                                                <Border Width="12" Background="#DDEB36" IsVisible="{Binding IsInteractionAdornerVisible}">
+                                                    <TextBlock Text="&lt;"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="#2B4D87"
+                                                               FontSize="12"
+                                                               FontWeight="Bold" />
+                                                </Border>
+                                            </Border>
+
+                                                <Border x:Name="ResizeRightHandle"
+                                                    Grid.RowSpan="2"
+                                                    Width="12"
+                                                    HorizontalAlignment="Right"
+                                                    Background="Transparent"
+                                                    PointerPressed="ResizeHandlePressed"
+                                                    PointerMoved="ResizeHandleMoved"
+                                                    PointerReleased="ResizeHandleReleased"
+                                                    ToolTip.Tip="Drag to change width">
+                                                <Border Width="12" Background="#DDEB36" IsVisible="{Binding IsInteractionAdornerVisible}">
+                                                    <TextBlock Text=">"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="#2B4D87"
+                                                               FontSize="12"
+                                                               FontWeight="Bold" />
+                                                </Border>
+                                            </Border>
+
+                                                <Border x:Name="ResizeTopHandle"
+                                                    Grid.RowSpan="2"
+                                                    Height="12"
+                                                    VerticalAlignment="Top"
+                                                    Background="Transparent"
+                                                    PointerPressed="ResizeHandlePressed"
+                                                    PointerMoved="ResizeHandleMoved"
+                                                    PointerReleased="ResizeHandleReleased"
+                                                    ToolTip.Tip="Drag to change height">
+                                                <Border Height="12" Background="#DDEB36" IsVisible="{Binding IsInteractionAdornerVisible}">
+                                                    <TextBlock Text="^"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="#2B4D87"
+                                                               FontSize="12"
+                                                               FontWeight="Bold" />
+                                                </Border>
+                                            </Border>
+
+                                                <Border x:Name="ResizeBottomHandle"
+                                                    Grid.RowSpan="2"
+                                                    Height="12"
+                                                    VerticalAlignment="Bottom"
+                                                    Background="Transparent"
+                                                    PointerPressed="ResizeHandlePressed"
+                                                    PointerMoved="ResizeHandleMoved"
+                                                    PointerReleased="ResizeHandleReleased"
+                                                    ToolTip.Tip="Drag to change height">
+                                                <Border Height="12" Background="#DDEB36" IsVisible="{Binding IsInteractionAdornerVisible}">
+                                                    <TextBlock Text="v"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="#2B4D87"
+                                                               FontSize="12"
+                                                               FontWeight="Bold" />
+                                                </Border>
                                             </Border>
                                         </Grid>
                                     </Border>

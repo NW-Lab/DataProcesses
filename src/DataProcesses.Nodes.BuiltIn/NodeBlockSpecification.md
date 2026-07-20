@@ -21,6 +21,9 @@ Every Block instance placed on a Flow has common settings. Block implementations
 | Name | string | Yes | Display name for this placed Block instance. Defaults to the Block definition display name. |
 | Description | string | No | Free text note for the user. Does not affect runtime behavior. |
 | Enabled | boolean | Yes | When `false`, the Block is not executed and emits no data. Connections remain in the Flow document. |
+| Show on Dashboard | boolean | Yes | When `true`, the Flow Editor keeps a dashboard widget for this placed Block. |
+| Dashboard width | integer | Yes | Widget width in dashboard grid cells. Minimum is 1. |
+| Dashboard height | integer | Yes | Widget height in dashboard grid cells. Minimum is 1. |
 
 Block-specific settings are stored as JSON and are interpreted by the Block. Settings must use culture-invariant numbers and stable property names.
 
@@ -37,6 +40,14 @@ Each Block definition may provide a title, subtitle, and icon path. The title an
 Icon source files should be PNG images named `icon.png` in the Block directory. Use a 64 x 64 pixel source image. The Flow Editor should render it at 32 x 32 pixels in the Node Library and 28 x 28 pixels on placed canvas Blocks.
 
 Placed canvas Blocks show the instance Name only. If Name is empty, the canvas falls back to the Block title.
+
+## Dashboard widgets
+
+Each Block definition may provide dashboard defaults in code: visible or hidden by default, plus widget width and height in grid cells. A placed Block can override these values from the settings panel.
+
+When dashboard display is enabled, the Flow Editor creates or updates one widget on the first dashboard. New widgets are placed at the first free grid position that does not overlap existing widgets. If no dashboard exists yet, a default dashboard is created. If dashboard display is disabled or the placed Block is deleted, its generated widget is removed.
+
+Generated Block widgets display a title and typed content. The title follows the placed Block Name and falls back to the Block title. The content is Block-specific and is not limited to text. Widget settings must include a stable `contentKind` such as `text`, `time-series`, `xy`, or a future Block-defined kind, plus structured `displayData` for that kind. Keep the legacy `content` string only as a text-display compatibility field. If the placed Block is disabled, the dashboard widget title background is shown in gray.
 
 ## Ports
 

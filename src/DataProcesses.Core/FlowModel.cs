@@ -17,7 +17,10 @@ public sealed record NodeInstance(
     string SettingsJson,
     string? Name = null,
     string? Description = null,
-    bool IsEnabled = true);
+    bool IsEnabled = true,
+    bool? ShowOnDashboard = null,
+    int? DashboardGridWidth = null,
+    int? DashboardGridHeight = null);
 
 public sealed record Connection(
     string SourceNodeId,

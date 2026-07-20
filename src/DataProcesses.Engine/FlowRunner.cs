@@ -23,6 +23,7 @@ public sealed class FlowRunner
         ArgumentNullException.ThrowIfNull(document);
 
         var logs = new List<FlowExecutionLogEntry>();
+        var outputPackets = new List<FlowOutputPacket>();
         State = FlowExecutionState.Validating;
         logs.Add(CreateLog(FlowExecutionLogLevel.Information, "Validating flow."));
 
@@ -59,7 +60,7 @@ public sealed class FlowRunner
 
             var contexts = runtimeNodes.ToDictionary(
                 static pair => pair.Key,
-                pair => new FlowNodeContext(pair.Key, document.Connections, runtimeNodes, logs),
+                pair => new FlowNodeContext(pair.Key, document.Connections, runtimeNodes, logs, outputPackets),
                 StringComparer.Ordinal);
 
             foreach (var node in enabledNodes)
@@ -93,7 +94,10 @@ public sealed class FlowRunner
 
             State = FlowExecutionState.Stopped;
             logs.Add(CreateLog(FlowExecutionLogLevel.Information, "Flow stopped."));
-            return new FlowRunResult(State, validationResult.Issues, logs);
+            return new FlowRunResult(State, validationResult.Issues, logs)
+            {
+                OutputPackets = outputPackets,
+            };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -101,14 +105,20 @@ public sealed class FlowRunner
             await StopInitializedNodesAsync(orderedNodes, runtimeNodes, logs, CancellationToken.None).ConfigureAwait(false);
             State = FlowExecutionState.Stopped;
             logs.Add(CreateLog(FlowExecutionLogLevel.Warning, "Flow run was canceled."));
-            return new FlowRunResult(State, validationResult.Issues, logs);
+            return new FlowRunResult(State, validationResult.Issues, logs)
+            {
+                OutputPackets = outputPackets,
+            };
         }
         catch (Exception exception)
         {
             State = FlowExecutionState.Faulted;
             logs.Add(CreateLog(FlowExecutionLogLevel.Error, exception.Message));
             await StopInitializedNodesAsync(orderedNodes, runtimeNodes, logs, CancellationToken.None).ConfigureAwait(false);
-            return new FlowRunResult(State, validationResult.Issues, logs);
+            return new FlowRunResult(State, validationResult.Issues, logs)
+            {
+                OutputPackets = outputPackets,
+            };
         }
     }
 
@@ -188,7 +198,8 @@ public sealed class FlowRunner
         string nodeId,
         IReadOnlyList<Connection> connections,
         IReadOnlyDictionary<string, INode> runtimeNodes,
-        ICollection<FlowExecutionLogEntry> logs) : INodeContext
+        ICollection<FlowExecutionLogEntry> logs,
+        ICollection<FlowOutputPacket> outputPackets) : INodeContext
     {
         public string NodeId { get; } = nodeId;
 
@@ -201,6 +212,7 @@ public sealed class FlowRunner
             ArgumentNullException.ThrowIfNull(packet);
 
             logs.Add(CreateLog(FlowExecutionLogLevel.Information, $"Emitted packet on '{outputPortId}'.", NodeId));
+            outputPackets.Add(new FlowOutputPacket(NodeId, outputPortId, packet));
 
             foreach (var connection in connections)
             {

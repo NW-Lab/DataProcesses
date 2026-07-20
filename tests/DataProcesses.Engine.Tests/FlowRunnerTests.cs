@@ -45,6 +45,10 @@ public sealed class FlowRunnerTests
         Assert.Equal(FlowExecutionState.Stopped, result.State);
         Assert.Empty(result.ValidationIssues);
         Assert.Same(packet, Assert.Single(receivedPackets));
+        var outputPacket = Assert.Single(result.OutputPackets);
+        Assert.Equal("source-1", outputPacket.NodeId);
+        Assert.Equal("out", outputPacket.OutputPortId);
+        Assert.Same(packet, outputPacket.Packet);
         Assert.Contains(result.Logs, log => log.NodeId == "sink-1" && log.Message.Contains("Delivered", StringComparison.Ordinal));
     }
 

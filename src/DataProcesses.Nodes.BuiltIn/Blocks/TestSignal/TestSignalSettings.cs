@@ -12,10 +12,10 @@ public sealed record TestSignalSettings(
     TestSignalWaveType WaveType = TestSignalWaveType.Sine,
     double FrequencyHertz = 10.0,
     double Amplitude = 1.0,
+    double SamplePeriodMilliseconds = 1.0,
     bool IsEnabled = true,
     bool PayloadThrough = true)
 {
-    public const int SampleRateHertz = 1_000;
     public const int SampleCount = 256;
 
     public static TestSignalSettings Default { get; } = new();
@@ -60,6 +60,11 @@ public sealed record TestSignalSettings(
             settings = settings with { Amplitude = ReadDouble(amplitude, "amplitude") };
         }
 
+        if (payload.TryGetProperty("samplePeriodMillis", out var samplePeriodMillis))
+        {
+            settings = settings with { SamplePeriodMilliseconds = ReadDouble(samplePeriodMillis, "samplePeriodMillis") };
+        }
+
         if (payload.TryGetProperty("isEnabled", out var isEnabled))
         {
             if (isEnabled.ValueKind is not JsonValueKind.True and not JsonValueKind.False)
@@ -94,6 +99,11 @@ public sealed record TestSignalSettings(
         if (!double.IsFinite(Amplitude) || Amplitude < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(Amplitude), "Amplitude must be a non-negative finite value.");
+        }
+
+        if (!double.IsFinite(SamplePeriodMilliseconds) || SamplePeriodMilliseconds <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(SamplePeriodMilliseconds), "Sample period must be a positive finite value in milliseconds.");
         }
     }
 
