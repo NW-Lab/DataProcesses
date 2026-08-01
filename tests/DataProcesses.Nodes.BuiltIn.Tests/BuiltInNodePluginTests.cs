@@ -2,8 +2,8 @@ using DataProcesses.Nodes.BuiltIn;
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
 using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
-using DataProcesses.Nodes.BuiltIn.Blocks.TimeSeriesDisplay;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Nodes.BuiltIn.Tests;
@@ -22,7 +22,7 @@ public sealed class BuiltInNodePluginTests
                 TestSignalBlock.TypeId,
                 LowPassFilterBlock.TypeId,
                 FastFourierTransformBlock.TypeId,
-                TimeSeriesDisplayBlock.TypeId,
+                StreamOutputBlock.TypeId,
                 PythonOutputBlock.TypeId,
             },
             typeIds);
@@ -54,7 +54,7 @@ public sealed class BuiltInNodePluginTests
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[LowPassFilterBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FastFourierTransformBlock.TypeId]);
-        Assert.Equal(NodeType.Output, nodeTypesByTypeId[TimeSeriesDisplayBlock.TypeId]);
+        Assert.Equal(NodeType.Output, nodeTypesByTypeId[StreamOutputBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[PythonOutputBlock.TypeId]);
     }
 

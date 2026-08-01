@@ -1,16 +1,16 @@
-using DataProcesses.Nodes.BuiltIn.Blocks.TimeSeriesDisplay;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Plugin.Abstractions;
 
-namespace DataProcesses.Nodes.BuiltIn.Tests.Blocks.TimeSeriesDisplay;
+namespace DataProcesses.Nodes.BuiltIn.Tests.Blocks.StreamOutput;
 
-public sealed class TimeSeriesDisplayBlockTests
+public sealed class StreamOutputBlockTests
 {
     [Fact]
     public void Definition_UsesOneFastStreamInput()
     {
-        var port = Assert.Single(TimeSeriesDisplayBlock.Definition.Ports);
+        var port = Assert.Single(StreamOutputBlock.Definition.Ports);
 
-        Assert.Equal(TimeSeriesDisplayBlock.InputPortId, port.Id);
+        Assert.Equal(StreamOutputBlock.InputPortId, port.Id);
         Assert.Equal(PortDirection.Input, port.Direction);
         Assert.Equal(PortDataKind.FastStream, port.DataKind);
     }
@@ -18,7 +18,7 @@ public sealed class TimeSeriesDisplayBlockTests
     [Fact]
     public async Task OnPacketAsync_DownsamplesAndStoresLatestSnapshot()
     {
-        var node = new TimeSeriesDisplayNode();
+        var node = new StreamOutputNode();
         await node.InitializeAsync(new RecordingNodeContext(), CancellationToken.None);
         var sourceSamples = Enumerable.Range(0, 1_024).Select(static value => (double)value).ToArray();
         var input = new FastStreamFrame(
@@ -28,11 +28,11 @@ public sealed class TimeSeriesDisplayBlockTests
             Samples: [sourceSamples.AsMemory()],
             SequenceNumber: 3);
 
-        await node.OnPacketAsync(TimeSeriesDisplayBlock.InputPortId, input, CancellationToken.None);
+        await node.OnPacketAsync(StreamOutputBlock.InputPortId, input, CancellationToken.None);
 
-        var snapshot = Assert.IsType<TimeSeriesSnapshot>(node.LatestSnapshot);
+        var snapshot = Assert.IsType<StreamOutputSnapshot>(node.LatestSnapshot);
         Assert.Equal(1_024, snapshot.SourceSampleCount);
-        Assert.Equal(TimeSeriesDisplayNode.MaximumSamplesPerChannel, snapshot.Samples[0].Length);
+        Assert.Equal(StreamOutputNode.MaximumSamplesPerChannel, snapshot.Samples[0].Length);
         Assert.Equal(0.0, snapshot.Samples[0].Span[0]);
         Assert.Equal(1_023.0, snapshot.Samples[0].Span[^1]);
         Assert.Equal(3, snapshot.SequenceNumber);

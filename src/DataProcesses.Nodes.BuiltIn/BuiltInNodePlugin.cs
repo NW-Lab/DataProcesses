@@ -1,8 +1,8 @@
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
 using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
-using DataProcesses.Nodes.BuiltIn.Blocks.TimeSeriesDisplay;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Nodes.BuiltIn;
@@ -17,7 +17,7 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new TestSignalNodeFactory(),
         new LowPassFilterNodeFactory(),
         new FastFourierTransformNodeFactory(),
-        new TimeSeriesDisplayNodeFactory(),
+        new StreamOutputNodeFactory(),
         new PythonOutputNodeFactory(),
     ];
 

@@ -89,7 +89,7 @@ Node-REDは、パレットへノードを追加することを主要な拡張方
 | Test Signal | `INPUT` | Payload / JSON Message（任意） | `FastStreamFrame`、Payload / JSON Message | 開始時に、設定された有効状態をPayloadで出力し、有効な場合は1 kHz・256サンプルの正弦波または矩形波フレームを1件出力する。Payload入力で`isEnabled`、`waveType`、`frequency`、`amplitude`を更新でき、既定では入力PayloadをそのままPayload出力へ通過させる。 | ホワイトノイズ、チャンネル数・ブロック長の設定、連続生成。 |
 | Low-pass Filter | `Basic Process` | `FastStreamFrame` | `FastStreamFrame` | チャンネルごとに状態を保持する一次平滑化（固定係数0.25）を適用する。 | カットオフ・次数設定、High-passを含む追加フィルター。 |
 | FFT | `Basic Process` | `FastStreamFrame` | `SpectrumFrame` | 実数入力の片側振幅スペクトルを計算し、周波数分解能と入力の時刻・シーケンス情報を保持する。 | FFTサイズ、窓関数、オーバーラップ、振幅表現、最適化済みアルゴリズム。 |
-| Time Series | `OUTPUT` | `FastStreamFrame` | なし | 最新フレームからチャンネルごとに最大512点へ間引いた表示用スナップショットを保持する。 | ダッシュボード描画、表示時間幅、Y軸、色、更新頻度。 |
+| Stream Output | `OUTPUT` | `FastStreamFrame` | なし | 最新フレームからチャンネルごとに最大512点へ間引いたデバッグ用スナップショットを保持する。 | Payload Outputとの役割分離、ダッシュボード描画、表示時間幅、Y軸、色、更新頻度。 |
 | Python Output | `OUTPUT` | `FastStreamFrame`またはJSON Message | JSON Messageによる状態 | 入力系統を検証し、受信記録と`deferred`状態メッセージを出力する。Pythonプロセスは起動しない。 | 実行環境、スクリプト、タイムアウト、送信方式、Pythonワーカーとの実通信。 |
 
 ## 6. ブロック間データモデル
@@ -323,9 +323,9 @@ UIと処理エンジンを分離し、エンジンはGUIなしでテストでき
 | ID | 受け入れ基準 |
 |---|---|
 | MVP-01 | Windowsでアプリを起動し、新規プロジェクトを作成・保存・再読込できる |
-| MVP-02 | Test Signal、Filter、FFT、Time Seriesをキャンバスへ配置できる |
+| MVP-02 | Test Signal、Filter、FFT、Stream Outputをキャンバスへ配置できる |
 | MVP-03 | Fast StreamとPayloadを色・ラベル・線種で識別でき、型不一致、詳細スキーマ不一致、循環接続を拒否できる |
-| MVP-04 | `Test Signal → Filter → Time Series` を開始・停止できる |
+| MVP-04 | `Test Signal → Filter → Stream Output` を開始・停止できる |
 | MVP-05 | `Test Signal → FFT` の出力を診断画面またはスペクトル表示で確認できる |
 | MVP-06 | 複数フローと複数ダッシュボードを一つのプロジェクトへ保存できる |
 | MVP-07 | ノードエラーがアプリ全体のクラッシュではなく、ノード状態とログに反映される |
@@ -360,7 +360,7 @@ API安定性は、アプリ本体とプラグインSDKで分けます。v0.x期�
 | 初期OS | Windows |
 | 将来OS | macOS |
 | プロジェクト構造 | 1プロジェクトに複数フロー・複数ダッシュボード |
-| 初期ノード | Test Signal、Filter、FFT、Time Series |
+| 初期ノード | Test Signal、Filter、FFT、Stream Output |
 | 拡張方式 | C#プラグイン＋将来の別プロセスWorker |
 | UI言語 | 日本語・英語を初期から設計対象にする |
 | フロー制約 | MVPはDAG、循環禁止 |

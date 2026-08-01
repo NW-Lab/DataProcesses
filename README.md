@@ -18,7 +18,7 @@ DataProcesses separates block-to-block communication into two explicit paths. **
 
 ## MVP direction
 
-The first milestone targets Windows while preserving a cross-platform architecture for future macOS support. The application is written in C#/.NET and uses Avalonia UI. Its initial built-in catalog now contains **Test Signal**, **Low-pass Filter**, **FFT**, **Time Series**, and **Python Output**.
+The first milestone targets Windows while preserving a cross-platform architecture for future macOS support. The application is written in C#/.NET and uses Avalonia UI. Its initial built-in catalog now contains **Test Signal**, **Low-pass Filter**, **FFT**, **Stream Output**, and **Python Output**.
 
 ## Initial built-in Blocks
 
@@ -29,7 +29,7 @@ All five Blocks are registered by `BuiltInNodePlugin` and have mirrored contract
 | **Test Signal** (`dataprocesses.test-signal`) | Fast Stream output: `stream` | Emits one 256-sample, 10 Hz sine-wave frame at a 1 kHz sample rate when started. Runtime configuration and continuous generation are not implemented yet. |
 | **Low-pass Filter** (`dataprocesses.filter.low-pass`) | Fast Stream input: `input`; Fast Stream output: `output` | Applies deterministic first-order smoothing independently to each channel and preserves filter state between frames. Cutoff and order settings are not implemented yet. |
 | **FFT** (`dataprocesses.analysis.fft`) | Fast Stream input: `input`; Fast Stream `SpectrumFrame` output: `spectrum` | Produces one-sided magnitude spectra and preserves source timing and sequence metadata. The initial calculation prioritizes explicit, deterministic behavior rather than optimized throughput. |
-| **Time Series** (`dataprocesses.dashboard.time-series`) | Fast Stream input: `input` | Retains a latest display snapshot, downsampling each channel to at most 512 points. A visual dashboard renderer is not implemented yet. |
+| **Stream Output** (`dataprocesses.output.stream`) | Fast Stream input: `input` | Retains a latest debug snapshot, downsampling each channel to at most 512 points. A visual dashboard renderer is not implemented yet. |
 | **Python Output** (`dataprocesses.output.python`) | Optional Fast Stream input: `fast-stream`; optional JSON Message input: `message`; optional JSON Message output: `status` | Validates typed input, records a receipt, and emits a deferred-delivery status message. It deliberately does not start or communicate with a Python process yet. |
 
 The full discussion draft is available in [docs/initial-specification.md](docs/initial-specification.md). Architectural decisions are tracked in [docs/decisions](docs/decisions). Local setup, Visual Studio startup, bug diagnosis, and validation are documented in [docs/development-workflow.md](docs/development-workflow.md). The external Add-in model is a documented future direction; its loader, package format, trust model, and distribution workflow are intentionally deferred in [ADR 0003](docs/decisions/0003-future-external-add-ins.md).
@@ -86,4 +86,4 @@ Licensed under the [Apache License 2.0](LICENSE). This license choice can be rev
 
 ## 日本語概要
 
-DataProcessesは、高速な時系列データ処理をノード接続で構成し、複数のダッシュボードで可視化・操作するOSSデスクトップアプリケーションです。現在は初期5 Block（Test Signal、Low-pass Filter、FFT、Time Series、Python Output）を実装し、Blockごとの契約テストを備えています。初期版はWindowsを対象としつつ、将来のmacOS対応を妨げない構成を採用します。フローエディター、ダッシュボード描画、プロジェクト保存、実際のPythonプロセス連携は今後の実装範囲です。外部開発者がBlockを提供するアドイン機構は将来方針として記録し、現時点では実装を保留しています。合意済みの詳細仕様は[初期仕様書](docs/initial-specification.md)および[ADR 0003](docs/decisions/0003-future-external-add-ins.md)を参照してください。
+DataProcessesは、高速な時系列データ処理をノード接続で構成し、複数のダッシュボードで可視化・操作するOSSデスクトップアプリケーションです。現在は初期5 Block（Test Signal、Low-pass Filter、FFT、Stream Output、Python Output）を実装し、Blockごとの契約テストを備えています。初期版はWindowsを対象としつつ、将来のmacOS対応を妨げない構成を採用します。フローエディター、ダッシュボード描画、プロジェクト保存、実際のPythonプロセス連携は今後の実装範囲です。外部開発者がBlockを提供するアドイン機構は将来方針として記録し、現時点では実装を保留しています。合意済みの詳細仕様は[初期仕様書](docs/initial-specification.md)および[ADR 0003](docs/decisions/0003-future-external-add-ins.md)を参照してください。

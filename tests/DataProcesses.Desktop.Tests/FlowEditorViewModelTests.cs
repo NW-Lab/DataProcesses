@@ -218,7 +218,7 @@ public sealed class FlowEditorViewModelTests
             new(
                 Guid.NewGuid(),
                 "Monitor",
-                [new DashboardWidget(Guid.NewGuid(), "dataprocesses.dashboard.time-series", 1, 2, 3, 2)]),
+                [new DashboardWidget(Guid.NewGuid(), "dataprocesses.output.stream", 1, 2, 3, 2)]),
         };
 
         try

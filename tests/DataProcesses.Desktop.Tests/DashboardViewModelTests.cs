@@ -41,11 +41,11 @@ public sealed class DashboardViewModelTests
             new DashboardDocument(
                 Guid.NewGuid(),
                 "Main",
-                [new DashboardWidget(Guid.NewGuid(), "dataprocesses.dashboard.time-series", 0, 0, 2, 2)]),
+                [new DashboardWidget(Guid.NewGuid(), "dataprocesses.output.stream", 0, 0, 2, 2)]),
             new DashboardDocument(
                 Guid.NewGuid(),
                 "Secondary",
-                [new DashboardWidget(Guid.NewGuid(), "dataprocesses.dashboard.time-series", 2, 1, 3, 2)]),
+                [new DashboardWidget(Guid.NewGuid(), "dataprocesses.output.stream", 2, 1, 3, 2)]),
         };
 
         viewModel.LoadDocuments(dashboards);

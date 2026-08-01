@@ -49,7 +49,7 @@ public sealed class ProjectFileServiceTests : IDisposable
             [
                 new DashboardWidget(
                     Guid.NewGuid(),
-                    "dataprocesses.dashboard.time-series",
+                    "dataprocesses.output.stream",
                     3,
                     2,
                     4,

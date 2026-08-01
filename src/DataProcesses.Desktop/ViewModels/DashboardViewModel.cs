@@ -456,7 +456,7 @@ public sealed class DashboardViewModel : ViewModelBase
         var widget = new DashboardWidgetViewModel(
             Guid.NewGuid(),
             $"Widget {widgetIndex}",
-            "dataprocesses.dashboard.time-series",
+            "dataprocesses.output.stream",
             nextDefaultGridX,
             nextDefaultGridY,
             2,
