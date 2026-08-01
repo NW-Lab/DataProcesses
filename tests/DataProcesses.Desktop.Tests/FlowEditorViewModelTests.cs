@@ -253,6 +253,94 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void ConnectionFlow_CanBeCanceledAndClearsPreview()
+    {
+        var factory = new TestNodeFactory();
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var sourceNode = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes), 0, 0);
+        var targetNode = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes), 220, 0);
+        var outputPort = Assert.Single(sourceNode.Outputs);
+
+        viewModel.StartPendingConnection(outputPort);
+        Assert.True(viewModel.ShowPreviewConnection);
+
+        viewModel.CancelPendingConnection();
+
+        Assert.False(viewModel.ShowPreviewConnection);
+        Assert.False(viewModel.IsConnectionAnimationActive);
+        Assert.Equal("Click an output port to start connecting.", viewModel.ConnectionHintText);
+    }
+
+    [Fact]
+    public void ConnectionFlow_ReleaseOutsidePort_CancelsPreview()
+    {
+        var factory = new TestNodeFactory();
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var sourceNode = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes), 0, 0);
+        var outputPort = Assert.Single(sourceNode.Outputs);
+
+        viewModel.StartPendingConnection(outputPort);
+        Assert.True(viewModel.ShowPreviewConnection);
+
+        viewModel.HandlePortConnection(outputPort, null);
+
+        Assert.False(viewModel.ShowPreviewConnection);
+        Assert.False(viewModel.IsConnectionAnimationActive);
+        Assert.Equal("Click an output port to start connecting.", viewModel.ConnectionHintText);
+    }
+
+    [Fact]
+    public void ConnectionFlow_ActivatesAnimationHintAndResetsAfterCompletion()
+    {
+        var factory = new TestNodeFactory();
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var paletteNode = Assert.Single(viewModel.Palette.FilteredNodes);
+        var sourceNode = viewModel.PlacePaletteNode(paletteNode, 0, 0);
+        var targetNode = viewModel.PlacePaletteNode(paletteNode, 220, 0);
+
+        var outputPort = Assert.Single(sourceNode.Outputs);
+        var inputPort = Assert.Single(targetNode.Inputs);
+
+        viewModel.StartPendingConnection(outputPort);
+        Assert.True(viewModel.IsConnectionAnimationActive);
+        Assert.Equal($"Connecting from {sourceNode.DisplayName}.{outputPort.DisplayName}. Hold and release on another port to finish.", viewModel.ConnectionHintText);
+
+        viewModel.HandlePortConnection(outputPort, inputPort);
+        Assert.False(viewModel.IsConnectionAnimationActive);
+        Assert.Contains($"Connected {sourceNode.DisplayName}.{outputPort.DisplayName}", viewModel.ConnectionHintText);
+    }
+
+    [Fact]
+    public void ConnectionFlow_StartFromInputPort_DoesNotShowPreview()
+    {
+        var factory = new TestNodeFactory();
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var node = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes), 0, 0);
+        var inputPort = Assert.Single(node.Inputs);
+
+        viewModel.StartPendingConnection(inputPort);
+
+        Assert.False(viewModel.ShowPreviewConnection);
+        Assert.False(viewModel.IsConnectionAnimationActive);
+    }
+
+    [Fact]
     public void PlacePaletteNode_AddsNodeAtCanvasPosition()
     {
         var factory = new TestNodeFactory();
@@ -799,7 +887,10 @@ public sealed class FlowEditorViewModelTests
                 displayName,
                 "Legacy Category",
                 "0.1.0",
-                [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream)],
+                [
+                    new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream),
+                    new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream),
+                ],
                 nodeType,
                 Title: title,
                 Subtitle: subtitle,

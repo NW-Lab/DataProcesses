@@ -49,7 +49,19 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
 
     public string StrokeDashArray => DataKind == PortDataKind.FastStream ? "" : "6,4";
 
-    public string PathData => FormattableString.Invariant($"M {X1} {Y1} L {X2} {Y2}");
+    public string PathData
+    {
+        get
+        {
+            var dx = X2 - X1;
+            var curvature = Math.Clamp(Math.Abs(dx) * 0.45, 80, 240);
+            var c1x = X1 + curvature;
+            var c1y = Y1;
+            var c2x = X2 - curvature;
+            var c2y = Y2;
+            return FormattableString.Invariant($"M {X1} {Y1} C {c1x} {c1y}, {c2x} {c2y}, {X2} {Y2}");
+        }
+    }
 
     public void Refresh()
     {

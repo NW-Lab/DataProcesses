@@ -25,6 +25,7 @@
                 <StackPanel Grid.Column="10" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="2">
                     <TextBlock Text="{Binding FlowName}" Foreground="White" FontWeight="SemiBold" FontSize="13" />
                     <TextBlock Text="{Binding PendingConnectionLabel}" Foreground="#DDEB36" FontSize="11" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding ConnectionHintText}" Foreground="#FDE68A" FontSize="11" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding InteractionStatus}" Foreground="#B8C2D8" FontSize="11" />
                 </StackPanel>
                 <TextBlock Grid.Column="11" Text="{Binding ExecutionState}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold" />
@@ -95,8 +96,9 @@
                             <DataTemplate DataType="vm:CanvasConnectionViewModel">
                                   <Path Data="{Binding PathData}"
                                       Stroke="{Binding StrokeColor}"
-                                      StrokeThickness="3"
+                                      StrokeThickness="3.5"
                                       StrokeDashArray="{Binding StrokeDashArray}"
+                                      ZIndex="20"
                                       ToolTip.Tip="{Binding KindLabel}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -105,18 +107,34 @@
                     <!-- Preview connection line while connecting -->
                     <Path IsVisible="{Binding ShowPreviewConnection}"
                           Data="{Binding PreviewConnectionPath}"
-                          Stroke="#DDEB36"
-                          StrokeThickness="2"
-                          StrokeDashArray="4,4" />
+                          Stroke="#FFB000"
+                          StrokeThickness="3.5"
+                          StrokeDashArray="6,3"
+                          ZIndex="120">
+                        <Path.Styles>
+                            <Style Selector="Path">
+                                <Style.Animations>
+                                    <Animation Duration="0:0:0.8" IterationCount="Infinite">
+                                        <KeyFrame Cue="0%">
+                                            <Setter Property="Opacity" Value="0.85" />
+                                        </KeyFrame>
+                                        <KeyFrame Cue="100%">
+                                            <Setter Property="Opacity" Value="1" />
+                                        </KeyFrame>
+                                    </Animation>
+                                </Style.Animations>
+                            </Style>
+                        </Path.Styles>
+                    </Path>
 
-                    <ItemsControl Width="2400" Height="1600" ItemsSource="{Binding Nodes}">
+                    <ItemsControl x:Name="NodesItemsControl" Width="2400" Height="1600" ItemsSource="{Binding Nodes}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <Canvas />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.Styles>
-                            <Style Selector="ContentPresenter">
+                            <Style Selector="ItemsControl#NodesItemsControl > ContentPresenter">
                                 <Setter Property="Canvas.Left" Value="{Binding X}" />
                                 <Setter Property="Canvas.Top" Value="{Binding Y}" />
                             </Style>
@@ -161,9 +179,13 @@
                                                             Background="Transparent"
                                                             BorderThickness="0"
                                                             HorizontalAlignment="Left"
-                                                            Command="{Binding DataContext.PortClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             CommandParameter="{Binding}"
                                                             ToolTip.Tip="{Binding AccessibleName}">
+                                                        <Button.Styles>
+                                                            <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                                                <Setter Property="Background" Value="#FDE68A" />
+                                                            </Style>
+                                                        </Button.Styles>
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <Grid Width="22" Height="22">
                                                                 <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="11">
@@ -188,9 +210,13 @@
                                                             Background="Transparent"
                                                             BorderThickness="0"
                                                             HorizontalAlignment="Right"
-                                                            Command="{Binding DataContext.PortClickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             CommandParameter="{Binding}"
                                                             ToolTip.Tip="{Binding AccessibleName}">
+                                                        <Button.Styles>
+                                                            <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                                                <Setter Property="Background" Value="#FDE68A" />
+                                                            </Style>
+                                                        </Button.Styles>
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="11" />
                                                             <Grid Width="22" Height="22">

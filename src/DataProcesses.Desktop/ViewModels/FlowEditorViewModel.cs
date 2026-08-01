@@ -44,8 +44,12 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private CanvasNodeViewModel? selectedNode;
     private PaletteNodeViewModel? selectedPaletteNode;
     private CanvasPortViewModel? pendingConnectionSource;
+    private CanvasPortViewModel? pendingConnectionTarget;
     private double previewConnectionEndX;
     private double previewConnectionEndY;
+    private bool isConnectionAnimationActive;
+    private bool showPreviewConnection;
+    private string connectionHintText = "Click an output port to start connecting.";
     private CancellationTokenSource? runCancellationTokenSource;
     private string flowName = "Untitled flow";
     private string projectName = "Untitled project";
@@ -83,7 +87,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     AddNodeCommand = new RelayCommand<PaletteNodeViewModel>(AddNode);
     SelectPaletteNodeCommand = new RelayCommand<PaletteNodeViewModel>(SelectPaletteNode);
-        PortClickCommand = new RelayCommand<CanvasPortViewModel>(HandlePortClick);
+        PortClickCommand = new RelayCommand<CanvasPortViewModel>(_ => { });
         SelectNodeCommand = new RelayCommand<CanvasNodeViewModel>(SelectNode);
         DeleteSelectedCommand = new RelayCommand(DeleteSelected, () => SelectedNode is not null);
         ValidateCommand = new RelayCommand(Validate);
@@ -282,7 +286,29 @@ public sealed class FlowEditorViewModel : ViewModelBase
         ? "No pending connection"
         : $"Connecting from {pendingConnectionSource.Node.DisplayName}.{pendingConnectionSource.DisplayName}";
 
-    public bool ShowPreviewConnection => pendingConnectionSource is not null;
+    public bool ShowPreviewConnection
+    {
+        get => showPreviewConnection;
+        private set => SetProperty(ref showPreviewConnection, value);
+    }
+
+    public CanvasPortViewModel? PendingConnectionTarget
+    {
+        get => pendingConnectionTarget;
+        private set => SetProperty(ref pendingConnectionTarget, value);
+    }
+
+    public bool IsConnectionAnimationActive
+    {
+        get => isConnectionAnimationActive;
+        private set => SetProperty(ref isConnectionAnimationActive, value);
+    }
+
+    public string ConnectionHintText
+    {
+        get => connectionHintText;
+        private set => SetProperty(ref connectionHintText, value);
+    }
 
     public double PreviewConnectionStartX => pendingConnectionSource?.Node.X + 220 ?? 0;
 
@@ -294,22 +320,132 @@ public sealed class FlowEditorViewModel : ViewModelBase
     public double PreviewConnectionEndX
     {
         get => previewConnectionEndX;
-        set => SetProperty(ref previewConnectionEndX, value);
+        set
+        {
+            if (SetProperty(ref previewConnectionEndX, value))
+            {
+                OnPropertyChanged(nameof(PreviewConnectionPath));
+            }
+        }
     }
 
     public double PreviewConnectionEndY
     {
         get => previewConnectionEndY;
-        set => SetProperty(ref previewConnectionEndY, value);
+        set
+        {
+            if (SetProperty(ref previewConnectionEndY, value))
+            {
+                OnPropertyChanged(nameof(PreviewConnectionPath));
+            }
+        }
     }
 
-    public string PreviewConnectionPath => 
-        FormattableString.Invariant($"M {PreviewConnectionStartX} {PreviewConnectionStartY} L {PreviewConnectionEndX} {PreviewConnectionEndY}");
+    public string PreviewConnectionPath =>
+        FormattableString.Invariant($"M {PreviewConnectionStartX} {PreviewConnectionStartY} C {PreviewConnectionStartX + 70} {PreviewConnectionStartY - 20}, {PreviewConnectionEndX - 70} {PreviewConnectionEndY + 20}, {PreviewConnectionEndX} {PreviewConnectionEndY}");
 
     public bool IsCanvasEditingEnabled
     {
         get => isCanvasEditingEnabled;
         private set => SetProperty(ref isCanvasEditingEnabled, value);
+    }
+
+    public void StartPendingConnection(CanvasPortViewModel port)
+    {
+        if (!IsCanvasEditingEnabled || port is null)
+        {
+            return;
+        }
+
+        pendingConnectionSource = port.IsOutput ? port : null;
+        pendingConnectionTarget = null;
+        ShowPreviewConnection = port.IsOutput;
+        IsConnectionAnimationActive = port.IsOutput;
+        ConnectionHintText = port.IsOutput
+            ? $"Connecting from {port.Node.DisplayName}.{port.DisplayName}. Hold and release on another port to finish."
+            : "Click an output port to start connecting.";
+        InteractionStatus = ConnectionHintText;
+        OnPropertyChanged(nameof(PendingConnectionLabel));
+        OnPropertyChanged(nameof(PreviewConnectionStartX));
+        OnPropertyChanged(nameof(PreviewConnectionStartY));
+        OnPropertyChanged(nameof(PreviewConnectionPath));
+        PreviewConnectionEndX = port.Node.X + 220;
+        PreviewConnectionEndY = port.Node.Y + 60;
+    }
+
+    public void UpdatePendingConnectionTarget(CanvasPortViewModel? port)
+    {
+        if (pendingConnectionSource is null)
+        {
+            return;
+        }
+
+        pendingConnectionTarget = port;
+
+        if (port is null)
+        {
+            return;
+        }
+
+        PreviewConnectionEndX = port.Node.X;
+        PreviewConnectionEndY = port.Node.Y + 60;
+    }
+
+    public void HandlePortConnection(CanvasPortViewModel? sourcePort, CanvasPortViewModel? targetPort)
+    {
+        if (sourcePort is null || targetPort is null || !IsCanvasEditingEnabled)
+        {
+            CancelPendingConnection();
+            return;
+        }
+
+        if (sourcePort.IsOutput && targetPort.IsInput)
+        {
+            if (!ConnectionValidator.CanConnect(sourcePort.Definition, targetPort.Definition))
+            {
+                ValidationIssues.Add(new ValidationIssueViewModel(new FlowValidationIssue(
+                    FlowValidationSeverity.Error,
+                    FlowValidationIssueCode.IncompatiblePorts,
+                    $"Cannot connect {sourcePort.DisplayName} to {targetPort.DisplayName}.",
+                    targetPort.Node.Id)));
+                ConnectionHintText = $"Incompatible connection: {sourcePort.DisplayName} → {targetPort.DisplayName}.";
+                InteractionStatus = ConnectionHintText;
+                CancelPendingConnection();
+                return;
+            }
+
+            var connection = new Connection(sourcePort.Node.Id, sourcePort.Id, targetPort.Node.Id, targetPort.Id, sourcePort.DataKind);
+            var connections = Connections.Select(static connectionViewModel => connectionViewModel.Connection).Append(connection).ToArray();
+            RebuildConnections(connections);
+            Validate();
+            MarkCurrentFlowDirty();
+            ConnectionHintText = $"Connected {sourcePort.Node.DisplayName}.{sourcePort.DisplayName} → {targetPort.Node.DisplayName}.{targetPort.DisplayName}.";
+            InteractionStatus = ConnectionHintText;
+        }
+        else
+        {
+            CancelPendingConnection();
+            return;
+        }
+
+        pendingConnectionSource = null;
+        pendingConnectionTarget = null;
+        ShowPreviewConnection = false;
+        IsConnectionAnimationActive = false;
+        OnPropertyChanged(nameof(PendingConnectionLabel));
+        OnPropertyChanged(nameof(PreviewConnectionPath));
+    }
+
+    public void CancelPendingConnection()
+    {
+        pendingConnectionSource = null;
+        pendingConnectionTarget = null;
+        ShowPreviewConnection = false;
+        IsConnectionAnimationActive = false;
+        ConnectionHintText = "Click an output port to start connecting.";
+        InteractionStatus = ConnectionHintText;
+        OnPropertyChanged(nameof(PendingConnectionLabel));
+        OnPropertyChanged(nameof(PreviewConnectionPath));
     }
 
     public void ApplyWorkspaceMode(WorkspaceRunMode mode)
@@ -458,24 +594,32 @@ public sealed class FlowEditorViewModel : ViewModelBase
         if (port.IsOutput)
         {
             pendingConnectionSource = port;
+            ShowPreviewConnection = true;
+            IsConnectionAnimationActive = true;
+            ConnectionHintText = $"Connecting from {port.Node.DisplayName}.{port.DisplayName}. Click an input port to finish.";
+            InteractionStatus = $"Connecting {port.Node.DisplayName}.{port.DisplayName}.";
             OnPropertyChanged(nameof(PendingConnectionLabel));
-            OnPropertyChanged(nameof(ShowPreviewConnection));
             OnPropertyChanged(nameof(PreviewConnectionStartX));
             OnPropertyChanged(nameof(PreviewConnectionStartY));
-            PreviewConnectionEndX = port.Node.X + 110;
+            PreviewConnectionEndX = port.Node.X + 220;
             PreviewConnectionEndY = port.Node.Y + 60;
             return;
         }
 
         if (pendingConnectionSource is null)
         {
+            ConnectionHintText = "Click an output port to start connecting.";
+            InteractionStatus = "Click an output port to start connecting.";
             return;
         }
 
         var source = pendingConnectionSource;
         pendingConnectionSource = null;
+        ShowPreviewConnection = false;
+        IsConnectionAnimationActive = false;
+        ConnectionHintText = $"Connected {source.Node.DisplayName}.{source.DisplayName} → {port.Node.DisplayName}.{port.DisplayName}.";
+        InteractionStatus = $"Connected {source.Node.DisplayName}.{source.DisplayName} → {port.Node.DisplayName}.{port.DisplayName}.";
         OnPropertyChanged(nameof(PendingConnectionLabel));
-        OnPropertyChanged(nameof(ShowPreviewConnection));
 
         if (!ConnectionValidator.CanConnect(source.Definition, port.Definition))
         {
@@ -484,6 +628,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 FlowValidationIssueCode.IncompatiblePorts,
                 $"Cannot connect {source.DisplayName} to {port.DisplayName}.",
                 port.Node.Id)));
+            ConnectionHintText = $"Incompatible connection: {source.DisplayName} → {port.DisplayName}.";
+            InteractionStatus = ConnectionHintText;
             return;
         }
 
@@ -719,6 +865,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
         ExecutionLogs.Clear();
         SelectedNode = null;
         pendingConnectionSource = null;
+        ShowPreviewConnection = false;
+        IsConnectionAnimationActive = false;
+        ConnectionHintText = "Click an output port to start connecting.";
         SelectedPaletteNode = null;
         nextNodeX = 80;
         nextNodeY = 80;

@@ -13,6 +13,7 @@ public partial class FlowEditorView : UserControl
 {
     private CanvasNodeViewModel? draggingNode;
     private PaletteNodeViewModel? draggingPaletteNode;
+    private CanvasPortViewModel? draggingPort;
     private Avalonia.Point lastPointerPosition;
 
     public FlowEditorView()
@@ -25,6 +26,31 @@ public partial class FlowEditorView : UserControl
 
     private void FlowEditorPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (e.Handled)
+        {
+            return;
+        }
+
+        if (DataContext is FlowEditorViewModel viewModelForConnection && viewModelForConnection.IsCanvasEditingEnabled)
+        {
+            var point = e.GetCurrentPoint(sender as Control).Properties;
+            var pressedPort = FindPortFromSource(e.Source) ?? FindPortAtPointer(e);
+
+            if (point.IsLeftButtonPressed && pressedPort is { IsOutput: true })
+            {
+                draggingPort = pressedPort;
+                viewModelForConnection.StartPendingConnection(pressedPort);
+
+                var position = e.GetPosition(CanvasRoot);
+                viewModelForConnection.PreviewConnectionEndX = position.X / viewModelForConnection.Zoom;
+                viewModelForConnection.PreviewConnectionEndY = position.Y / viewModelForConnection.Zoom;
+
+                e.Pointer.Capture(this);
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (draggingPaletteNode is not null
             || DataContext is not FlowEditorViewModel viewModel
             || FindPaletteNode(e.Source) is not { } paletteNode)
@@ -43,6 +69,11 @@ public partial class FlowEditorView : UserControl
             return;
         }
 
+        if (FindPortFromSource(e.Source) is not null)
+        {
+            return;
+        }
+
         draggingPaletteNode = paletteNode;
         viewModel.SelectPaletteNodeCommand.Execute(paletteNode);
         PaletteDragPreviewTitle.Text = paletteNode.DisplayName;
@@ -54,6 +85,11 @@ public partial class FlowEditorView : UserControl
 
     private void FlowEditorPointerMoved(object? sender, PointerEventArgs e)
     {
+        if (e.Handled)
+        {
+            return;
+        }
+
         if (DataContext is not FlowEditorViewModel viewModel)
         {
             return;
@@ -67,11 +103,19 @@ public partial class FlowEditorView : UserControl
             return;
         }
 
-        // Update preview connection line if connecting
         if (viewModel.ShowPreviewConnection)
         {
             viewModel.PreviewConnectionEndX = position.X / viewModel.Zoom;
             viewModel.PreviewConnectionEndY = position.Y / viewModel.Zoom;
+        }
+
+        if (draggingPort is not null)
+        {
+            viewModel.PreviewConnectionEndX = position.X / viewModel.Zoom;
+            viewModel.PreviewConnectionEndY = position.Y / viewModel.Zoom;
+
+            var hoveredPort = FindPortAtPointer(e);
+            viewModel.UpdatePendingConnectionTarget(hoveredPort);
         }
     }
 
@@ -94,6 +138,24 @@ public partial class FlowEditorView : UserControl
 
     private void FlowEditorPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (e.Handled)
+        {
+            return;
+        }
+
+        if (draggingPort is not null)
+        {
+            if (DataContext is FlowEditorViewModel viewModel)
+            {
+                viewModel.HandlePortConnection(draggingPort, viewModel.PendingConnectionTarget);
+            }
+
+            draggingPort = null;
+            e.Pointer.Capture(null);
+            e.Handled = true;
+            return;
+        }
+
         CompletePaletteDrop(e, "view");
     }
 
@@ -167,6 +229,44 @@ public partial class FlowEditorView : UserControl
         PaletteDragPreviewTitle.Text = string.Empty;
     }
 
+    private static CanvasPortViewModel? FindPortFromSource(object? source)
+    {
+        var current = source as Control;
+        while (current is not null)
+        {
+            if (current.DataContext is CanvasPortViewModel port)
+            {
+                return port;
+            }
+
+            current = current.Parent as Control;
+        }
+
+        return null;
+    }
+
+    private CanvasPortViewModel? FindPortAtPointer(PointerEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null)
+        {
+            return null;
+        }
+
+        var current = topLevel.InputHitTest(e.GetPosition(topLevel)) as Control;
+        while (current is not null)
+        {
+            if (current is Control { DataContext: CanvasPortViewModel port })
+            {
+                return port;
+            }
+
+            current = current.Parent as Control;
+        }
+
+        return null;
+    }
+
     private void NodePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Control { DataContext: CanvasNodeViewModel node })
@@ -181,9 +281,15 @@ public partial class FlowEditorView : UserControl
 
         var properties = e.GetCurrentPoint(sender as Control).Properties;
 
-        // Handle right-click to show context menu
         if (properties.IsRightButtonPressed)
         {
+            if (viewModel.ShowPreviewConnection)
+            {
+                viewModel.CancelPendingConnection();
+                e.Handled = true;
+                return;
+            }
+
             viewModel.SelectNodeCommand.Execute(node);
             Log($"Node right-clicked: {node.DisplayName} ({node.Id})");
             e.Handled = true;
@@ -236,6 +342,13 @@ public partial class FlowEditorView : UserControl
     {
         if (DataContext is not FlowEditorViewModel viewModel)
         {
+            return;
+        }
+
+        if (e.Key == Key.Escape && viewModel.ShowPreviewConnection)
+        {
+            viewModel.CancelPendingConnection();
+            e.Handled = true;
             return;
         }
 
