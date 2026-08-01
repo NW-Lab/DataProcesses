@@ -90,6 +90,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
         PortClickCommand = new RelayCommand<CanvasPortViewModel>(_ => { });
         SelectNodeCommand = new RelayCommand<CanvasNodeViewModel>(SelectNode);
         DeleteSelectedCommand = new RelayCommand(DeleteSelected, () => SelectedNode is not null);
+        DeleteNodeCommand = new RelayCommand<CanvasNodeViewModel>(DeleteNode);
+        DeleteConnectionCommand = new RelayCommand<CanvasConnectionViewModel>(DeleteConnection);
         ValidateCommand = new RelayCommand(Validate);
         RunCommand = new AsyncRelayCommand(RunAsync);
         StopCommand = new RelayCommand(StopRun, () => ExecutionState is FlowExecutionState.Running or FlowExecutionState.Starting);
@@ -130,6 +132,10 @@ public sealed class FlowEditorViewModel : ViewModelBase
     public IRelayCommand<CanvasNodeViewModel> SelectNodeCommand { get; }
 
     public IRelayCommand DeleteSelectedCommand { get; }
+
+    public IRelayCommand<CanvasNodeViewModel> DeleteNodeCommand { get; }
+
+    public IRelayCommand<CanvasConnectionViewModel> DeleteConnectionCommand { get; }
 
     public IRelayCommand ValidateCommand { get; }
 
@@ -566,7 +572,16 @@ public sealed class FlowEditorViewModel : ViewModelBase
             return;
         }
 
-        var node = SelectedNode;
+        DeleteNode(SelectedNode);
+    }
+
+    private void DeleteNode(CanvasNodeViewModel? node)
+    {
+        if (!IsCanvasEditingEnabled || node is null)
+        {
+            return;
+        }
+
         SelectedNode = null;
         node.PropertyChanged -= CanvasNodePropertyChanged;
         Nodes.Remove(node);
@@ -575,6 +590,38 @@ public sealed class FlowEditorViewModel : ViewModelBase
             && !string.Equals(connection.TargetNodeId, node.Id, StringComparison.Ordinal)).ToArray());
         RemoveDashboardWidgetForNode(node);
         MarkCurrentFlowDirty();
+    }
+
+    private void DeleteConnection(CanvasConnectionViewModel? connectionViewModel)
+    {
+        if (!IsCanvasEditingEnabled || connectionViewModel is null)
+        {
+            return;
+        }
+
+        var remainingConnections = Connections
+            .Select(static connection => connection.Connection)
+            .Where(connection => !IsSameConnection(connection, connectionViewModel.Connection))
+            .ToArray();
+
+        if (remainingConnections.Length == Connections.Count)
+        {
+            return;
+        }
+
+        RebuildConnections(remainingConnections);
+        Validate();
+        MarkCurrentFlowDirty();
+        InteractionStatus = "Connection deleted.";
+    }
+
+    private static bool IsSameConnection(Connection left, Connection right)
+    {
+        return string.Equals(left.SourceNodeId, right.SourceNodeId, StringComparison.Ordinal)
+            && string.Equals(left.SourcePortId, right.SourcePortId, StringComparison.Ordinal)
+            && string.Equals(left.TargetNodeId, right.TargetNodeId, StringComparison.Ordinal)
+            && string.Equals(left.TargetPortId, right.TargetPortId, StringComparison.Ordinal)
+            && left.DataKind == right.DataKind;
     }
 
     private void HandlePortClick(CanvasPortViewModel? port)

@@ -245,6 +245,26 @@ public partial class FlowEditorView : UserControl
         return null;
     }
 
+    private void ConnectionPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control control)
+        {
+            return;
+        }
+
+        var properties = e.GetCurrentPoint(control).Properties;
+        if (!properties.IsRightButtonPressed)
+        {
+            return;
+        }
+
+        if (control.ContextMenu is { } menu)
+        {
+            menu.Open(control);
+            e.Handled = true;
+        }
+    }
+
     private CanvasPortViewModel? FindPortAtPointer(PointerEventArgs e)
     {
         var topLevel = TopLevel.GetTopLevel(this);
@@ -357,6 +377,30 @@ public partial class FlowEditorView : UserControl
             viewModel.DeleteSelectedCommand.Execute(null);
             e.Handled = true;
         }
+    }
+
+    private void DeleteNodeMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FlowEditorViewModel viewModel
+            || sender is not MenuItem { DataContext: CanvasNodeViewModel node })
+        {
+            return;
+        }
+
+        viewModel.DeleteNodeCommand.Execute(node);
+        e.Handled = true;
+    }
+
+    private void DeleteConnectionMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FlowEditorViewModel viewModel
+            || sender is not MenuItem { DataContext: CanvasConnectionViewModel connection })
+        {
+            return;
+        }
+
+        viewModel.DeleteConnectionCommand.Execute(connection);
+        e.Handled = true;
     }
 
     private async void CopyExecutionLogClicked(object? sender, RoutedEventArgs e)

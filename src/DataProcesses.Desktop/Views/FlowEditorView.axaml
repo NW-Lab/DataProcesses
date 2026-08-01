@@ -94,12 +94,27 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:CanvasConnectionViewModel">
-                                  <Path Data="{Binding PathData}"
-                                      Stroke="{Binding StrokeColor}"
-                                      StrokeThickness="3.5"
-                                      StrokeDashArray="{Binding StrokeDashArray}"
-                                      ZIndex="20"
-                                      ToolTip.Tip="{Binding KindLabel}" />
+                                <Grid PointerPressed="ConnectionPointerPressed">
+                                    <!-- Wide transparent hit area to make right-click easier. -->
+                                    <Path Data="{Binding PathData}"
+                                          Stroke="Transparent"
+                                          StrokeThickness="14"
+                                          ZIndex="18" />
+
+                                    <Path Data="{Binding PathData}"
+                                          Stroke="{Binding StrokeColor}"
+                                          StrokeThickness="3.5"
+                                          StrokeDashArray="{Binding StrokeDashArray}"
+                                          ZIndex="20"
+                                          ToolTip.Tip="{Binding KindLabel}" />
+
+                                    <Grid.ContextMenu>
+                                        <ContextMenu DataContext="{Binding}">
+                                            <MenuItem Header="Delete"
+                                                      Click="DeleteConnectionMenuItemClicked" />
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
+                                </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -151,8 +166,9 @@
                                         PointerMoved="NodePointerMoved"
                                         PointerReleased="NodePointerReleased">
                                     <Border.ContextMenu>
-                                        <ContextMenu>
-                                            <MenuItem Header="Delete" Command="{Binding DataContext.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                        <ContextMenu DataContext="{Binding}">
+                                            <MenuItem Header="Delete"
+                                                      Click="DeleteNodeMenuItemClicked" />
                                         </ContextMenu>
                                     </Border.ContextMenu>
                                     <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,*">

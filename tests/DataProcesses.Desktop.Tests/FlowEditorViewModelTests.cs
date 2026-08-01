@@ -341,6 +341,48 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void ConnectionFlow_DeleteConnectionCommand_RemovesConnection()
+    {
+        var factory = new TestNodeFactory();
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var paletteNode = Assert.Single(viewModel.Palette.FilteredNodes);
+        var sourceNode = viewModel.PlacePaletteNode(paletteNode, 0, 0);
+        var targetNode = viewModel.PlacePaletteNode(paletteNode, 220, 0);
+
+        var outputPort = Assert.Single(sourceNode.Outputs);
+        var inputPort = Assert.Single(targetNode.Inputs);
+
+        viewModel.StartPendingConnection(outputPort);
+        viewModel.HandlePortConnection(outputPort, inputPort);
+
+        var connection = Assert.Single(viewModel.Connections);
+        viewModel.DeleteConnectionCommand.Execute(connection);
+
+        Assert.Empty(viewModel.Connections);
+    }
+
+    [Fact]
+    public void DeleteNodeCommand_RemovesSpecifiedNode()
+    {
+        var factory = new TestNodeFactory();
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var node = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes), 120, 120);
+        Assert.Single(viewModel.Nodes);
+
+        viewModel.DeleteNodeCommand.Execute(node);
+
+        Assert.Empty(viewModel.Nodes);
+    }
+
+    [Fact]
     public void PlacePaletteNode_AddsNodeAtCanvasPosition()
     {
         var factory = new TestNodeFactory();
