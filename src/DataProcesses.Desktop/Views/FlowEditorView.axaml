@@ -8,7 +8,7 @@
              KeyDown="FlowEditorKeyDown">
     <Grid RowDefinitions="Auto,*,160" ColumnDefinitions="250,*,300">
         <Border Grid.Row="0" Grid.ColumnSpan="3" Background="#172033" Padding="12,8">
-            <Grid ColumnDefinitions="220,180,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="200,170,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
                 <ComboBox Grid.Column="0"
                           ItemsSource="{Binding Flows}"
                           SelectedItem="{Binding SelectedFlow}"
@@ -49,24 +49,24 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="vm:PaletteNodeViewModel">
                                                 <Border Margin="0,0,0,4"
-                                                        Padding="10,8"
+                                                        Padding="8,6"
                                                         Background="#FFFFFF"
                                                         BorderBrush="#94A3B8"
                                                         BorderThickness="1"
                                                         CornerRadius="5"
                                                         Cursor="Hand">
-                                                    <Grid ColumnDefinitions="40,*" RowDefinitions="Auto,Auto" ColumnSpacing="8">
+                                                    <Grid ColumnDefinitions="30,*" RowDefinitions="Auto,Auto" ColumnSpacing="6">
                                                         <Border Grid.RowSpan="2"
-                                                                Width="32"
-                                                                Height="32"
+                                                                Width="24"
+                                                                Height="24"
                                                                 Background="#E2E8F0"
                                                                 CornerRadius="6"
                                                                 HorizontalAlignment="Left"
                                                                 VerticalAlignment="Center">
-                                                            <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}" Stretch="Uniform" Margin="4" />
+                                                            <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}" Stretch="Uniform" Margin="3" />
                                                         </Border>
-                                                        <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="#0F172A" FontWeight="SemiBold" />
-                                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" FontSize="10" Foreground="#475569" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="#0F172A" FontWeight="SemiBold" FontSize="12" />
+                                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" FontSize="9" Foreground="#475569" />
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
@@ -156,8 +156,8 @@
                         </ItemsControl.Styles>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:CanvasNodeViewModel">
-                                <Border Width="220"
-                                        MinHeight="116"
+                                <Border Width="180"
+                                    MinHeight="96"
                                         Background="White"
                                         BorderBrush="#334155"
                                         BorderThickness="1"
@@ -172,15 +172,15 @@
                                         </ContextMenu>
                                     </Border.ContextMenu>
                                     <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,*">
-                                        <Border Grid.ColumnSpan="2" Background="#1E293B" CornerRadius="6,6,0,0" Padding="10,8">
+                                        <Border Grid.ColumnSpan="2" Background="#1E293B" CornerRadius="6,6,0,0" Padding="8,6">
                                             <Grid>
-                                                <Grid ColumnDefinitions="32,*" ColumnSpacing="8">
-                                                    <Border Width="28"
-                                                            Height="28"
+                                                <Grid ColumnDefinitions="24,*" ColumnSpacing="6">
+                                                    <Border Width="22"
+                                                            Height="22"
                                                             Background="#334155"
                                                             CornerRadius="6"
                                                             VerticalAlignment="Center">
-                                                        <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}" Stretch="Uniform" Margin="3" />
+                                                        <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}" Stretch="Uniform" Margin="2" />
                                                     </Border>
                                                     <TextBlock Grid.Column="1" Text="{Binding DisplayName}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
                                                 </Grid>
@@ -202,16 +202,16 @@
                                                                 <Setter Property="Background" Value="#FDE68A" />
                                                             </Style>
                                                         </Button.Styles>
-                                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <Grid Width="22" Height="22">
-                                                                <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="11">
-                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="Bold" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <Grid Width="18" Height="18">
+                                                                <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="9">
+                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
                                                                 </Border>
-                                                                <Border IsVisible="{Binding IsJsonMessage}" Background="#D92D20" CornerRadius="11">
-                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="Bold" />
+                                                                <Border IsVisible="{Binding IsJsonMessage}" Background="#D92D20" CornerRadius="9">
+                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
                                                                 </Border>
                                                             </Grid>
-                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="11" />
+                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="10" />
                                                         </StackPanel>
                                                     </Button>
                                                 </DataTemplate>
@@ -233,17 +233,22 @@
                                                                 <Setter Property="Background" Value="#FDE68A" />
                                                             </Style>
                                                         </Button.Styles>
-                                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="11" />
-                                                            <Grid Width="22" Height="22">
-                                                                <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="11">
-                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="Bold" />
+                                                        <Grid Width="74" ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                                            <TextBlock Grid.Column="0"
+                                                                       Text="{Binding DisplayName}"
+                                                                       VerticalAlignment="Center"
+                                                                       FontSize="10"
+                                                                       TextAlignment="Right"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <Grid Grid.Column="1" Width="18" Height="18">
+                                                                <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="9">
+                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
                                                                 </Border>
-                                                                <Border IsVisible="{Binding IsJsonMessage}" Background="#D92D20" CornerRadius="11">
-                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="Bold" />
+                                                                <Border IsVisible="{Binding IsJsonMessage}" Background="#D92D20" CornerRadius="9">
+                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
                                                                 </Border>
                                                             </Grid>
-                                                        </StackPanel>
+                                                        </Grid>
                                                     </Button>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -255,9 +260,9 @@
                     </ItemsControl>
 
                     <Border x:Name="PaletteDragPreview"
-                            Width="220"
-                            MinHeight="64"
-                            Padding="10,8"
+                            Width="180"
+                            MinHeight="54"
+                            Padding="8,6"
                             Background="#E0F2FE"
                             BorderBrush="#1D70B8"
                             BorderThickness="2"
@@ -267,10 +272,10 @@
                             Opacity="0.9">
                         <Grid ColumnDefinitions="32,*" RowDefinitions="Auto,Auto">
                             <Border Grid.RowSpan="2"
-                                    Width="24"
-                                    Height="24"
+                                    Width="20"
+                                    Height="20"
                                     Background="#1D70B8"
-                                    CornerRadius="12"
+                                    CornerRadius="10"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center">
                                 <TextBlock Text="+"

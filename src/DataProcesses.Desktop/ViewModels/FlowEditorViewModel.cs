@@ -17,6 +17,12 @@ public sealed class FlowEditorViewModel : ViewModelBase
 {
     private const string NodeDashboardWidgetType = "dataprocesses.dashboard.node-block";
     private const int RunLoopDelayMilliseconds = 100;
+    private const double CanvasNodeWidth = 180;
+    private const double CanvasPortPanelMargin = 8;
+    private const double CanvasPortGlyphSize = 18;
+    private const double CanvasNodeHeaderHeight = 34;
+    private const double CanvasPortRowHeight = 22;
+    private const double CanvasPortCenterOffset = 17;
 
     private sealed record FlowWorkspaceState(
         FlowDocument Document,
@@ -316,12 +322,13 @@ public sealed class FlowEditorViewModel : ViewModelBase
         private set => SetProperty(ref connectionHintText, value);
     }
 
-    public double PreviewConnectionStartX => pendingConnectionSource?.Node.X + 220 ?? 0;
+    public double PreviewConnectionStartX => pendingConnectionSource is null
+        ? 0
+        : GetPortCenterX(pendingConnectionSource);
 
-    public double PreviewConnectionStartY => 
-        pendingConnectionSource?.Node.Y + 46 + 
-        (pendingConnectionSource?.Node.Outputs.Count > 0 ? 
-            pendingConnectionSource.Node.Outputs.TakeWhile(p => !string.Equals(p.Id, pendingConnectionSource.Id)).Count() * 28 + 14 : 14) ?? 0;
+    public double PreviewConnectionStartY => pendingConnectionSource is null
+        ? 0
+        : GetPortCenterY(pendingConnectionSource);
 
     public double PreviewConnectionEndX
     {
@@ -375,8 +382,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
         OnPropertyChanged(nameof(PreviewConnectionStartX));
         OnPropertyChanged(nameof(PreviewConnectionStartY));
         OnPropertyChanged(nameof(PreviewConnectionPath));
-        PreviewConnectionEndX = port.Node.X + 220;
-        PreviewConnectionEndY = port.Node.Y + 60;
+        PreviewConnectionEndX = PreviewConnectionStartX;
+        PreviewConnectionEndY = PreviewConnectionStartY;
     }
 
     public void UpdatePendingConnectionTarget(CanvasPortViewModel? port)
@@ -393,8 +400,32 @@ public sealed class FlowEditorViewModel : ViewModelBase
             return;
         }
 
-        PreviewConnectionEndX = port.Node.X;
-        PreviewConnectionEndY = port.Node.Y + 60;
+        PreviewConnectionEndX = GetPortCenterX(port);
+        PreviewConnectionEndY = GetPortCenterY(port);
+    }
+
+    private static double GetPortCenterX(CanvasPortViewModel port)
+    {
+        return port.IsOutput
+            ? port.Node.X + CanvasNodeWidth - CanvasPortPanelMargin - (CanvasPortGlyphSize / 2)
+            : port.Node.X + CanvasPortPanelMargin + (CanvasPortGlyphSize / 2);
+    }
+
+    private static double GetPortCenterY(CanvasPortViewModel port)
+    {
+        var ports = port.IsOutput ? port.Node.Outputs : port.Node.Inputs;
+        var index = 0;
+        foreach (var candidate in ports)
+        {
+            if (string.Equals(candidate.Id, port.Id, StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            index++;
+        }
+
+        return port.Node.Y + CanvasNodeHeaderHeight + index * CanvasPortRowHeight + CanvasPortCenterOffset;
     }
 
     public void HandlePortConnection(CanvasPortViewModel? sourcePort, CanvasPortViewModel? targetPort)

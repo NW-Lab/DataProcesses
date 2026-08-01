@@ -5,9 +5,12 @@ namespace DataProcesses.Desktop.ViewModels;
 
 public sealed class CanvasConnectionViewModel : ViewModelBase
 {
-    private const double NodeWidth = 220;
-    private const double PortRowHeight = 28;
-    private const double HeaderHeight = 46;
+    private const double NodeWidth = 180;
+    private const double PortPanelMargin = 8;
+    private const double PortGlyphSize = 18;
+    private const double PortRowHeight = 22;
+    private const double HeaderHeight = 34;
+    private const double PortCenterOffset = 17;
 
     public CanvasConnectionViewModel(
         Connection connection,
@@ -37,13 +40,13 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
 
     public string KindLabel => DataKind == PortDataKind.FastStream ? "Fast Stream" : "Payload";
 
-    public double X1 => SourceNode.X + NodeWidth;
+    public double X1 => SourceNode.X + NodeWidth - PortPanelMargin - (PortGlyphSize / 2);
 
-    public double Y1 => SourceNode.Y + HeaderHeight + GetPortIndex(SourceNode.Outputs, SourcePort.Id) * PortRowHeight + 14;
+    public double Y1 => SourceNode.Y + HeaderHeight + GetPortIndex(SourceNode.Outputs, SourcePort.Id) * PortRowHeight + PortCenterOffset;
 
-    public double X2 => TargetNode.X;
+    public double X2 => TargetNode.X + PortPanelMargin + (PortGlyphSize / 2);
 
-    public double Y2 => TargetNode.Y + HeaderHeight + GetPortIndex(TargetNode.Inputs, TargetPort.Id) * PortRowHeight + 14;
+    public double Y2 => TargetNode.Y + HeaderHeight + GetPortIndex(TargetNode.Inputs, TargetPort.Id) * PortRowHeight + PortCenterOffset;
 
     public string StrokeColor => DataKind == PortDataKind.FastStream ? "#1D70B8" : "#D92D20";
 
