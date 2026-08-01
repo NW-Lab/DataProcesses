@@ -75,6 +75,7 @@ Block-specific settings use this JSON shape:
 | `FastFourierTransform/` | `dataprocesses.analysis.fft` | Fast Stream to one-sided `SpectrumFrame` analysis processor. |
 | `StreamOutput/` | `dataprocesses.output.stream` | Debug-oriented Fast Stream output adapter with bounded downsampling. |
 | `PythonOutput/` | `dataprocesses.output.python` | Typed Fast Stream/JSON boundary that emits deferred-delivery status; it does not launch Python yet. |
+| `PayloadOutput/` | `dataprocesses.output.payload` | Debug-oriented Payload sink that appends timestamped entries for dashboard inspection. |
 
 ## Adding a Block
 

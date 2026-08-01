@@ -1,9 +1,12 @@
 using System.Text.Json;
+using System.Reflection;
 
 using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Desktop.ViewModels;
 using DataProcesses.Engine;
+using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Desktop.Tests;
@@ -559,6 +562,57 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public async Task RunAsync_AppendsTimestampedPayloadOutputContentToDashboard()
+    {
+        IReadOnlyList<DashboardDocument> dashboards = [];
+        INodeFactory[] factories =
+        [
+            new TestSignalNodeFactory(),
+            new PayloadOutputNodeFactory(),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService(),
+            () => dashboards,
+            documents => dashboards = documents);
+
+        var sourcePaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+        var payloadOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == PayloadOutputBlock.TypeId);
+
+        var sourceNode = viewModel.PlacePaletteNode(sourcePaletteNode, 100, 100);
+        var payloadOutputNode = viewModel.PlacePaletteNode(payloadOutputPaletteNode, 380, 100);
+
+        var payloadSourcePort = sourceNode.Outputs.Single(port => port.Id == TestSignalBlock.PayloadOutputPortId);
+        var payloadTargetPort = payloadOutputNode.Inputs.Single(port => port.Id == PayloadOutputBlock.InputPortId);
+
+        viewModel.StartPendingConnection(payloadSourcePort);
+        viewModel.HandlePortConnection(payloadSourcePort, payloadTargetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(() => dashboards, "topic=dataprocesses.test-signal.status");
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+
+        var dashboard = Assert.Single(dashboards);
+        var widget = Assert.Single(dashboard.Widgets, candidate => candidate.SourcePortId == payloadOutputNode.Id);
+        Assert.Equal(3, widget.GridWidth);
+        Assert.Equal(3, widget.GridHeight);
+
+        using var document = JsonDocument.Parse(widget.SettingsJson);
+        var content = document.RootElement.GetProperty("content").GetString() ?? string.Empty;
+        Assert.Contains("topic=dataprocesses.test-signal.status", content, StringComparison.Ordinal);
+        Assert.Contains("payload=", content, StringComparison.Ordinal);
+        Assert.StartsWith("[", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task StartExecutionAsync_RefreshesDashboardWidgetContentUntilStopped()
     {
         IReadOnlyList<DashboardDocument> dashboards = [];
@@ -675,7 +729,7 @@ public sealed class FlowEditorViewModelTests
         int timeoutMilliseconds = 2_000)
     {
         using var timeout = new CancellationTokenSource(timeoutMilliseconds);
-        while (!timeout.IsCancellationRequested)
+        while (true)
         {
             var content = getDashboards()
                 .SelectMany(static dashboard => dashboard.Widgets)
@@ -686,10 +740,20 @@ public sealed class FlowEditorViewModelTests
                 return;
             }
 
-            await Task.Delay(25, timeout.Token).ConfigureAwait(true);
+            try
+            {
+                await Task.Delay(25, timeout.Token).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+            {
+                var snapshot = string.Join(
+                    " | ",
+                    getDashboards()
+                        .SelectMany(static dashboard => dashboard.Widgets)
+                        .Select(static widget => widget.SettingsJson));
+                throw new TimeoutException($"Dashboard content did not contain '{expectedContent}'. Snapshot: {snapshot}");
+            }
         }
-
-        throw new TimeoutException($"Dashboard content did not contain '{expectedContent}'.");
     }
 
     [Fact]
@@ -897,6 +961,25 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal(string.Empty, widget.Content);
     }
 
+    [Fact]
+    public void AppendLogEntry_TrimsToLatest500Lines()
+    {
+        var appendLogEntryMethod = typeof(FlowEditorViewModel)
+            .GetMethod("AppendLogEntry", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(appendLogEntryMethod);
+
+        var content = string.Empty;
+        for (var index = 1; index <= 505; index++)
+        {
+            content = Assert.IsType<string>(appendLogEntryMethod!.Invoke(null, [content, $"line-{index}"]));
+        }
+
+        var lines = content.Split(Environment.NewLine, StringSplitOptions.None);
+        Assert.Equal(500, lines.Length);
+        Assert.Equal("line-6", lines[0]);
+        Assert.Equal("line-505", lines[^1]);
+    }
+
     private sealed class TestNodeFactory : INodeFactory
     {
         private readonly IDataPacket? packetToEmit;
@@ -930,7 +1013,7 @@ public sealed class FlowEditorViewModelTests
                 "Legacy Category",
                 "0.1.0",
                 [
-                    new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream),
+                    new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, IsRequired: false),
                     new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream),
                 ],
                 nodeType,

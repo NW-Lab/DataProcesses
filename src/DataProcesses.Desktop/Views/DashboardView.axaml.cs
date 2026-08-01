@@ -4,6 +4,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Avalonia.Collections;
 
 using DataProcesses.Desktop.ViewModels;
@@ -266,5 +267,21 @@ public partial class DashboardView : UserControl
 
         closeButton.Click += (_, _) => dialog.Close();
         await dialog.ShowDialog(owner).ConfigureAwait(true);
+    }
+
+    private void ContentTextBoxTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (sender is not TextBox textBox)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            var end = textBox.Text?.Length ?? 0;
+            textBox.CaretIndex = end;
+            textBox.SelectionStart = end;
+            textBox.SelectionEnd = end;
+        }, DispatcherPriority.Background);
     }
 }

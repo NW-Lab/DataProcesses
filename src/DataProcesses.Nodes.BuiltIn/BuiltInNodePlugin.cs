@@ -1,5 +1,6 @@
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
 using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
+using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
@@ -19,6 +20,7 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new FastFourierTransformNodeFactory(),
         new StreamOutputNodeFactory(),
         new PythonOutputNodeFactory(),
+        new PayloadOutputNodeFactory(),
     ];
 
     public string Id => "dataprocesses.built-in";

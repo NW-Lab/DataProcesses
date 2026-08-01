@@ -72,12 +72,19 @@
                                                 </Grid>
                                             </Border>
 
-                                            <TextBlock Grid.Row="1"
-                                                       Margin="10"
-                                                       Text="{Binding Content}"
-                                                       Foreground="#475569"
-                                                       TextWrapping="Wrap"
-                                                       IsVisible="{Binding IsTextContent}" />
+                                            <TextBox Grid.Row="1"
+                                                     Margin="10"
+                                                     Text="{Binding Content}"
+                                                     Foreground="#475569"
+                                                     Background="Transparent"
+                                                     BorderThickness="0"
+                                                     IsReadOnly="True"
+                                                     AcceptsReturn="True"
+                                                     TextWrapping="Wrap"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                     TextChanged="ContentTextBoxTextChanged"
+                                                     IsVisible="{Binding IsTextContent}" />
 
                                                 <Border x:Name="ResizeLeftHandle"
                                                     Grid.RowSpan="2"

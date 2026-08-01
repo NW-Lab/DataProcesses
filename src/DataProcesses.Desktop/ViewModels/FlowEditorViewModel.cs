@@ -16,6 +16,8 @@ namespace DataProcesses.Desktop.ViewModels;
 public sealed class FlowEditorViewModel : ViewModelBase
 {
     private const string NodeDashboardWidgetType = "dataprocesses.dashboard.node-block";
+    private const string PayloadOutputNodeTypeId = "dataprocesses.output.payload";
+    private const int MaximumPayloadDashboardLogLines = 500;
     private const int RunLoopDelayMilliseconds = 100;
     private const double CanvasNodeWidth = 180;
     private const double CanvasPortPanelMargin = 8;
@@ -1227,6 +1229,65 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
             SynchronizeDashboardWidgetForNode(node, FormatFastStreamFrame(frame, GetRunStartedUnixNanoseconds(frame)));
         }
+
+        var dashboardContentByNodeId = GetNodeDashboardWidgetContentByNodeId();
+        var payloadLogByNodeId = new Dictionary<string, string>(StringComparer.Ordinal);
+        var nodesById = Nodes.ToDictionary(static node => node.Id, StringComparer.Ordinal);
+
+        foreach (var output in result.OutputPackets)
+        {
+            if (output.Packet is not JsonMessage message)
+            {
+                continue;
+            }
+
+            var targetNodeIds = Connections
+                .Select(static connection => connection.Connection)
+                .Where(connection =>
+                    string.Equals(connection.SourceNodeId, output.NodeId, StringComparison.Ordinal)
+                    && string.Equals(connection.SourcePortId, output.OutputPortId, StringComparison.Ordinal)
+                    && connection.DataKind == PortDataKind.JsonMessage)
+                .Select(static connection => connection.TargetNodeId)
+                .ToArray();
+
+            foreach (var targetNodeId in targetNodeIds)
+            {
+                if (!nodesById.TryGetValue(targetNodeId, out var node)
+                    || !node.ShowOnDashboard
+                    || !string.Equals(node.TypeId, PayloadOutputNodeTypeId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var entry = FormatPayloadMessage(message);
+                var currentContent = payloadLogByNodeId.TryGetValue(node.Id, out var stagedContent)
+                    ? stagedContent
+                    : dashboardContentByNodeId.GetValueOrDefault(node.Id, string.Empty);
+                payloadLogByNodeId[node.Id] = AppendLogEntry(currentContent, entry);
+            }
+        }
+
+        foreach (var payloadLog in payloadLogByNodeId)
+        {
+            if (nodesById.TryGetValue(payloadLog.Key, out var node))
+            {
+                SynchronizeDashboardWidgetForNode(node, payloadLog.Value);
+            }
+        }
+    }
+
+    private Dictionary<string, string> GetNodeDashboardWidgetContentByNodeId()
+    {
+        return getDashboardDocuments()
+            .SelectMany(static dashboard => dashboard.Widgets)
+            .Where(widget =>
+                string.Equals(widget.WidgetType, NodeDashboardWidgetType, StringComparison.Ordinal)
+                && !string.IsNullOrWhiteSpace(widget.SourcePortId))
+            .GroupBy(static widget => widget.SourcePortId!, StringComparer.Ordinal)
+            .ToDictionary(
+                static group => group.Key,
+                static group => ReadDashboardWidgetContent(group.Last().SettingsJson),
+                StringComparer.Ordinal);
     }
 
     private long GetRunStartedUnixNanoseconds(FastStreamFrame frame)
@@ -1341,6 +1402,35 @@ public sealed class FlowEditorViewModel : ViewModelBase
         }
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string FormatPayloadMessage(JsonMessage message)
+    {
+        var payload = JsonSerializer.Serialize(message.Payload);
+        var correlationId = string.IsNullOrWhiteSpace(message.CorrelationId)
+            ? "-"
+            : message.CorrelationId;
+
+        return FormattableString.Invariant(
+            $"[{DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss.fff zzz}] topic={message.Topic} correlationId={correlationId} payload={payload}");
+    }
+
+    private static string AppendLogEntry(string currentContent, string entry)
+    {
+        if (string.IsNullOrEmpty(currentContent))
+        {
+            return entry;
+        }
+
+        var merged = string.Join(Environment.NewLine, currentContent, entry);
+        var lines = merged.Split(Environment.NewLine, StringSplitOptions.None);
+        if (lines.Length <= MaximumPayloadDashboardLogLines)
+        {
+            return merged;
+        }
+
+        var keepFrom = lines.Length - MaximumPayloadDashboardLogLines;
+        return string.Join(Environment.NewLine, lines[keepFrom..]);
     }
 
     private string GetNextNodeId()
