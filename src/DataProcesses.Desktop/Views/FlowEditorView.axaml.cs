@@ -1,7 +1,10 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Platform.Storage;
 
 using DataProcesses.Desktop.ViewModels;
 
@@ -403,6 +406,36 @@ public partial class FlowEditorView : UserControl
         e.Handled = true;
     }
 
+    private async void SetConnectionTagMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FlowEditorViewModel viewModel
+            || sender is not MenuItem { DataContext: CanvasConnectionViewModel connection })
+        {
+            return;
+        }
+
+        var updatedTag = await ShowConnectionTagDialogAsync(connection.Tag).ConfigureAwait(true);
+        if (updatedTag is null)
+        {
+            return;
+        }
+
+        viewModel.UpdateConnectionTag(connection, updatedTag);
+        e.Handled = true;
+    }
+
+    private void ClearConnectionTagMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FlowEditorViewModel viewModel
+            || sender is not MenuItem { DataContext: CanvasConnectionViewModel connection })
+        {
+            return;
+        }
+
+        viewModel.UpdateConnectionTag(connection, null);
+        e.Handled = true;
+    }
+
     private void NodeTriggerButtonPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         e.Handled = true;
@@ -437,5 +470,123 @@ public partial class FlowEditorView : UserControl
         Debug.WriteLine(formattedMessage);
         Trace.WriteLine(formattedMessage);
         Console.WriteLine(formattedMessage);
+    }
+
+    private async void BrowseCsvOutputFilePathClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FlowEditorViewModel { SelectedNode: { } selectedNode } viewModel
+            || !selectedNode.IsCsvOutputNode)
+        {
+            return;
+        }
+
+        if (TopLevel.GetTopLevel(this) is not TopLevel topLevel || topLevel.StorageProvider is not { } storageProvider)
+        {
+            return;
+        }
+
+        var pickedFile = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Select CSV output file",
+            SuggestedFileName = "output.csv",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("CSV")
+                {
+                    Patterns = ["*.csv"],
+                },
+            ],
+            ShowOverwritePrompt = true,
+        }).ConfigureAwait(true);
+
+        if (pickedFile is null)
+        {
+            return;
+        }
+
+        selectedNode.CsvOutputFilePath = pickedFile.Path.LocalPath;
+        viewModel.InteractionStatus = "CSV output path updated.";
+        e.Handled = true;
+    }
+
+    private async Task<string?> ShowConnectionTagDialogAsync(string currentTag)
+    {
+        if (TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return null;
+        }
+
+        var tagTextBox = new TextBox
+        {
+            Text = currentTag,
+        };
+
+        var saveButton = new Button
+        {
+            Content = "Save",
+            Width = 88,
+            HorizontalAlignment = HorizontalAlignment.Right,
+        };
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel",
+            Width = 88,
+            HorizontalAlignment = HorizontalAlignment.Right,
+        };
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Children =
+            {
+                cancelButton,
+                saveButton,
+            },
+        };
+
+        var dialog = new Window
+        {
+            Title = "Connection Tag",
+            Width = 440,
+            Height = 190,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 10,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = "Set a tag for this flow line.",
+                        FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                    },
+                    tagTextBox,
+                    buttons,
+                },
+            },
+        };
+
+        var tcs = new TaskCompletionSource<string?>();
+        saveButton.Click += (_, _) =>
+        {
+            tcs.TrySetResult(tagTextBox.Text);
+            dialog.Close();
+        };
+
+        cancelButton.Click += (_, _) =>
+        {
+            tcs.TrySetResult(null);
+            dialog.Close();
+        };
+
+        dialog.Closed += (_, _) => tcs.TrySetResult(null);
+
+        _ = dialog.ShowDialog(owner);
+        return await tcs.Task.ConfigureAwait(true);
     }
 }

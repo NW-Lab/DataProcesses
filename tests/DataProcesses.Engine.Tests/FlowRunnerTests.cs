@@ -100,6 +100,51 @@ public sealed class FlowRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_PassesConnectionMetadataToConnectionAwareNode()
+    {
+        var packet = new TestPacket();
+        var received = new List<(string SourceNodeId, string SourcePortId, string? Tag, IDataPacket Packet)>();
+        var factories = new INodeFactory[]
+        {
+            new TestNodeFactory(
+                new NodeDefinition(
+                    "source",
+                    "Source",
+                    "Sources",
+                    "0.1.0",
+                    [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream)]),
+                nodeId => new SourceNode(nodeId, packet)),
+            new TestNodeFactory(
+                new NodeDefinition(
+                    "sink-aware",
+                    "Sink Aware",
+                    "Outputs",
+                    "0.1.0",
+                    [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream)]),
+                _ => new ConnectionAwareSinkNode(received)),
+        };
+
+        var runner = new FlowRunner(factories);
+        var document = new FlowDocument(
+            Guid.NewGuid(),
+            "Connection-aware flow",
+            [
+                new NodeInstance("source-1", "source", 0, 0, "{}"),
+                new NodeInstance("sink-1", "sink-aware", 100, 0, "{}"),
+            ],
+            [new Connection("source-1", "out", "sink-1", "in", PortDataKind.FastStream, Tag: "SensorA")]);
+
+        var result = await runner.RunAsync(document, CancellationToken.None);
+
+        Assert.Equal(FlowExecutionState.Stopped, result.State);
+        var delivery = Assert.Single(received);
+        Assert.Equal("source-1", delivery.SourceNodeId);
+        Assert.Equal("out", delivery.SourcePortId);
+        Assert.Equal("SensorA", delivery.Tag);
+        Assert.Same(packet, delivery.Packet);
+    }
+
+    [Fact]
     public async Task RunAsync_PassesSettingsJsonToConfiguredFactory()
     {
         var factory = new ConfiguredTestNodeFactory(
@@ -297,6 +342,50 @@ public sealed class FlowRunnerTests
         {
             Assert.Equal("in", inputPortId);
             receivedPackets.Add(packet);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask StartAsync(CancellationToken cancellationToken)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask StopAsync(CancellationToken cancellationToken)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class ConnectionAwareSinkNode(
+        ICollection<(string SourceNodeId, string SourcePortId, string? Tag, IDataPacket Packet)> deliveries) : IConnectionAwareNode
+    {
+        public NodeDefinition Definition { get; } = new(
+            "sink-aware",
+            "Sink Aware",
+            "Test",
+            "0.1.0",
+            [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream)]);
+
+        public ValueTask InitializeAsync(INodeContext context, CancellationToken cancellationToken)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnPacketAsync(string inputPortId, IDataPacket packet, CancellationToken cancellationToken)
+        {
+            throw new InvalidOperationException("Connection-aware callback should be used.");
+        }
+
+        public ValueTask OnPacketAsync(
+            string inputPortId,
+            IDataPacket packet,
+            string sourceNodeId,
+            string sourcePortId,
+            string? connectionTag,
+            CancellationToken cancellationToken)
+        {
+            Assert.Equal("in", inputPortId);
+            deliveries.Add((sourceNodeId, sourcePortId, connectionTag, packet));
             return ValueTask.CompletedTask;
         }
 

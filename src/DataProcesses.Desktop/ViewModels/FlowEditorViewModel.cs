@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -19,6 +20,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private const string TriggerNodeTypeId = "dataprocesses.trigger";
     private const string TriggerButtonContentKind = "button-trigger";
     private const string PayloadOutputNodeTypeId = "dataprocesses.output.payload";
+    private const string CsvOutputNodeTypeId = "dataprocesses.output.csv";
+    private const string CsvOutputInputPortId = "input";
     private const int MaximumPayloadDashboardLogLines = 500;
     private const int MaximumStreamDashboardSamples = 500;
     private const int RunLoopDelayMilliseconds = 100;
@@ -519,7 +522,6 @@ public sealed class FlowEditorViewModel : ViewModelBase
         }
 
         isDebugExecution = debugMode;
-        triggerExecutionSessionId++;
         await RunAsync().ConfigureAwait(true);
     }
 
@@ -656,6 +658,46 @@ public sealed class FlowEditorViewModel : ViewModelBase
         InteractionStatus = "Connection deleted.";
     }
 
+    public void UpdateConnectionTag(CanvasConnectionViewModel? connectionViewModel, string? tag)
+    {
+        if (!IsCanvasEditingEnabled || connectionViewModel is null)
+        {
+            return;
+        }
+
+        var normalizedTag = string.IsNullOrWhiteSpace(tag) ? null : tag.Trim();
+        var changed = false;
+        var updatedConnections = Connections
+            .Select(static connection => connection.Connection)
+            .Select(connection =>
+            {
+                if (!IsSameConnection(connection, connectionViewModel.Connection))
+                {
+                    return connection;
+                }
+
+                if (string.Equals(connection.Tag, normalizedTag, StringComparison.Ordinal))
+                {
+                    return connection;
+                }
+
+                changed = true;
+                return connection with { Tag = normalizedTag };
+            })
+            .ToArray();
+
+        if (!changed)
+        {
+            return;
+        }
+
+        RebuildConnections(updatedConnections);
+        MarkCurrentFlowDirty();
+        InteractionStatus = string.IsNullOrWhiteSpace(normalizedTag)
+            ? "Connection tag cleared."
+            : $"Connection tag set to '{normalizedTag}'.";
+    }
+
     private static bool IsSameConnection(Connection left, Connection right)
     {
         return string.Equals(left.SourceNodeId, right.SourceNodeId, StringComparison.Ordinal)
@@ -741,6 +783,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private async Task RunAsync()
     {
+        triggerExecutionSessionId++;
         ExecutionLogs.Clear();
         runCancellationTokenSource?.Dispose();
         runCancellationTokenSource = new CancellationTokenSource();
@@ -982,7 +1025,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 node.TypeId,
                 node.X,
                 node.Y,
-                node.BuildRuntimeSettingsJson(triggerExecutionSessionId),
+                BuildRuntimeSettingsJsonForNode(node),
                 node.Name,
                 node.Description,
                 node.IsEnabled,
@@ -990,6 +1033,48 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 node.DashboardGridWidth,
                 node.DashboardGridHeight)).ToArray(),
             Connections.Select(static connection => connection.Connection).ToArray());
+    }
+
+    private string BuildRuntimeSettingsJsonForNode(CanvasNodeViewModel node)
+    {
+        var runtimeSettingsJson = node.BuildRuntimeSettingsJson(triggerExecutionSessionId);
+        if (!string.Equals(node.TypeId, CsvOutputNodeTypeId, StringComparison.Ordinal))
+        {
+            return runtimeSettingsJson;
+        }
+
+        var settings = ReadSettingsObject(runtimeSettingsJson);
+        settings["executionSessionId"] = triggerExecutionSessionId;
+
+        var bindings = new JsonArray();
+        foreach (var connection in Connections.Select(static connection => connection.Connection)
+                     .Where(connection =>
+                         string.Equals(connection.TargetNodeId, node.Id, StringComparison.Ordinal)
+                         && string.Equals(connection.TargetPortId, CsvOutputInputPortId, StringComparison.Ordinal)
+                         && connection.DataKind == PortDataKind.FastStream))
+        {
+            bindings.Add(new JsonObject
+            {
+                ["sourceNodeId"] = connection.SourceNodeId,
+                ["sourcePortId"] = connection.SourcePortId,
+                ["tag"] = connection.Tag ?? string.Empty,
+            });
+        }
+
+        settings["inputBindings"] = bindings;
+        return settings.ToJsonString();
+    }
+
+    private static JsonObject ReadSettingsObject(string settingsJson)
+    {
+        try
+        {
+            return JsonNode.Parse(settingsJson) as JsonObject ?? new JsonObject();
+        }
+        catch (JsonException)
+        {
+            return new JsonObject();
+        }
     }
 
     public void TriggerNodeById(string nodeId)

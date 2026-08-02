@@ -107,6 +107,10 @@
 
                                     <Grid.ContextMenu>
                                         <ContextMenu DataContext="{Binding}">
+                                            <MenuItem Header="Set Tag..."
+                                                      Click="SetConnectionTagMenuItemClicked" />
+                                            <MenuItem Header="Clear Tag"
+                                                      Click="ClearConnectionTagMenuItemClicked" />
                                             <MenuItem Header="Delete"
                                                       Click="DeleteConnectionMenuItemClicked" />
                                         </ContextMenu>
@@ -404,6 +408,25 @@
                                            Increment="9600"
                                            Value="{Binding SelectedNode.CsvInputBaudRate}" />
                         </StackPanel>
+                    </StackPanel>
+                    <TextBlock Grid.Row="12" Text="CSV Output settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsCsvOutputNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsCsvOutputNode}">
+                        <TextBlock Text="CSV file path" FontWeight="SemiBold" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding SelectedNode.CsvOutputFilePath}"
+                                     PlaceholderText="C:/data/output.csv" />
+                            <Button Grid.Column="1"
+                                    Content="Browse"
+                                    Click="BrowseCsvOutputFilePathClicked" />
+                        </Grid>
+                        <TextBlock Text="Write mode" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.CsvOutputWriteModes}"
+                                  SelectedItem="{Binding SelectedNode.CsvOutputWriteMode}" />
+                        <TextBlock Text="Span time (ms)" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Increment="10"
+                                       Value="{Binding SelectedNode.CsvOutputSpanMilliseconds}" />
                     </StackPanel>
                     <TextBox Grid.Row="14"
                              AcceptsReturn="True"

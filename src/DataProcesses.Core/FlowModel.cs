@@ -27,7 +27,8 @@ public sealed record Connection(
     string SourcePortId,
     string TargetNodeId,
     string TargetPortId,
-    PortDataKind DataKind);
+    PortDataKind DataKind,
+    string? Tag = null);
 
 public sealed record FlowValidationResult(IReadOnlyList<FlowValidationIssue> Issues)
 {

@@ -1,5 +1,6 @@
 using DataProcesses.Nodes.BuiltIn;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
+using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
 using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
@@ -30,6 +31,7 @@ public sealed class BuiltInNodePluginTests
                 StreamOutputBlock.TypeId,
                 PythonOutputBlock.TypeId,
                 PayloadOutputBlock.TypeId,
+                CsvOutputBlock.TypeId,
             },
             typeIds);
     }
@@ -65,6 +67,7 @@ public sealed class BuiltInNodePluginTests
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[PythonOutputBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[PayloadOutputBlock.TypeId]);
+        Assert.Equal(NodeType.Output, nodeTypesByTypeId[CsvOutputBlock.TypeId]);
     }
 
     [Fact]

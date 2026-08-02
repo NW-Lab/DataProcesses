@@ -224,7 +224,21 @@ public sealed class FlowRunner
 
                 if (runtimeNodes.TryGetValue(connection.TargetNodeId, out var targetNode))
                 {
-                    await targetNode.OnPacketAsync(connection.TargetPortId, packet, cancellationToken).ConfigureAwait(false);
+                    if (targetNode is IConnectionAwareNode connectionAwareNode)
+                    {
+                        await connectionAwareNode.OnPacketAsync(
+                            connection.TargetPortId,
+                            packet,
+                            NodeId,
+                            outputPortId,
+                            connection.Tag,
+                            cancellationToken).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await targetNode.OnPacketAsync(connection.TargetPortId, packet, cancellationToken).ConfigureAwait(false);
+                    }
+
                     logs.Add(CreateLog(FlowExecutionLogLevel.Information, $"Delivered packet to '{connection.TargetPortId}'.", connection.TargetNodeId));
                 }
             }

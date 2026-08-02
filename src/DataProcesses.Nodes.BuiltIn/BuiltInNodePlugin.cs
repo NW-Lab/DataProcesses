@@ -3,6 +3,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
+using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
@@ -25,6 +26,7 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new StreamOutputNodeFactory(),
         new PythonOutputNodeFactory(),
         new PayloadOutputNodeFactory(),
+        new CsvOutputNodeFactory(),
     ];
 
     public string Id => "dataprocesses.built-in";

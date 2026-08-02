@@ -64,6 +64,21 @@ public interface INode
     ValueTask StopAsync(CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Optional contract for nodes that need source-connection metadata when receiving a packet.
+/// Hosts call this in preference to <see cref="INode.OnPacketAsync"/> when available.
+/// </summary>
+public interface IConnectionAwareNode : INode
+{
+    ValueTask OnPacketAsync(
+        string inputPortId,
+        IDataPacket packet,
+        string sourceNodeId,
+        string sourcePortId,
+        string? connectionTag,
+        CancellationToken cancellationToken);
+}
+
 public interface INodeContext
 {
     string NodeId { get; }

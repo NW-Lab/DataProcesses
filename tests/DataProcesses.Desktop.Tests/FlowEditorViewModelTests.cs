@@ -372,6 +372,32 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void ConnectionFlow_UpdateConnectionTag_StoresTagOnConnection()
+    {
+        var factory = new TestNodeFactory();
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var paletteNode = Assert.Single(viewModel.Palette.FilteredNodes);
+        var sourceNode = viewModel.PlacePaletteNode(paletteNode, 0, 0);
+        var targetNode = viewModel.PlacePaletteNode(paletteNode, 220, 0);
+
+        var outputPort = Assert.Single(sourceNode.Outputs);
+        var inputPort = Assert.Single(targetNode.Inputs);
+
+        viewModel.StartPendingConnection(outputPort);
+        viewModel.HandlePortConnection(outputPort, inputPort);
+
+        var connection = Assert.Single(viewModel.Connections);
+        viewModel.UpdateConnectionTag(connection, "CH1");
+
+        var updated = Assert.Single(viewModel.Connections).Connection;
+        Assert.Equal("CH1", updated.Tag);
+    }
+
+    [Fact]
     public void DeleteNodeCommand_RemovesSpecifiedNode()
     {
         var factory = new TestNodeFactory();

@@ -40,6 +40,12 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
 
     public string KindLabel => DataKind == PortDataKind.FastStream ? "Fast Stream" : "Payload";
 
+    public string Tag => Connection.Tag ?? string.Empty;
+
+    public bool HasTag => !string.IsNullOrWhiteSpace(Connection.Tag);
+
+    public string TagDisplay => HasTag ? Connection.Tag! : "(none)";
+
     public double X1 => SourceNode.X + NodeWidth - PortPanelMargin - (PortGlyphSize / 2);
 
     public double Y1 => SourceNode.Y + HeaderHeight + GetPortIndex(SourceNode.Outputs, SourcePort.Id) * PortRowHeight + PortCenterOffset;
@@ -73,6 +79,9 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
         OnPropertyChanged(nameof(X2));
         OnPropertyChanged(nameof(Y2));
         OnPropertyChanged(nameof(PathData));
+        OnPropertyChanged(nameof(Tag));
+        OnPropertyChanged(nameof(HasTag));
+        OnPropertyChanged(nameof(TagDisplay));
     }
 
     private static int GetPortIndex(IEnumerable<CanvasPortViewModel> ports, string portId)
