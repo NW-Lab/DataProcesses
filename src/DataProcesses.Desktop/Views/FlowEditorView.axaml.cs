@@ -403,6 +403,23 @@ public partial class FlowEditorView : UserControl
         e.Handled = true;
     }
 
+    private void NodeTriggerButtonPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private void NodeTriggerButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not FlowEditorViewModel viewModel
+            || sender is not Control { DataContext: CanvasNodeViewModel node })
+        {
+            return;
+        }
+
+        viewModel.TriggerNodeCommand.Execute(node);
+        e.Handled = true;
+    }
+
     private async void CopyExecutionLogClicked(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not FlowEditorViewModel viewModel

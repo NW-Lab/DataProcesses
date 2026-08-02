@@ -16,6 +16,8 @@ namespace DataProcesses.Desktop.ViewModels;
 public sealed class FlowEditorViewModel : ViewModelBase
 {
     private const string NodeDashboardWidgetType = "dataprocesses.dashboard.node-block";
+    private const string TriggerNodeTypeId = "dataprocesses.trigger";
+    private const string TriggerButtonContentKind = "button-trigger";
     private const string PayloadOutputNodeTypeId = "dataprocesses.output.payload";
     private const int MaximumPayloadDashboardLogLines = 500;
     private const int RunLoopDelayMilliseconds = 100;
@@ -48,6 +50,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private bool isApplyingFlowState;
     private bool isCanvasEditingEnabled = true;
     private bool isDebugExecution;
+    private long triggerExecutionSessionId;
     private long? runStartedUnixNanoseconds;
     private CanvasNodeViewModel? selectedNode;
     private PaletteNodeViewModel? selectedPaletteNode;
@@ -93,10 +96,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
         Palette = new NodePaletteViewModel(factoryList);
         Inspector = new InspectorViewModel();
 
-    AddNodeCommand = new RelayCommand<PaletteNodeViewModel>(AddNode);
-    SelectPaletteNodeCommand = new RelayCommand<PaletteNodeViewModel>(SelectPaletteNode);
+        AddNodeCommand = new RelayCommand<PaletteNodeViewModel>(AddNode);
+        SelectPaletteNodeCommand = new RelayCommand<PaletteNodeViewModel>(SelectPaletteNode);
         PortClickCommand = new RelayCommand<CanvasPortViewModel>(_ => { });
         SelectNodeCommand = new RelayCommand<CanvasNodeViewModel>(SelectNode);
+        TriggerNodeCommand = new RelayCommand<CanvasNodeViewModel>(TriggerNode);
         DeleteSelectedCommand = new RelayCommand(DeleteSelected, () => SelectedNode is not null);
         DeleteNodeCommand = new RelayCommand<CanvasNodeViewModel>(DeleteNode);
         DeleteConnectionCommand = new RelayCommand<CanvasConnectionViewModel>(DeleteConnection);
@@ -138,6 +142,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
     public IRelayCommand<CanvasPortViewModel> PortClickCommand { get; }
 
     public IRelayCommand<CanvasNodeViewModel> SelectNodeCommand { get; }
+
+    public IRelayCommand<CanvasNodeViewModel> TriggerNodeCommand { get; }
 
     public IRelayCommand DeleteSelectedCommand { get; }
 
@@ -512,6 +518,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
         }
 
         isDebugExecution = debugMode;
+        triggerExecutionSessionId++;
         await RunAsync().ConfigureAwait(true);
     }
 
@@ -747,7 +754,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var result = await runner.RunAsync(GetDocument(), cancellationToken).ConfigureAwait(true);
+                var result = await runner.RunAsync(GetRuntimeDocument(), cancellationToken).ConfigureAwait(true);
                 ApplyRunResult(result);
 
                 if (result.State == FlowExecutionState.Faulted)
@@ -964,6 +971,45 @@ public sealed class FlowEditorViewModel : ViewModelBase
             Connections.Select(static connection => connection.Connection).ToArray());
     }
 
+    private FlowDocument GetRuntimeDocument()
+    {
+        return new FlowDocument(
+            flowId,
+            FlowName,
+            Nodes.Select(node => new NodeInstance(
+                node.Id,
+                node.TypeId,
+                node.X,
+                node.Y,
+                node.BuildRuntimeSettingsJson(triggerExecutionSessionId),
+                node.Name,
+                node.Description,
+                node.IsEnabled,
+                node.ShowOnDashboard,
+                node.DashboardGridWidth,
+                node.DashboardGridHeight)).ToArray(),
+            Connections.Select(static connection => connection.Connection).ToArray());
+    }
+
+    public void TriggerNodeById(string nodeId)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return;
+        }
+
+        var node = Nodes.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, nodeId, StringComparison.Ordinal)
+            && string.Equals(candidate.TypeId, TriggerNodeTypeId, StringComparison.Ordinal));
+
+        if (node is null)
+        {
+            return;
+        }
+
+        TriggerNode(node);
+    }
+
     private void LoadFlow(FlowDocument flow)
     {
         isApplyingFlowState = true;
@@ -1154,6 +1200,17 @@ public sealed class FlowEditorViewModel : ViewModelBase
         {
             MarkCurrentFlowDirty();
         }
+    }
+
+    private void TriggerNode(CanvasNodeViewModel? node)
+    {
+        if (node is null || !string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        node.RequestTriggerNow();
+        InteractionStatus = $"Triggered {node.DisplayName}.";
     }
 
     private void SynchronizeDashboardWidgetForNode(CanvasNodeViewModel node, string? contentOverride = null)
@@ -1352,14 +1409,18 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private static string CreateDashboardWidgetSettingsJson(CanvasNodeViewModel node, string content)
     {
+        var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal);
+        var contentKind = isTriggerNode ? TriggerButtonContentKind : "text";
+        var textContent = isTriggerNode ? "Trigger" : content;
+
         return JsonSerializer.Serialize(new
         {
             title = node.DisplayName,
-            contentKind = "text",
-            content,
+            contentKind,
+            content = textContent,
             displayData = new
             {
-                text = content,
+                text = textContent,
             },
             isSourceNodeEnabled = node.IsEnabled,
         });

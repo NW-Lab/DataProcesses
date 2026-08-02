@@ -46,6 +46,7 @@ public sealed class PaletteNodeViewModel : ViewModelBase
     {
         return nodeType switch
         {
+            NodeType.Debug => "DEBUG",
             NodeType.Input => "INPUT",
             NodeType.BasicProcess => "Basic Process",
             NodeType.Output => "OUTPUT",

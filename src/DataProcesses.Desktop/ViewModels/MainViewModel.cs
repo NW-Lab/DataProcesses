@@ -34,6 +34,7 @@ public partial class MainViewModel : ViewModelBase
             Dashboard.GetDocuments,
             Dashboard.LoadDocuments,
             Dashboard.MarkAllClean);
+        Dashboard.TriggerRequested += FlowEditor.TriggerNodeById;
 
         ShowFlowViewCommand = new RelayCommand(() => IsFlowViewSelected = true);
         ShowDashboardViewCommand = new RelayCommand(() => IsFlowViewSelected = false);

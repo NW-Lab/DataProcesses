@@ -8,6 +8,7 @@ public sealed class NodePaletteViewModel : ViewModelBase
 {
     private static readonly IReadOnlyList<NodeType> NodeTypeOrder =
     [
+        NodeType.Debug,
         NodeType.Input,
         NodeType.BasicProcess,
         NodeType.Output,

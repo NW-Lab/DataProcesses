@@ -5,6 +5,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
+using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Nodes.BuiltIn.Tests;
@@ -21,6 +22,7 @@ public sealed class BuiltInNodePluginTests
             new[]
             {
                 TestSignalBlock.TypeId,
+                TriggerBlock.TypeId,
                 LowPassFilterBlock.TypeId,
                 FastFourierTransformBlock.TypeId,
                 StreamOutputBlock.TypeId,
@@ -54,11 +56,12 @@ public sealed class BuiltInNodePluginTests
             static factory => factory.Definition.NodeType);
 
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[TriggerBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[LowPassFilterBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FastFourierTransformBlock.TypeId]);
-        Assert.Equal(NodeType.Output, nodeTypesByTypeId[StreamOutputBlock.TypeId]);
+        Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[PythonOutputBlock.TypeId]);
-        Assert.Equal(NodeType.Output, nodeTypesByTypeId[PayloadOutputBlock.TypeId]);
+        Assert.Equal(NodeType.Debug, nodeTypesByTypeId[PayloadOutputBlock.TypeId]);
     }
 
     [Fact]

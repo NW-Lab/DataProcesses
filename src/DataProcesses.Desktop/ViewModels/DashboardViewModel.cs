@@ -26,6 +26,8 @@ public sealed class DashboardViewModel : ViewModelBase
     private bool isApplyingWorkspaceMode;
     private WorkspaceRunMode workspaceMode = WorkspaceRunMode.Edit;
 
+    public event Action<string>? TriggerRequested;
+
     public DashboardViewModel()
     {
         AddWidgetCommand = new RelayCommand(AddWidget);
@@ -333,6 +335,16 @@ public sealed class DashboardViewModel : ViewModelBase
         {
             isLoadingDocuments = false;
         }
+    }
+
+    public void RequestTriggerByNodeId(string? nodeId)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return;
+        }
+
+        TriggerRequested?.Invoke(nodeId);
     }
 
     private void PersistCurrentDashboard()

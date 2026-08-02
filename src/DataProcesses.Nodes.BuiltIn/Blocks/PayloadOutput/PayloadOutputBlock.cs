@@ -14,13 +14,13 @@ public static class PayloadOutputBlock
     public static readonly NodeDefinition Definition = new(
         TypeId: TypeId,
         DisplayName: "Payload Output",
-        Category: "Output",
+        Category: "Debug",
         Version: "0.1.0",
         Ports:
         [
             new PortDefinition(InputPortId, "Payload", PortDirection.Input, PortDataKind.JsonMessage),
         ],
-        NodeType: NodeType.Output,
+        NodeType: NodeType.Debug,
         Title: "Payload Output",
         Subtitle: "Debug payload",
         IconPath: IconPath,

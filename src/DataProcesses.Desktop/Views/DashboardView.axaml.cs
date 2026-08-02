@@ -284,4 +284,16 @@ public partial class DashboardView : UserControl
             textBox.SelectionEnd = end;
         }, DispatcherPriority.Background);
     }
+
+    private void TriggerSurfacePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { DataContext: DashboardWidgetViewModel widget }
+            || DataContext is not DashboardViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.RequestTriggerByNodeId(widget.SourcePortId);
+        e.Handled = true;
+    }
 }

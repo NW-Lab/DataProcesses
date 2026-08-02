@@ -13,7 +13,10 @@
                           ItemsSource="{Binding Flows}"
                           SelectedItem="{Binding SelectedFlow}"
                           DisplayMemberBinding="{Binding DisplayName}" />
-                <TextBox Grid.Column="1" Text="{Binding FlowName}" PlaceholderText="Flow name" />
+                <TextBox Grid.Column="1"
+                         Text="{Binding FlowName}"
+                         PlaceholderText="Flow name"
+                         VerticalAlignment="Center" />
                 <Button Grid.Column="2" Content="Add Flow" Command="{Binding AddFlowCommand}" />
                 <Button Grid.Column="3" Content="Remove Flow" Command="{Binding RemoveFlowCommand}" />
                 <Button Grid.Column="4" Content="New" Command="{Binding NewFlowCommand}" />
@@ -22,12 +25,6 @@
                 <Button Grid.Column="7" Content="Validate" Command="{Binding ValidateCommand}" />
                 <Button Grid.Column="8" Content="-" Command="{Binding ZoomOutCommand}" />
                 <Button Grid.Column="9" Content="+" Command="{Binding ZoomInCommand}" />
-                <StackPanel Grid.Column="10" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="{Binding FlowName}" Foreground="White" FontWeight="SemiBold" FontSize="13" />
-                    <TextBlock Text="{Binding PendingConnectionLabel}" Foreground="#DDEB36" FontSize="11" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding ConnectionHintText}" Foreground="#FDE68A" FontSize="11" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding InteractionStatus}" Foreground="#B8C2D8" FontSize="11" />
-                </StackPanel>
                 <TextBlock Grid.Column="11" Text="{Binding ExecutionState}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold" />
             </Grid>
         </Border>
@@ -174,7 +171,7 @@
                                     <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,*">
                                         <Border Grid.ColumnSpan="2" Background="#1E293B" CornerRadius="6,6,0,0" Padding="8,6">
                                             <Grid>
-                                                <Grid ColumnDefinitions="24,*" ColumnSpacing="6">
+                                                <Grid ColumnDefinitions="24,*,Auto" ColumnSpacing="6">
                                                     <Border Width="22"
                                                             Height="22"
                                                             Background="#334155"
@@ -183,6 +180,19 @@
                                                         <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}" Stretch="Uniform" Margin="2" />
                                                     </Border>
                                                     <TextBlock Grid.Column="1" Text="{Binding DisplayName}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                    <Button Grid.Column="2"
+                                                            Margin="6,0,0,0"
+                                                            Padding="8,2"
+                                                            FontSize="10"
+                                                            FontWeight="Bold"
+                                                            Background="#DDEB36"
+                                                            Foreground="#1E293B"
+                                                            BorderBrush="#DDEB36"
+                                                            PointerPressed="NodeTriggerButtonPointerPressed"
+                                                            Click="NodeTriggerButtonClicked"
+                                                            IsVisible="{Binding IsTriggerNode}">
+                                                        <TextBlock Text="Trigger" />
+                                                    </Button>
                                                 </Grid>
                                             </Grid>
                                         </Border>
@@ -253,6 +263,7 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
+
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -323,6 +334,41 @@
                         <NumericUpDown Minimum="0.001"
                                        Increment="0.1"
                                        Value="{Binding SelectedNode.TestSignalSamplePeriodMilliseconds}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="10" Text="Trigger settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTriggerNode}" />
+                    <StackPanel Grid.Row="11" Spacing="5" IsVisible="{Binding SelectedNode.IsTriggerNode}">
+                        <CheckBox Content="Emit on execution start" IsChecked="{Binding SelectedNode.TriggerEmitOnExecutionStart}" />
+                        <CheckBox Content="Emit periodically" IsChecked="{Binding SelectedNode.TriggerEmitPeriodically}" />
+                        <TextBlock Text="Initial delay (ms)" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="0"
+                                       Increment="100"
+                                       Value="{Binding SelectedNode.TriggerInitialDelayMilliseconds}" />
+                        <TextBlock Text="Repeat interval (ms)" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Increment="100"
+                                       Value="{Binding SelectedNode.TriggerRepeatIntervalMilliseconds}" />
+                        <TextBlock Text="Topic" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.TriggerTopic}" />
+                        <TextBlock Text="Payload path" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.TriggerPayloadPath}" />
+                        <TextBlock Text="Payload value type" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.TriggerPayloadValueTypes}"
+                                  SelectedItem="{Binding SelectedNode.TriggerPayloadValueType}" />
+                        <StackPanel Spacing="4"
+                                IsVisible="{Binding SelectedNode.IsTriggerBoolEditorVisible}">
+                            <TextBlock Text="Boolean value" FontWeight="SemiBold" />
+                            <ComboBox ItemsSource="{Binding SelectedNode.TriggerBooleanChoices}"
+                                  SelectedItem="{Binding SelectedNode.TriggerBoolValue}" />
+                        </StackPanel>
+                        <TextBox Text="{Binding SelectedNode.TriggerStringValue}"
+                                 PlaceholderText="String value"
+                                 IsVisible="{Binding SelectedNode.IsTriggerStringEditorVisible}" />
+                        <NumericUpDown Value="{Binding SelectedNode.TriggerNumberValue}"
+                                       Increment="1"
+                                       IsVisible="{Binding SelectedNode.IsTriggerNumberEditorVisible}" />
+                        <TextBox Text="{Binding SelectedNode.TriggerNumberArrayText}"
+                                 PlaceholderText="1,2,3"
+                                 IsVisible="{Binding SelectedNode.IsTriggerNumberArrayEditorVisible}" />
                     </StackPanel>
                     <TextBox Grid.Row="12"
                              AcceptsReturn="True"

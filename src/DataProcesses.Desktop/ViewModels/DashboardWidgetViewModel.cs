@@ -7,6 +7,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     private const int DefaultGridWidth = 2;
     private const int DefaultGridHeight = 2;
     private const string DefaultContentKind = "text";
+    private const string TriggerButtonContentKind = "button-trigger";
 
     private int gridX;
     private int gridY;
@@ -72,11 +73,14 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
             if (SetProperty(ref contentKind, string.IsNullOrWhiteSpace(value) ? DefaultContentKind : value))
             {
                 OnPropertyChanged(nameof(IsTextContent));
+                OnPropertyChanged(nameof(IsTriggerButtonContent));
             }
         }
     }
 
     public bool IsTextContent => string.Equals(ContentKind, DefaultContentKind, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsTriggerButtonContent => string.Equals(ContentKind, TriggerButtonContentKind, StringComparison.OrdinalIgnoreCase);
 
     public string DisplayDataJson
     {

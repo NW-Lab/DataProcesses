@@ -7,6 +7,7 @@ using DataProcesses.Desktop.ViewModels;
 using DataProcesses.Engine;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
+using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Desktop.Tests;
@@ -444,6 +445,21 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void PlacePaletteNode_TriggerNodeCreatesButtonDashboardWidget()
+    {
+        var mainViewModel = new MainViewModel();
+        var trigger = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == TriggerBlock.TypeId);
+
+        mainViewModel.FlowEditor.PlacePaletteNode(trigger, 240, 220);
+
+        var widget = Assert.Single(mainViewModel.Dashboard.Widgets);
+        Assert.Equal(1, widget.GridWidth);
+        Assert.Equal(1, widget.GridHeight);
+        Assert.True(widget.IsTriggerButtonContent);
+        Assert.Equal("Trigger", widget.Content);
+    }
+
+    [Fact]
     public void PlacePaletteNode_PlacesDashboardWidgetWithoutOverlap()
     {
         IReadOnlyList<DashboardDocument> dashboards =
@@ -516,6 +532,24 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal("square", document.RootElement.GetProperty("waveType").GetString());
         Assert.Equal(25.5, document.RootElement.GetProperty("frequency").GetDouble());
         Assert.Equal(0.5, document.RootElement.GetProperty("samplePeriodMillis").GetDouble());
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_BuildRuntimeSettingsJson_InjectsTriggerSessionAndManualNonce()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", TriggerBlock.TypeId, 0, 0, "{}"),
+            TriggerBlock.Definition);
+
+        node.RequestTriggerNow();
+        node.RequestTriggerNow();
+
+        var runtimeSettingsJson = node.BuildRuntimeSettingsJson(42);
+
+        Assert.Equal("{}", node.SettingsJson);
+        using var document = JsonDocument.Parse(runtimeSettingsJson);
+        Assert.Equal(42, document.RootElement.GetProperty("executionSessionId").GetInt64());
+        Assert.Equal(2, document.RootElement.GetProperty("manualTriggerNonce").GetInt64());
     }
 
     [Fact]
@@ -657,6 +691,7 @@ public sealed class FlowEditorViewModelTests
     {
         var factories = new INodeFactory[]
         {
+            new TestNodeFactory("debug.block", "Debug Block", NodeType.Debug),
             new TestNodeFactory("input.block", "Input Block", NodeType.Input),
             new TestNodeFactory("process.block", "Process Block", NodeType.BasicProcess),
             new TestNodeFactory("output.block", "Output Block", NodeType.Output),
@@ -666,7 +701,7 @@ public sealed class FlowEditorViewModelTests
             new FlowRunner(factories),
             new ProjectFileService());
 
-        Assert.Equal(["INPUT", "Basic Process", "OUTPUT"], viewModel.Palette.Groups.Select(static group => group.DisplayName));
+        Assert.Equal(["DEBUG", "INPUT", "Basic Process", "OUTPUT"], viewModel.Palette.Groups.Select(static group => group.DisplayName));
         Assert.All(viewModel.Palette.Groups, group => Assert.Single(group.Nodes));
     }
 

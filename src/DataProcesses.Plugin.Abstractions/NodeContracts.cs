@@ -8,9 +8,10 @@ public enum PortDirection
 
 public enum NodeType
 {
-    Input,
-    BasicProcess,
-    Output,
+    Input = 0,
+    BasicProcess = 1,
+    Output = 2,
+    Debug = 3,
 }
 
 public sealed record PortDefinition(

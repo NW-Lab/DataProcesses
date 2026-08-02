@@ -4,6 +4,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
+using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Nodes.BuiltIn;
@@ -16,6 +17,7 @@ public sealed class BuiltInNodePlugin : INodePlugin
     private static readonly IReadOnlyCollection<INodeFactory> Factories =
     [
         new TestSignalNodeFactory(),
+        new TriggerNodeFactory(),
         new LowPassFilterNodeFactory(),
         new FastFourierTransformNodeFactory(),
         new StreamOutputNodeFactory(),

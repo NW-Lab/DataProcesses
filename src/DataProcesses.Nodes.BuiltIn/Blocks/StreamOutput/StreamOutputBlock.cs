@@ -14,13 +14,13 @@ public static class StreamOutputBlock
     public static readonly NodeDefinition Definition = new(
         TypeId: TypeId,
         DisplayName: "Stream Output",
-        Category: "Output",
+        Category: "Debug",
         Version: "0.1.0",
         Ports:
         [
             new PortDefinition(InputPortId, "Input", PortDirection.Input, PortDataKind.FastStream),
         ],
-        NodeType: NodeType.Output,
+        NodeType: NodeType.Debug,
         Title: "Stream Output",
         Subtitle: "Debug stream",
         IconPath: IconPath);
