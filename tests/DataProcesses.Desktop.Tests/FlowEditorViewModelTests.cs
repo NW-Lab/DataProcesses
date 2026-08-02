@@ -857,6 +857,26 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void CanvasNodeViewModel_UpdatesDashboardTextWrapSettingInSettingsJson()
+    {
+        var definition = new NodeDefinition(
+            "test.block",
+            "Test Block",
+            "Test",
+            "0.1.0",
+            []);
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", "test.block", 10, 20, "{}"),
+            definition);
+
+        Assert.True(node.DashboardTextWrapEnabled);
+        node.DashboardTextWrapEnabled = false;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.False(document.RootElement.GetProperty("dashboardTextWrapEnabled").GetBoolean());
+    }
+
+    [Fact]
     public void CanvasNodeViewModel_FallsBackToTitleWhenNameIsEmpty()
     {
         var definition = new NodeDefinition(
@@ -933,6 +953,7 @@ public sealed class FlowEditorViewModelTests
             {
                 text = "millis,value\n0,0",
             },
+            isTextWrapEnabled = false,
             isSourceNodeEnabled = false,
         });
 
@@ -951,6 +972,10 @@ public sealed class FlowEditorViewModelTests
         Assert.True(widget.IsTextContent);
         Assert.Equal("millis,value\n0,0", widget.Content);
         Assert.Contains("millis,value", widget.DisplayDataJson, StringComparison.Ordinal);
+        Assert.False(widget.IsTextWrapEnabled);
+        Assert.True(widget.IsTextNoWrapEnabled);
+        Assert.False(widget.IsTextContentAndWrapEnabled);
+        Assert.True(widget.IsTextContentAndNoWrapEnabled);
         Assert.Equal("#94A3B8", widget.HeaderBackground);
     }
 
@@ -1013,6 +1038,29 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal(500, lines.Length);
         Assert.Equal("line-6", lines[0]);
         Assert.Equal("line-505", lines[^1]);
+    }
+
+    [Fact]
+    public void FormatFastStreamFrame_UsesLatest500Samples()
+    {
+        var formatMethod = typeof(FlowEditorViewModel)
+            .GetMethod("FormatFastStreamFrame", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(formatMethod);
+
+        var samples = Enumerable.Range(0, 1_024).Select(static value => (double)value).ToArray();
+        var frame = new FastStreamFrame(
+            StartTimeUnixNanoseconds: 0,
+            SamplePeriodNanoseconds: 1_000_000,
+            ChannelNames: ["signal"],
+            Samples: [samples.AsMemory()],
+            SequenceNumber: 1);
+
+        var content = Assert.IsType<string>(formatMethod!.Invoke(null, [frame, 0L]));
+        var lines = content.Split(Environment.NewLine, StringSplitOptions.None);
+        Assert.Equal(501, lines.Length);
+        Assert.Equal("millis,value", lines[0]);
+        Assert.EndsWith(",524", lines[1], StringComparison.Ordinal);
+        Assert.EndsWith(",1023", lines[^1], StringComparison.Ordinal);
     }
 
     private sealed class TestNodeFactory : INodeFactory

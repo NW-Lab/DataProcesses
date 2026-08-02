@@ -20,6 +20,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     private string contentKind = DefaultContentKind;
     private string content = string.Empty;
     private string displayDataJson = "{}";
+    private bool isTextWrapEnabled = true;
     private bool isSourceNodeEnabled = true;
     private bool isInteractionAdornerVisible;
 
@@ -74,11 +75,17 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(IsTextContent));
                 OnPropertyChanged(nameof(IsTriggerButtonContent));
+                OnPropertyChanged(nameof(IsTextContentAndWrapEnabled));
+                OnPropertyChanged(nameof(IsTextContentAndNoWrapEnabled));
             }
         }
     }
 
     public bool IsTextContent => string.Equals(ContentKind, DefaultContentKind, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsTextContentAndWrapEnabled => IsTextContent && IsTextWrapEnabled;
+
+    public bool IsTextContentAndNoWrapEnabled => IsTextContent && IsTextNoWrapEnabled;
 
     public bool IsTriggerButtonContent => string.Equals(ContentKind, TriggerButtonContentKind, StringComparison.OrdinalIgnoreCase);
 
@@ -87,6 +94,22 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
         get => displayDataJson;
         private set => SetProperty(ref displayDataJson, string.IsNullOrWhiteSpace(value) ? "{}" : value);
     }
+
+    public bool IsTextWrapEnabled
+    {
+        get => isTextWrapEnabled;
+        private set
+        {
+            if (SetProperty(ref isTextWrapEnabled, value))
+            {
+                OnPropertyChanged(nameof(IsTextNoWrapEnabled));
+                OnPropertyChanged(nameof(IsTextContentAndWrapEnabled));
+                OnPropertyChanged(nameof(IsTextContentAndNoWrapEnabled));
+            }
+        }
+    }
+
+    public bool IsTextNoWrapEnabled => !IsTextWrapEnabled;
 
     public bool IsSourceNodeEnabled
     {
@@ -203,6 +226,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
         var parsedContentKind = DefaultContentKind;
         var parsedContent = string.Empty;
         var parsedDisplayDataJson = "{}";
+        var parsedIsTextWrapEnabled = true;
         var parsedIsEnabled = true;
 
         using var document = JsonDocument.Parse(value);
@@ -245,12 +269,19 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
             {
                 parsedIsEnabled = enabledElement.GetBoolean();
             }
+
+            if (document.RootElement.TryGetProperty("isTextWrapEnabled", out var textWrapElement)
+                && textWrapElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                parsedIsTextWrapEnabled = textWrapElement.GetBoolean();
+            }
         }
 
         Title = parsedTitle;
         ContentKind = parsedContentKind;
         Content = parsedContent;
         DisplayDataJson = parsedDisplayDataJson;
+        IsTextWrapEnabled = parsedIsTextWrapEnabled;
         IsSourceNodeEnabled = parsedIsEnabled;
     }
 }

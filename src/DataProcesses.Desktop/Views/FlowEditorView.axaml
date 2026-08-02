@@ -320,7 +320,12 @@
                     <TextBlock Grid.Row="4" Text="Description" FontWeight="SemiBold" />
                     <TextBox Grid.Row="5" Text="{Binding SelectedNode.Description}" />
                     <CheckBox Grid.Row="6" Content="Enabled" IsChecked="{Binding SelectedNode.IsEnabled}" />
-                    <CheckBox Grid.Row="7" Content="Show on Dashboard" IsChecked="{Binding SelectedNode.ShowOnDashboard}" />
+                    <StackPanel Grid.Row="7" Spacing="4">
+                        <CheckBox Content="Show on Dashboard" IsChecked="{Binding SelectedNode.ShowOnDashboard}" />
+                        <CheckBox Content="Wrap dashboard text"
+                                  IsChecked="{Binding SelectedNode.DashboardTextWrapEnabled}"
+                                  IsVisible="{Binding SelectedNode.ShowOnDashboard}" />
+                    </StackPanel>
                     <TextBlock Grid.Row="8" Text="TestSignal settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignal}" />
                     <StackPanel Grid.Row="9" Spacing="5" IsVisible="{Binding SelectedNode.IsTestSignal}">
                         <TextBlock Text="Wave type" FontWeight="SemiBold" />

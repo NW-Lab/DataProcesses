@@ -285,6 +285,50 @@ public partial class DashboardView : UserControl
         }, DispatcherPriority.Background);
     }
 
+    private void CopyTextBoxContentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (TryGetContextMenuTextBox(sender, out var textBox))
+        {
+            textBox.Copy();
+        }
+    }
+
+    private void CopyAllTextBoxContentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (!TryGetContextMenuTextBox(sender, out var textBox))
+        {
+            return;
+        }
+
+        var selectionStart = textBox.SelectionStart;
+        var selectionEnd = textBox.SelectionEnd;
+
+        textBox.SelectAll();
+        textBox.Copy();
+        textBox.SelectionStart = selectionStart;
+        textBox.SelectionEnd = selectionEnd;
+    }
+
+    private void SelectAllTextBoxContentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (TryGetContextMenuTextBox(sender, out var textBox))
+        {
+            textBox.SelectAll();
+        }
+    }
+
+    private static bool TryGetContextMenuTextBox(object? sender, out TextBox textBox)
+    {
+        if (sender is MenuItem { Parent: ContextMenu { PlacementTarget: TextBox targetTextBox } })
+        {
+            textBox = targetTextBox;
+            return true;
+        }
+
+        textBox = null!;
+        return false;
+    }
+
     private void TriggerSurfacePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Control { DataContext: DashboardWidgetViewModel widget }

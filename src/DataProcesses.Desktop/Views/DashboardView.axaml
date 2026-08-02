@@ -84,7 +84,37 @@
                                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                                      TextChanged="ContentTextBoxTextChanged"
-                                                     IsVisible="{Binding IsTextContent}" />
+                                                     IsVisible="{Binding IsTextContentAndWrapEnabled}">
+                                                <TextBox.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Copy All" Click="CopyAllTextBoxContentClicked" />
+                                                        <MenuItem Header="Copy" Click="CopyTextBoxContentClicked" />
+                                                        <MenuItem Header="Select All" Click="SelectAllTextBoxContentClicked" />
+                                                    </ContextMenu>
+                                                </TextBox.ContextMenu>
+                                            </TextBox>
+
+                                            <TextBox Grid.Row="1"
+                                                     Margin="10"
+                                                     Text="{Binding Content}"
+                                                     Foreground="#475569"
+                                                     Background="Transparent"
+                                                     BorderThickness="0"
+                                                     IsReadOnly="True"
+                                                     AcceptsReturn="True"
+                                                     TextWrapping="NoWrap"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                     TextChanged="ContentTextBoxTextChanged"
+                                                     IsVisible="{Binding IsTextContentAndNoWrapEnabled}">
+                                                <TextBox.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Copy All" Click="CopyAllTextBoxContentClicked" />
+                                                        <MenuItem Header="Copy" Click="CopyTextBoxContentClicked" />
+                                                        <MenuItem Header="Select All" Click="SelectAllTextBoxContentClicked" />
+                                                    </ContextMenu>
+                                                </TextBox.ContextMenu>
+                                            </TextBox>
 
                                             <Border Grid.Row="1"
                                                     Margin="6"

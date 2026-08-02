@@ -228,6 +228,12 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         set => SetProperty(ref dashboardGridHeight, Math.Max(1, value));
     }
 
+    public bool DashboardTextWrapEnabled
+    {
+        get => ReadSettingsBoolean("dashboardTextWrapEnabled", true);
+        set => UpdateSettingsBoolean("dashboardTextWrapEnabled", value);
+    }
+
     public string SettingsJson
     {
         get => settingsJson;
@@ -253,6 +259,7 @@ public sealed class CanvasNodeViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsTriggerStringEditorVisible));
                 OnPropertyChanged(nameof(IsTriggerNumberEditorVisible));
                 OnPropertyChanged(nameof(IsTriggerNumberArrayEditorVisible));
+                OnPropertyChanged(nameof(DashboardTextWrapEnabled));
             }
         }
     }

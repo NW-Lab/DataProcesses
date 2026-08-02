@@ -20,6 +20,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private const string TriggerButtonContentKind = "button-trigger";
     private const string PayloadOutputNodeTypeId = "dataprocesses.output.payload";
     private const int MaximumPayloadDashboardLogLines = 500;
+    private const int MaximumStreamDashboardSamples = 500;
     private const int RunLoopDelayMilliseconds = 100;
     private const double CanvasNodeWidth = 180;
     private const double CanvasPortPanelMargin = 8;
@@ -1191,7 +1192,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
             or nameof(CanvasNodeViewModel.IsEnabled)
             or nameof(CanvasNodeViewModel.ShowOnDashboard)
             or nameof(CanvasNodeViewModel.DashboardGridWidth)
-            or nameof(CanvasNodeViewModel.DashboardGridHeight))
+            or nameof(CanvasNodeViewModel.DashboardGridHeight)
+            or nameof(CanvasNodeViewModel.DashboardTextWrapEnabled))
         {
             SynchronizeDashboardWidgetForNode(node);
             MarkCurrentFlowDirty();
@@ -1422,6 +1424,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
             {
                 text = textContent,
             },
+            isTextWrapEnabled = node.DashboardTextWrapEnabled,
             isSourceNodeEnabled = node.IsEnabled,
         });
     }
@@ -1449,17 +1452,19 @@ public sealed class FlowEditorViewModel : ViewModelBase
         }
 
         var samples = frame.Samples[0].Span;
-        var lines = new List<string>(Math.Min(samples.Length, 8) + 1)
+        var sampleCount = Math.Min(samples.Length, MaximumStreamDashboardSamples);
+        var firstSourceIndex = samples.Length - sampleCount;
+        var lines = new List<string>(sampleCount + 1)
         {
             "millis,value",
         };
 
-        var sampleCount = Math.Min(samples.Length, 8);
-        var startMillis = Math.Max(0, frame.StartTimeUnixNanoseconds - runStartedUnixNanoseconds) / 1_000_000.0;
+        var frameStartMillis = Math.Max(0, frame.StartTimeUnixNanoseconds - runStartedUnixNanoseconds) / 1_000_000.0;
         for (var index = 0; index < sampleCount; index++)
         {
-            var millis = startMillis + (index * frame.SamplePeriodNanoseconds / 1_000_000.0);
-            lines.Add(FormattableString.Invariant($"{millis:0.###},{samples[index]:0.####}"));
+            var sourceIndex = firstSourceIndex + index;
+            var millis = frameStartMillis + (sourceIndex * frame.SamplePeriodNanoseconds / 1_000_000.0);
+            lines.Add(FormattableString.Invariant($"{millis:0.###},{samples[sourceIndex]:0.####}"));
         }
 
         return string.Join(Environment.NewLine, lines);
