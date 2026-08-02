@@ -312,7 +312,7 @@
 
         <Border Grid.Row="1" Grid.Column="2" BorderBrush="#D5D9E2" BorderThickness="1,0,0,0" Padding="10">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,180,Auto,Auto" RowSpacing="6" Margin="0,0,14,0">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,180,Auto,Auto" RowSpacing="6" Margin="0,0,14,0">
                     <TextBlock Text="Inspector" FontSize="14" FontWeight="SemiBold" />
                     <TextBlock Grid.Row="1" Text="{Binding SelectedNode.TypeId}" Foreground="#526071" TextWrapping="Wrap" FontSize="12" />
                     <TextBlock Grid.Row="2" Text="Name" FontWeight="SemiBold" />
@@ -375,13 +375,43 @@
                                  PlaceholderText="1,2,3"
                                  IsVisible="{Binding SelectedNode.IsTriggerNumberArrayEditorVisible}" />
                     </StackPanel>
-                    <TextBox Grid.Row="12"
+                    <TextBlock Grid.Row="12" Text="CSV Input settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsCsvInputNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsCsvInputNode}">
+                        <TextBlock Text="Output stream count" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="16"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.CsvInputOutputCount}" />
+                        <CheckBox Content="CSV has header row" IsChecked="{Binding SelectedNode.CsvInputHasHeaderRow}" />
+                        <TextBlock Text="Input source" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.CsvInputSourceTypes}"
+                                  SelectedItem="{Binding SelectedNode.CsvInputSourceType}" />
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.CsvInputIsFileSourceVisible}">
+                            <TextBlock Text="CSV file path" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding SelectedNode.CsvInputFilePath}"
+                                     PlaceholderText="C:/data/input.csv" />
+                        </StackPanel>
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.CsvInputIsFilePlaybackVisible}">
+                            <TextBlock Text="File playback mode" FontWeight="SemiBold" />
+                            <ComboBox ItemsSource="{Binding SelectedNode.CsvInputFilePlaybackModes}"
+                                      SelectedItem="{Binding SelectedNode.CsvInputFilePlaybackMode}" />
+                        </StackPanel>
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.CsvInputIsComSourceVisible}">
+                            <TextBlock Text="COM port" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding SelectedNode.CsvInputComPortName}" PlaceholderText="COM3" />
+                            <TextBlock Text="Baud rate" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="1"
+                                           Increment="9600"
+                                           Value="{Binding SelectedNode.CsvInputBaudRate}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBox Grid.Row="14"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
                              Text="{Binding SelectedNode.SettingsJson}"
                              PlaceholderText="Block-specific settings JSON" />
-                    <TextBlock Grid.Row="13" Text="Project directory" FontWeight="SemiBold" />
-                    <TextBox Grid.Row="14" Text="{Binding ProjectDirectory}" />
+                    <TextBlock Grid.Row="15" Text="Project directory" FontWeight="SemiBold" />
+                    <TextBox Grid.Row="16" Text="{Binding ProjectDirectory}" />
                 </Grid>
             </ScrollViewer>
         </Border>

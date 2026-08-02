@@ -1,4 +1,5 @@
 using DataProcesses.Nodes.BuiltIn;
+using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
 using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
@@ -21,6 +22,7 @@ public sealed class BuiltInNodePluginTests
         Assert.Equal(
             new[]
             {
+                CsvInputBlock.TypeId,
                 TestSignalBlock.TypeId,
                 TriggerBlock.TypeId,
                 LowPassFilterBlock.TypeId,
@@ -56,6 +58,7 @@ public sealed class BuiltInNodePluginTests
             static factory => factory.Definition.NodeType);
 
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[CsvInputBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TriggerBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[LowPassFilterBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FastFourierTransformBlock.TypeId]);

@@ -13,6 +13,7 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 {
     private const string TestSignalTypeId = "dataprocesses.test-signal";
     private const string TriggerTypeId = "dataprocesses.trigger";
+    private const string CsvInputTypeId = "dataprocesses.input.csv";
 
     private double x;
     private double y;
@@ -25,6 +26,8 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     private int dashboardGridWidth;
     private int dashboardGridHeight;
     private long triggerManualTriggerNonce;
+    private readonly IReadOnlyList<PortDefinition> inputDefinitions;
+    private readonly IReadOnlyList<PortDefinition> outputDefinitions;
 
     public CanvasNodeViewModel(NodeInstance instance, NodeDefinition definition)
     {
@@ -44,10 +47,17 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         dashboardGridWidth = Math.Max(1, instance.DashboardGridWidth ?? definition.DashboardWidget?.GridWidth ?? 2);
         dashboardGridHeight = Math.Max(1, instance.DashboardGridHeight ?? definition.DashboardWidget?.GridHeight ?? 2);
         IconImage = NodeIconLoader.Load(definition.IconPath);
+        inputDefinitions = definition.Ports.Where(static port => port.Direction == PortDirection.Input).ToArray();
+        outputDefinitions = definition.Ports.Where(static port => port.Direction == PortDirection.Output).ToArray();
         Inputs = new ObservableCollection<CanvasPortViewModel>(
-            definition.Ports.Where(static port => port.Direction == PortDirection.Input).Select(port => new CanvasPortViewModel(this, port)));
+            inputDefinitions.Select(port => new CanvasPortViewModel(this, port)));
         Outputs = new ObservableCollection<CanvasPortViewModel>(
-            definition.Ports.Where(static port => port.Direction == PortDirection.Output).Select(port => new CanvasPortViewModel(this, port)));
+            outputDefinitions.Select(port => new CanvasPortViewModel(this, port)));
+
+        if (IsCsvInputNode)
+        {
+            RefreshCsvInputOutputPorts();
+        }
     }
 
     public string Id { get; }
@@ -70,11 +80,17 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public bool IsTriggerNode => string.Equals(TypeId, TriggerTypeId, StringComparison.Ordinal);
 
+    public bool IsCsvInputNode => string.Equals(TypeId, CsvInputTypeId, StringComparison.Ordinal);
+
     public IReadOnlyList<string> TestSignalWaveTypes { get; } = ["sine", "square"];
 
     public IReadOnlyList<string> TriggerPayloadValueTypes { get; } = ["datetime", "boolean", "string", "numberArray", "number"];
 
     public IReadOnlyList<bool> TriggerBooleanChoices { get; } = [true, false];
+
+    public IReadOnlyList<string> CsvInputSourceTypes { get; } = ["file", "com"];
+
+    public IReadOnlyList<string> CsvInputFilePlaybackModes { get; } = ["immediate", "millis"];
 
     public string TestSignalWaveType
     {
@@ -168,6 +184,60 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public bool IsTriggerNumberArrayEditorVisible => string.Equals(TriggerPayloadValueType, "numberArray", StringComparison.Ordinal);
 
+    public string CsvInputSourceType
+    {
+        get => NormalizeCsvInputSourceType(ReadSettingsString("sourceType", "file"));
+        set
+        {
+            UpdateSettingsString("sourceType", NormalizeCsvInputSourceType(value));
+            OnPropertyChanged(nameof(CsvInputIsFileSourceVisible));
+            OnPropertyChanged(nameof(CsvInputIsComSourceVisible));
+            OnPropertyChanged(nameof(CsvInputIsFilePlaybackVisible));
+        }
+    }
+
+    public string CsvInputFilePath
+    {
+        get => ReadSettingsString("filePath", string.Empty);
+        set => UpdateSettingsString("filePath", value ?? string.Empty);
+    }
+
+    public string CsvInputComPortName
+    {
+        get => ReadSettingsString("comPortName", "COM3");
+        set => UpdateSettingsString("comPortName", string.IsNullOrWhiteSpace(value) ? "COM3" : value.Trim());
+    }
+
+    public double CsvInputBaudRate
+    {
+        get => ReadSettingsDouble("baudRate", 115200);
+        set => UpdateSettingsInt("baudRate", (int)Math.Round(value, MidpointRounding.AwayFromZero), minimumInclusive: 1, maximumInclusive: int.MaxValue);
+    }
+
+    public double CsvInputOutputCount
+    {
+        get => ReadSettingsDouble("outputCount", 2);
+        set => UpdateSettingsInt("outputCount", (int)Math.Round(value, MidpointRounding.AwayFromZero), minimumInclusive: 1, maximumInclusive: 16);
+    }
+
+    public bool CsvInputHasHeaderRow
+    {
+        get => ReadSettingsBoolean("hasHeaderRow", true);
+        set => UpdateSettingsBoolean("hasHeaderRow", value);
+    }
+
+    public string CsvInputFilePlaybackMode
+    {
+        get => NormalizeCsvInputFilePlaybackMode(ReadSettingsString("filePlaybackMode", "immediate"));
+        set => UpdateSettingsString("filePlaybackMode", NormalizeCsvInputFilePlaybackMode(value));
+    }
+
+    public bool CsvInputIsFileSourceVisible => string.Equals(CsvInputSourceType, "file", StringComparison.Ordinal);
+
+    public bool CsvInputIsComSourceVisible => string.Equals(CsvInputSourceType, "com", StringComparison.Ordinal);
+
+    public bool CsvInputIsFilePlaybackVisible => CsvInputIsFileSourceVisible;
+
     public string Category => Definition.Category;
 
     public ObservableCollection<CanvasPortViewModel> Inputs { get; }
@@ -241,6 +311,11 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         {
             if (SetProperty(ref settingsJson, string.IsNullOrWhiteSpace(value) ? "{}" : value))
             {
+                if (IsCsvInputNode)
+                {
+                    RefreshCsvInputOutputPorts();
+                }
+
                 OnPropertyChanged(nameof(TestSignalWaveType));
                 OnPropertyChanged(nameof(TestSignalFrequencyHertz));
                 OnPropertyChanged(nameof(TestSignalSamplePeriodMilliseconds));
@@ -259,6 +334,16 @@ public sealed class CanvasNodeViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsTriggerStringEditorVisible));
                 OnPropertyChanged(nameof(IsTriggerNumberEditorVisible));
                 OnPropertyChanged(nameof(IsTriggerNumberArrayEditorVisible));
+                OnPropertyChanged(nameof(CsvInputSourceType));
+                OnPropertyChanged(nameof(CsvInputFilePath));
+                OnPropertyChanged(nameof(CsvInputComPortName));
+                OnPropertyChanged(nameof(CsvInputBaudRate));
+                OnPropertyChanged(nameof(CsvInputOutputCount));
+                OnPropertyChanged(nameof(CsvInputHasHeaderRow));
+                OnPropertyChanged(nameof(CsvInputFilePlaybackMode));
+                OnPropertyChanged(nameof(CsvInputIsFileSourceVisible));
+                OnPropertyChanged(nameof(CsvInputIsComSourceVisible));
+                OnPropertyChanged(nameof(CsvInputIsFilePlaybackVisible));
                 OnPropertyChanged(nameof(DashboardTextWrapEnabled));
             }
         }
@@ -307,6 +392,11 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         }
 
         triggerManualTriggerNonce++;
+    }
+
+    public void RefreshDynamicPortsFromSettings()
+    {
+        RefreshCsvInputOutputPorts();
     }
 
     private string ReadSettingsString(string propertyName, string fallback)
@@ -408,6 +498,18 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         SettingsJson = settings.ToJsonString();
     }
 
+    private void UpdateSettingsInt(string propertyName, int value, int minimumInclusive, int maximumInclusive)
+    {
+        if (value < minimumInclusive || value > maximumInclusive)
+        {
+            return;
+        }
+
+        var settings = ReadSettingsObject();
+        settings[propertyName] = value;
+        SettingsJson = settings.ToJsonString();
+    }
+
     private JsonObject ReadSettingsObject()
     {
         try
@@ -417,6 +519,30 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         catch (JsonException)
         {
             return new JsonObject();
+        }
+    }
+
+    private void RefreshCsvInputOutputPorts()
+    {
+        if (!IsCsvInputNode)
+        {
+            return;
+        }
+
+        var requestedCount = (int)Math.Round(ReadSettingsDouble("outputCount", 2), MidpointRounding.AwayFromZero);
+        var outputCount = Math.Clamp(requestedCount, 1, outputDefinitions.Count);
+        var visibleDefinitions = outputDefinitions.Take(outputCount).ToArray();
+
+        if (Outputs.Count == visibleDefinitions.Length
+            && Outputs.Zip(visibleDefinitions, static (port, definition) => string.Equals(port.Id, definition.Id, StringComparison.Ordinal)).All(static isSame => isSame))
+        {
+            return;
+        }
+
+        Outputs.Clear();
+        foreach (var definition in visibleDefinitions)
+        {
+            Outputs.Add(new CanvasPortViewModel(this, definition));
         }
     }
 
@@ -448,6 +574,21 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         }
 
         return "datetime";
+    }
+
+    private static string NormalizeCsvInputSourceType(string? value)
+    {
+        return string.Equals(value, "com", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "comport", StringComparison.OrdinalIgnoreCase)
+            ? "com"
+            : "file";
+    }
+
+    private static string NormalizeCsvInputFilePlaybackMode(string? value)
+    {
+        return string.Equals(value, "millis", StringComparison.OrdinalIgnoreCase)
+            ? "millis"
+            : "immediate";
     }
 
 }

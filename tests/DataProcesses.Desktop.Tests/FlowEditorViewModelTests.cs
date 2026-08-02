@@ -5,7 +5,9 @@ using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Desktop.ViewModels;
 using DataProcesses.Engine;
+using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Plugin.Abstractions;
@@ -550,6 +552,47 @@ public sealed class FlowEditorViewModelTests
         using var document = JsonDocument.Parse(runtimeSettingsJson);
         Assert.Equal(42, document.RootElement.GetProperty("executionSessionId").GetInt64());
         Assert.Equal(2, document.RootElement.GetProperty("manualTriggerNonce").GetInt64());
+    }
+
+    [Fact]
+    public void CsvInput_OutputCountChange_UpdatesVisiblePortsAndDropsHiddenConnections()
+    {
+        INodeFactory[] factories =
+        [
+            new CsvInputNodeFactory(),
+            new StreamOutputNodeFactory(),
+        ];
+
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService());
+
+        var csvInputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == CsvInputBlock.TypeId);
+        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputBlock.TypeId);
+
+        var csvInputNode = viewModel.PlacePaletteNode(csvInputPaletteNode, 100, 100);
+        var streamOutputNode1 = viewModel.PlacePaletteNode(streamOutputPaletteNode, 380, 80);
+        var streamOutputNode2 = viewModel.PlacePaletteNode(streamOutputPaletteNode, 380, 200);
+
+        var stream1 = csvInputNode.Outputs.Single(port => port.Id == CsvInputBlock.GetStreamPortId(1));
+        var stream2 = csvInputNode.Outputs.Single(port => port.Id == CsvInputBlock.GetStreamPortId(2));
+        var target1 = Assert.Single(streamOutputNode1.Inputs);
+        var target2 = Assert.Single(streamOutputNode2.Inputs);
+
+        viewModel.StartPendingConnection(stream1);
+        viewModel.HandlePortConnection(stream1, target1);
+        viewModel.StartPendingConnection(stream2);
+        viewModel.HandlePortConnection(stream2, target2);
+
+        Assert.Equal(2, viewModel.Connections.Count);
+
+        csvInputNode.CsvInputOutputCount = 1;
+
+        var visibleOutput = Assert.Single(csvInputNode.Outputs);
+        Assert.Equal(CsvInputBlock.GetStreamPortId(1), visibleOutput.Id);
+        var remainingConnection = Assert.Single(viewModel.Connections);
+        Assert.Equal(CsvInputBlock.GetStreamPortId(1), remainingConnection.Connection.SourcePortId);
     }
 
     [Fact]

@@ -1198,8 +1198,17 @@ public sealed class FlowEditorViewModel : ViewModelBase
             SynchronizeDashboardWidgetForNode(node);
             MarkCurrentFlowDirty();
         }
-        else if (e.PropertyName is nameof(CanvasNodeViewModel.SettingsJson))
+        else if (e.PropertyName is nameof(CanvasNodeViewModel.SettingsJson)
+            or nameof(CanvasNodeViewModel.CsvInputOutputCount))
         {
+            if (node.IsCsvInputNode)
+            {
+                node.RefreshDynamicPortsFromSettings();
+                var currentConnections = Connections.Select(static connection => connection.Connection).ToArray();
+                RebuildConnections(currentConnections);
+                Validate();
+            }
+
             MarkCurrentFlowDirty();
         }
     }
