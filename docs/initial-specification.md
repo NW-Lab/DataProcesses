@@ -82,26 +82,31 @@ MVPでは時系列グラフを実装し、将来は数値表示、FFTスペク�
 
 Node-REDは、パレットへノードを追加することを主要な拡張方法とし、各ノードを明確で単純な目的に限定する設計指針を示しています。[2] DataProcessesもこの考え方を採用し、巨大な万能ノードではなく、小さな責務のノードを接続します。
 
-現在のpre-alpha実装では、次の5 Blockを`BuiltInNodePlugin`へ登録し、各Blockのポート契約と基本動作をテストしています。表中の「今後のMVP拡張」は製品仕様として維持する目標であり、現時点で実装済みであることを意味しません。
+現在のpre-alpha実装では、次の表に示す Block 群を`BuiltInNodePlugin`へ登録し、各Blockのポート契約と基本動作をテストしています。表中の「今後のMVP拡張」は製品仕様として維持する目標であり、現時点で実装済みであることを意味しません。
 
 | ノード | NodeType | 入力 | 出力 | 現在のpre-alpha実装 | 今後のMVP拡張 |
 |---|---|---|---|---|---|
-| Test Signal | `INPUT` | Payload / JSON Message（任意） | `FastStreamFrame`、Payload / JSON Message | 開始時に、設定された有効状態をPayloadで出力し、有効な場合は1 kHz・256サンプルの正弦波または矩形波フレームを1件出力する。Payload入力で`isEnabled`、`waveType`、`frequency`、`amplitude`を更新でき、既定では入力PayloadをそのままPayload出力へ通過させる。 | ホワイトノイズ、チャンネル数・ブロック長の設定、連続生成。 |
+| Test Signal | `INPUT` | Payload（内部契約名: JSON Message）（任意） | `FastStreamFrame`、Payload（内部契約名: JSON Message） | 開始時に、設定された有効状態をPayloadで出力し、有効な場合は1 kHz・256サンプルの正弦波または矩形波フレームを1件出力する。Payload入力で`isEnabled`、`waveType`、`frequency`、`amplitude`を更新でき、既定では入力PayloadをそのままPayload出力へ通過させる。 | ホワイトノイズ、チャンネル数・ブロック長の設定、連続生成。 |
 | Low-pass Filter | `Basic Process` | `FastStreamFrame` | `FastStreamFrame` | チャンネルごとに状態を保持する一次平滑化（固定係数0.25）を適用する。 | カットオフ・次数設定、High-passを含む追加フィルター。 |
 | FFT | `Basic Process` | `FastStreamFrame` | `SpectrumFrame` | 実数入力の片側振幅スペクトルを計算し、周波数分解能と入力の時刻・シーケンス情報を保持する。 | FFTサイズ、窓関数、オーバーラップ、振幅表現、最適化済みアルゴリズム。 |
 | Stream Output | `OUTPUT` | `FastStreamFrame` | なし | 最新フレームからチャンネルごとに最大512点へ間引いたデバッグ用スナップショットを保持する。 | Payload Outputとの役割分離、ダッシュボード描画、表示時間幅、Y軸、色、更新頻度。 |
-| Python Output | `OUTPUT` | `FastStreamFrame`またはJSON Message | JSON Messageによる状態 | 入力系統を検証し、受信記録と`deferred`状態メッセージを出力する。Pythonプロセスは起動しない。 | 実行環境、スクリプト、タイムアウト、送信方式、Pythonワーカーとの実通信。 |
+| Numeric Vector Output | `Debug` | `NumericVectorFrame` | なし | 1次元ベクトルを受信し、表示用に保持する。上限内はゼロコピーで保持する。 | ベクトル可視化、統計表示、ピーク注釈。 |
+| Image Output | `Debug` | `ImageFrame` | なし | 2次元画像を受信し、表示用プレビューを保持する。上限超過時のみ切り詰める。 | 画像プレビュー、ヒートマップ、ROI表示。 |
+| Python Output | `OUTPUT` | `FastStreamFrame`またはPayload（内部契約名: JSON Message） | Payload（内部契約名: JSON Message）による状態 | 入力系統を検証し、受信記録と`deferred`状態メッセージを出力する。Pythonプロセスは起動しない。 | 実行環境、スクリプト、タイムアウト、送信方式、Pythonワーカーとの実通信。 |
+| CSV Output | `Output` | `FastStreamFrame` | なし | Fast Stream入力をCSVファイルへ追記/新規保存する。 | ローテーション、時刻形式、複数バインディング制御。 |
 
 ## 6. ブロック間データモデル
 
-ブロック間通信は、**高速ストリーム（Fast Stream）**と**Payload（内部契約名: JSON Message）**の二系統に分けます。この分離により、連続サンプルを効率よく処理する経路と、設定、イベント、コマンド、結果などを柔軟に扱う経路を明確にできます。利用者向けの画面と文書ではPayload系と呼び、コード上の既存公開契約では`JsonMessage`を維持します。
+ブロック間通信は、**高速ストリーム（Fast Stream）**と**Payload（内部契約名: JSON Message）**の二系統に分けます。この分離により、連続サンプルを効率よく処理する経路と、設定、イベント、コマンド、結果などを柔軟に扱う経路を明確にできます。本仕様では、利用者向け表記をPayload、契約ファミリー名をJSON Message、コード上の型名を`JsonMessage`として使い分けます。
 
 | 系統 | 主用途 | 内部表現 | 代表例 |
 |---|---|---|---|
 | Fast Stream | 高頻度の連続数値データ | 型付きバイナリ／メモリ上の数値配列 | 波形、センサー値、FFT入力 |
-| Payload / JSON Message | 低頻度のイベント、制御、可変構造データ | UTF-8 JSON payload | 開始通知、検出イベント、設定変更、解析結果 |
+| Payload（内部契約名: JSON Message） | 低頻度のイベント、制御、可変構造データ | UTF-8 JSON payload | 開始通知、検出イベント、設定変更、解析結果 |
 
 一つのBlockは、複数のFast Stream入力、複数のPayload入力、複数のFast Stream出力、複数のPayload出力を持てます。接続は出力ポートから入力ポートへ向かい、一つの出力ポートから複数の下流Blockへ分岐できます。
+
+2026-08-08時点の実装では、`PortDataKind`（`FastStream` / `JsonMessage`）に加えて、詳細互換性として`PortDataSchema`を導入しています。`TimeSeries1D`、`Spectrum1D`、`NumericVector1D`、`NumericMatrix2D`、`Image2D`、`JsonEnvelope`を用いて接続互換性を判定します。`Unspecified`は後方互換・移行用途として許可します。
 
 ### 6.1 Fast Stream
 
@@ -119,6 +124,35 @@ FastStreamFrame
 ```
 
 現在公開している`FastStreamFrame`は、規則的にサンプリングされたチャンネル主順の数値配列を受け渡す最小契約です。`StartTimeUnixNanoseconds`は先頭サンプルの基準時刻、`SamplePeriodNanoseconds`は公称サンプル間隔です。ナノ秒単位の整数を採用するのは、1 ms未満の間隔を表現できるようにするためであり、計測精度が必ずナノ秒になることを意味しません。実際の時刻精度は入力デバイスとOSタイマーに依存します。
+
+加えて、1D/2D拡張として以下の契約を導入しています。
+
+```text
+NumericVectorFrame
+  Name: string
+  Values: ReadOnlyMemory<double>
+  SequenceNumber: long
+  Timestamp: DateTimeOffset?
+
+NumericMatrixFrame
+  Name: string
+  RowCount: int
+  ColumnCount: int
+  ValuesRowMajor: ReadOnlyMemory<double>
+  SequenceNumber: long
+  Timestamp: DateTimeOffset?
+
+ImageFrame
+  Name: string
+  Width: int
+  Height: int
+  PixelFormat: Gray8 | Rgb24 | Rgba32
+  PixelsInterleaved: ReadOnlyMemory<byte>  // H x W x C
+  SequenceNumber: long
+  Timestamp: DateTimeOffset?
+```
+
+カラー画像は`H x W x C`（interleaved）を1つのデータとして扱います。R/G/Bを別データとして分離する方式は標準契約には採用しません。
 
 `SchemaVersion`、`StreamId`、単位、品質フラグ、メタデータ、不規則サンプリング用の時刻オフセットは、将来の互換性を損なわない形で追加する拡張候補です。現在の最小契約へ暗黙にフィールドを追加するのではなく、必要時にデータ契約と保存形式を明示的に版管理します。
 
@@ -144,7 +178,7 @@ millis,data
 
 `millis,data`は分かりやすく、1000 Hz以下の表示・保存には使いやすい形式です。ただし、1000 Hzを超えるサンプリングでは複数サンプルが同じミリ秒値になり得るため、内部表現や高精度CSVではナノ秒またはマイクロ秒単位を使用します。
 
-### 6.3 JSON Message
+### 6.3 Payload（JSON Message）
 
 JSON系統は、Node-REDに近い `payload` 中心のメッセージモデルとします。ただし、追跡と互換性のために最小限の共通エンベロープを定義します。
 
@@ -170,12 +204,12 @@ JSON系統は、Node-REDに近い `payload` 中心のメッセージモデルと
 | ポート種別 | 推奨色 | 推奨形状 | 短縮表示 |
 |---|---|---|---|
 | Fast Stream | 青系 | 円 | `S` |
-| Payload / JSON Message | 赤系 | 円 | `P` |
+| Payload（内部契約名: JSON Message） | 赤系 | 円 | `P` |
 | 将来の制御専用ポート | 紫系 | 三角形 | `C` |
 
 入力ポートはブロック左側、出力ポートは右側に配置します。マウスオーバー時には、ポート名、データ系統、詳細スキーマ、単位をツールチップ表示します。接続線もポート種別と同じ色・線種を使用し、Fast Streamは青い実線、Payloadは赤い破線とします。色だけに依存しないよう、ラベルと線種も必ず併用します。
 
-接続時には系統と詳細スキーマを検査し、Fast StreamとPayloadの直接接続は拒否します。両者を変換する場合は、`Stream to Payload`や`Payload to Stream`など、変換内容が明示された専用ブロックを使用します。
+接続時には系統と詳細スキーマを検査し、Fast StreamとPayloadの直接接続は拒否します。詳細スキーマは、双方が`Unspecified`以外を宣言している場合に完全一致が必要です。両者を変換する場合は、`Stream to Payload`や`Payload to Stream`など、変換内容が明示された専用ブロックを使用します。
 
 キャンバスに置かれたBlockは、共通設定として名前、説明、有効、Dashboard表示、Dashboardサイズを持ちます。有効が`false`の場合、そのBlockは実行されず、データも出力しません。Dashboard表示が有効な場合、最初のDashboardへBlock用ウィジェットを自動追加します。追加位置は既存ウィジェットと重ならない空きグリッドを選択します。Block定義はDashboard表示の初期値とサイズをコードで指定できます。Dashboardウィジェットはタイトルと表示種別付きコンテンツを表示し、元のBlockが無効な場合はタイトルをグレーで表示します。コンテンツはテキスト、時系列グラフ、X-Yグラフ、その他の将来形式を扱えるよう、表示種別と構造化データを分けます。Block固有設定は各Blockの仕様で定義します。Block定義はタイトル、サブタイトル、アイコンを持てます。タイトルとサブタイトルはノードライブラリで表示し、キャンバス上では配置済みBlockの名前のみを表示します。名前が未定義の場合はBlockタイトルを表示します。BlockアイコンはBlockフォルダの`icon.png`を使用し、64 x 64 pxを推奨します。
 
@@ -252,10 +286,10 @@ public interface INodeRuntime : IAsyncDisposable
 
 | 機能 | 説明 | 推奨時期 |
 |---|---|---|
-| Python Outputノード | 実行中データをPythonワーカープロセスへ送り、保存・解析・外部送信を行う | v0.1後半〜v0.2 |
+| Python Outputノード | v0.1では受信検証と状態出力（deferred）まで提供し、v0.2でPythonワーカープロセス実行・実通信を追加する | v0.1〜v0.2 |
 | Python Code Export | フロー全体または一部をPythonコード／Notebookへ変換する | v1.0以降 |
 
-MVPにPython Outputを含める場合、Pythonコードをアプリ本体へ埋め込まず、**別プロセスとして実行**します。初期プロトコルはJSON Linesによる標準入出力とし、メッセージにはスキーマバージョン、フローID、ノードID、フレーム種別を含めます。大容量データで性能不足が判明した段階で、MessagePack、名前付きパイプ、共有メモリなどへ拡張します。
+v0.1（現pre-alpha）ではPython Outputは受信検証と状態出力（`deferred`）までを対象とし、Pythonプロセスは起動しません。v0.2でPythonコードをアプリ本体へ埋め込まず、**別プロセスとして実行**します。初期プロトコルはJSON Linesによる標準入出力とし、メッセージにはスキーマバージョン、フローID、ノードID、フレーム種別を含めます。大容量データで性能不足が判明した段階で、MessagePack、名前付きパイプ、共有メモリなどへ拡張します。
 
 Python側の例外、終了コード、標準エラー、タイムアウトをノード状態としてGUIへ表示します。Python実行を許可する前には、対象スクリプトと実行環境を利用者に明示します。
 
@@ -318,27 +352,29 @@ DataProcesses.sln
 
 UIと処理エンジンを分離し、エンジンはGUIなしでテストできるようにします。この分離は、将来のCLI実行、ヘッドレス収集、リモート実行にも有効です。
 
-## 13. MVP受け入れ基準
+## 13. MVP受け入れ基準（pre-alpha整合版）
 
-| ID | 受け入れ基準 |
-|---|---|
-| MVP-01 | Windowsでアプリを起動し、新規プロジェクトを作成・保存・再読込できる |
-| MVP-02 | Test Signal、Filter、FFT、Stream Outputをキャンバスへ配置できる |
-| MVP-03 | Fast StreamとPayloadを色・ラベル・線種で識別でき、型不一致、詳細スキーマ不一致、循環接続を拒否できる |
-| MVP-04 | `Test Signal → Filter → Stream Output` を開始・停止できる |
-| MVP-05 | `Test Signal → FFT` の出力を診断画面またはスペクトル表示で確認できる |
-| MVP-06 | 複数フローと複数ダッシュボードを一つのプロジェクトへ保存できる |
-| MVP-07 | ノードエラーがアプリ全体のクラッシュではなく、ノード状態とログに反映される |
-| MVP-08 | 外部のサンプルC#プラグインを検出し、ノードパレットへ追加できる |
-| MVP-09 | UIを日本語と英語で切り替えられる |
-| MVP-10 | コア処理、保存互換性、主要ノードに自動テストがある |
+`MVP-08` はADR 0003（外部Add-in読み込みを将来機能とする方針）に合わせて再定義しています。
+
+| ID | 受け入れ基準 | pre-alpha実装状況 |
+|---|---|---|
+| MVP-01 | Windowsでアプリを起動し、新規プロジェクトを作成・保存・再読込できる | 実装済み |
+| MVP-02 | `BuiltInNodePlugin` に登録された標準Block（Test Signal、Low-pass Filter、FFT、Stream Output、Payload Output、Python Output、CSV Input、CSV Output、Trigger、Numeric Vector Output、Image Output）をキャンバスへ配置できる | 実装済み |
+| MVP-03 | Fast StreamとPayloadを色・ラベル・線種で識別でき、型不一致、詳細スキーマ不一致、循環接続を拒否できる | 実装済み |
+| MVP-04 | `Test Signal → Low-pass Filter → Stream Output` を開始・停止できる | 実装済み |
+| MVP-05 | `Test Signal → FFT` の出力を診断Block（Stream Output / Numeric Vector Output）で確認できる | 実装済み |
+| MVP-06 | 複数フローと複数ダッシュボードを一つのプロジェクトへ保存できる | 実装済み |
+| MVP-07 | ノードエラーがアプリ全体のクラッシュではなく、ノード状態とログに反映される | 実装済み |
+| MVP-08 | 外部Add-inの検出・動的読み込みは行わず、標準Blockを明示登録で提供できる（外部Add-inは将来機能） | 実装済み |
+| MVP-09 | UIを日本語と英語で切り替えられる | 未実装 |
+| MVP-10 | コア処理、保存互換性、主要Blockに自動テストがある | 実装済み |
 
 ## 14. リリース段階
 
 | 段階 | 内容 |
 |---|---|
-| v0.1 Foundation | プロジェクト保存、フローGUI、実行エンジン、4基本ノード、時系列表示、ログ |
-| v0.2 Extensibility | プラグインSDK安定化、Python Worker、プラグインテンプレート、プラグイン管理 |
+| v0.1 Foundation | プロジェクト保存、フローGUI、実行エンジン、標準Block（BuiltInNodePlugin登録群）、時系列表示、ログ、Python Outputのdeferred状態出力 |
+| v0.2 Extensibility | プラグインSDK安定化、Python Worker実行、プラグインテンプレート、プラグイン管理 |
 | v0.3 Dashboard | 複数ウィジェット、FFT表示、レイアウト編集、操作系ウィジェット |
 | v0.4 Cross-platform | macOSビルド、パッケージング、OS差異の整理 |
 | v1.0 Stable | 保存形式とプラグインAPIの互換性方針、文書化、サンプル、署名済みリリース |

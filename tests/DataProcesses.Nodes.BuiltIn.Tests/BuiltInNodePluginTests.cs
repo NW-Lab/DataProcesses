@@ -2,7 +2,9 @@ using DataProcesses.Nodes.BuiltIn;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
+using DataProcesses.Nodes.BuiltIn.Blocks.ImageOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
+using DataProcesses.Nodes.BuiltIn.Blocks.NumericVectorOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
@@ -29,6 +31,8 @@ public sealed class BuiltInNodePluginTests
                 LowPassFilterBlock.TypeId,
                 FastFourierTransformBlock.TypeId,
                 StreamOutputBlock.TypeId,
+                NumericVectorOutputBlock.TypeId,
+                ImageOutputBlock.TypeId,
                 PythonOutputBlock.TypeId,
                 PayloadOutputBlock.TypeId,
                 CsvOutputBlock.TypeId,
@@ -65,6 +69,8 @@ public sealed class BuiltInNodePluginTests
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[LowPassFilterBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FastFourierTransformBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputBlock.TypeId]);
+        Assert.Equal(NodeType.Debug, nodeTypesByTypeId[NumericVectorOutputBlock.TypeId]);
+        Assert.Equal(NodeType.Debug, nodeTypesByTypeId[ImageOutputBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[PythonOutputBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[PayloadOutputBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[CsvOutputBlock.TypeId]);

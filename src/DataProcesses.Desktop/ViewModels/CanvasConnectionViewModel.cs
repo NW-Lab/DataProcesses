@@ -38,7 +38,27 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
 
     public PortDataKind DataKind => Connection.DataKind;
 
+    public PortDataSchema DataSchema => Connection.DataSchema;
+
     public string KindLabel => DataKind == PortDataKind.FastStream ? "Fast Stream" : "Payload";
+
+    public bool HasDetailedSchema => DataSchema != PortDataSchema.Unspecified;
+
+    public string SchemaLabel => DataSchema switch
+    {
+        PortDataSchema.Unspecified => "Unspecified",
+        PortDataSchema.TimeSeries1D => "Time Series (1D)",
+        PortDataSchema.Spectrum1D => "Spectrum (1D)",
+        PortDataSchema.NumericVector1D => "Numeric Vector (1D)",
+        PortDataSchema.NumericMatrix2D => "Numeric Matrix (2D)",
+        PortDataSchema.Image2D => "Image (2D)",
+        PortDataSchema.JsonEnvelope => "JSON Envelope",
+        _ => "Unknown Schema",
+    };
+
+    public string ConnectionLabel => HasDetailedSchema
+        ? $"{KindLabel} / {SchemaLabel}"
+        : KindLabel;
 
     public string Tag => Connection.Tag ?? string.Empty;
 

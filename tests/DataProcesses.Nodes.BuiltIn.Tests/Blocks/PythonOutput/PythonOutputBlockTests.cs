@@ -18,18 +18,21 @@ public sealed class PythonOutputBlockTests
                 Assert.Equal(PythonOutputBlock.FastStreamInputPortId, fastStream.Id);
                 Assert.Equal(PortDirection.Input, fastStream.Direction);
                 Assert.Equal(PortDataKind.FastStream, fastStream.DataKind);
+                Assert.Equal(PortDataSchema.Unspecified, fastStream.DataSchema);
             },
             jsonMessage =>
             {
                 Assert.Equal(PythonOutputBlock.JsonMessageInputPortId, jsonMessage.Id);
                 Assert.Equal(PortDirection.Input, jsonMessage.Direction);
                 Assert.Equal(PortDataKind.JsonMessage, jsonMessage.DataKind);
+                Assert.Equal(PortDataSchema.JsonEnvelope, jsonMessage.DataSchema);
             },
             status =>
             {
                 Assert.Equal(PythonOutputBlock.StatusOutputPortId, status.Id);
                 Assert.Equal(PortDirection.Output, status.Direction);
                 Assert.Equal(PortDataKind.JsonMessage, status.DataKind);
+                Assert.Equal(PortDataSchema.JsonEnvelope, status.DataSchema);
             });
     }
 

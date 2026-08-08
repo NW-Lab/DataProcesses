@@ -18,7 +18,12 @@ public static class PayloadOutputBlock
         Version: "0.1.0",
         Ports:
         [
-            new PortDefinition(InputPortId, "Payload", PortDirection.Input, PortDataKind.JsonMessage),
+            new PortDefinition(
+                InputPortId,
+                "Payload",
+                PortDirection.Input,
+                PortDataKind.JsonMessage,
+                DataSchema: PortDataSchema.JsonEnvelope),
         ],
         NodeType: NodeType.Debug,
         Title: "Payload Output",

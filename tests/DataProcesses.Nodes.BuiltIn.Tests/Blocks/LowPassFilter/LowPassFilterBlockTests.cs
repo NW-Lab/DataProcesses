@@ -17,12 +17,14 @@ public sealed class LowPassFilterBlockTests
                 Assert.Equal(LowPassFilterBlock.InputPortId, input.Id);
                 Assert.Equal(PortDirection.Input, input.Direction);
                 Assert.Equal(PortDataKind.FastStream, input.DataKind);
+                Assert.Equal(PortDataSchema.TimeSeries1D, input.DataSchema);
             },
             output =>
             {
                 Assert.Equal(LowPassFilterBlock.OutputPortId, output.Id);
                 Assert.Equal(PortDirection.Output, output.Direction);
                 Assert.Equal(PortDataKind.FastStream, output.DataKind);
+                Assert.Equal(PortDataSchema.TimeSeries1D, output.DataSchema);
             });
     }
 

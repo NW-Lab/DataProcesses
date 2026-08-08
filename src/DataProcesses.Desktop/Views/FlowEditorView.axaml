@@ -103,7 +103,7 @@
                                           StrokeThickness="3.5"
                                           StrokeDashArray="{Binding StrokeDashArray}"
                                           ZIndex="20"
-                                          ToolTip.Tip="{Binding KindLabel}" />
+                                        ToolTip.Tip="{Binding ConnectionLabel}" />
 
                                     <Grid.ContextMenu>
                                         <ContextMenu DataContext="{Binding}">
@@ -210,22 +210,40 @@
                                                             BorderThickness="0"
                                                             HorizontalAlignment="Left"
                                                             CommandParameter="{Binding}"
-                                                            ToolTip.Tip="{Binding AccessibleName}">
+                                                            ToolTip.Tip="{Binding ToolTipText}">
                                                         <Button.Styles>
                                                             <Style Selector="Button:pointerover /template/ ContentPresenter">
                                                                 <Setter Property="Background" Value="#FDE68A" />
                                                             </Style>
                                                         </Button.Styles>
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <Grid Width="18" Height="18">
-                                                                <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="9">
-                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
-                                                                </Border>
-                                                                <Border IsVisible="{Binding IsJsonMessage}" Background="#D92D20" CornerRadius="9">
-                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Left">
+                                                            <Border IsVisible="{Binding HasDetailedSchema}"
+                                                                    Background="{Binding SchemaBadgeBackground}"
+                                                                    BorderBrush="{Binding SchemaBadgeBorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="4"
+                                                                    Padding="4,1"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding SchemaBadge}"
+                                                                           Foreground="{Binding SchemaBadgeForeground}"
+                                                                           FontSize="9"
+                                                                           FontWeight="SemiBold" />
+                                                            </Border>
+                                                            <Grid Width="74" ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                                                <TextBlock Grid.Column="0"
+                                                                           Text="{Binding DisplayName}"
+                                                                           VerticalAlignment="Center"
+                                                                           FontSize="10"
+                                                                           TextAlignment="Right"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                                <Border Grid.Column="1"
+                                                                        Width="18"
+                                                                        Height="18"
+                                                                        Background="{Binding KindBadgeBackground}"
+                                                                        CornerRadius="9">
+                                                                    <TextBlock Text="{Binding KindLabel}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
                                                                 </Border>
                                                             </Grid>
-                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="10" />
                                                         </StackPanel>
                                                     </Button>
                                                 </DataTemplate>
@@ -241,28 +259,41 @@
                                                             BorderThickness="0"
                                                             HorizontalAlignment="Right"
                                                             CommandParameter="{Binding}"
-                                                            ToolTip.Tip="{Binding AccessibleName}">
+                                                            ToolTip.Tip="{Binding ToolTipText}">
                                                         <Button.Styles>
                                                             <Style Selector="Button:pointerover /template/ ContentPresenter">
                                                                 <Setter Property="Background" Value="#FDE68A" />
                                                             </Style>
                                                         </Button.Styles>
-                                                        <Grid Width="74" ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                                            <TextBlock Grid.Column="0"
-                                                                       Text="{Binding DisplayName}"
-                                                                       VerticalAlignment="Center"
-                                                                       FontSize="10"
-                                                                       TextAlignment="Right"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <Grid Grid.Column="1" Width="18" Height="18">
-                                                                <Border IsVisible="{Binding IsFastStream}" Background="#1D70B8" CornerRadius="9">
-                                                                    <TextBlock Text="S" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
-                                                                </Border>
-                                                                <Border IsVisible="{Binding IsJsonMessage}" Background="#D92D20" CornerRadius="9">
-                                                                    <TextBlock Text="P" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                                            <Border IsVisible="{Binding HasDetailedSchema}"
+                                                                    Background="{Binding SchemaBadgeBackground}"
+                                                                    BorderBrush="{Binding SchemaBadgeBorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="4"
+                                                                    Padding="4,1"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding SchemaBadge}"
+                                                                           Foreground="{Binding SchemaBadgeForeground}"
+                                                                           FontSize="9"
+                                                                           FontWeight="SemiBold" />
+                                                            </Border>
+                                                            <Grid Width="74" ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                                                <TextBlock Grid.Column="0"
+                                                                           Text="{Binding DisplayName}"
+                                                                           VerticalAlignment="Center"
+                                                                           FontSize="10"
+                                                                           TextAlignment="Right"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                                <Border Grid.Column="1"
+                                                                        Width="18"
+                                                                        Height="18"
+                                                                        Background="{Binding KindBadgeBackground}"
+                                                                        CornerRadius="9">
+                                                                    <TextBlock Text="{Binding KindLabel}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
                                                                 </Border>
                                                             </Grid>
-                                                        </Grid>
+                                                        </StackPanel>
                                                     </Button>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>

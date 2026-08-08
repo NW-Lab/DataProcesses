@@ -14,6 +14,7 @@ public sealed class PayloadOutputBlockTests
         Assert.Equal(PayloadOutputBlock.InputPortId, port.Id);
         Assert.Equal(PortDirection.Input, port.Direction);
         Assert.Equal(PortDataKind.JsonMessage, port.DataKind);
+        Assert.Equal(PortDataSchema.JsonEnvelope, port.DataSchema);
 
         var dashboard = Assert.IsType<DashboardWidgetDefinition>(PayloadOutputBlock.Definition.DashboardWidget);
         Assert.True(dashboard.IsVisibleByDefault);

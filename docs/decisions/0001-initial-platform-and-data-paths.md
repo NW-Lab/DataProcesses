@@ -1,6 +1,6 @@
 # ADR 0001: Initial platform and two data paths
 
-**Status:** Accepted for the v0.1 scaffold  
+**Status:** Accepted for the v0.1 scaffold (updated 2026-08-08)  
 **Date:** 2026-07-12
 
 ## Context
@@ -16,7 +16,22 @@ Block connections expose two visible port families:
 | Family | Internal representation | Visual convention |
 |---|---|---|
 | Fast Stream | Typed frame containing numeric channel buffers and timing metadata | Blue circle, `S`, solid line |
-| JSON Message | Versioned envelope containing a JSON `payload` | Orange diamond, `J`, dashed line |
+| JSON Message | Versioned envelope containing a JSON `payload` | Red circle, `P`, dashed line |
+
+Within each family, ports may declare a detailed schema (`PortDataSchema`) for compatibility checks.
+The current Fast Stream-side schema set includes `TimeSeries1D`, `Spectrum1D`,
+`NumericVector1D`, `NumericMatrix2D`, and `Image2D`. JSON Message uses `JsonEnvelope`.
+
+Current public packet contracts include:
+
+| Contract | Family | Purpose |
+|---|---|---|
+| `FastStreamFrame` | Fast Stream | Regularly sampled channel-major time series. |
+| `SpectrumFrame` | Fast Stream | One-sided frequency-domain magnitudes. |
+| `NumericVectorFrame` | Fast Stream | Dense one-dimensional numeric arrays (for example FFT vectors). |
+| `NumericMatrixFrame` | Fast Stream | Dense row-major two-dimensional numeric arrays. |
+| `ImageFrame` | Fast Stream | Interleaved image bytes in HxWxC layout. |
+| `JsonMessage` | JSON Message | Topic + payload + timestamp + optional correlation ID envelope. |
 
 CSV, including `millis,data`, is an import, export, storage, and explicit interoperability format. It is not the internal Fast Stream representation. Detailed schemas such as time series and spectrum remain distinguishable even when they share the Fast Stream visual family.
 
@@ -25,5 +40,8 @@ Built-in and third-party nodes implement contracts from `DataProcesses.Plugin.Ab
 ## Consequences
 
 Windows is the first supported packaging target, while UI code starts from a cross-platform framework. Fast Stream implementations must avoid per-sample JSON or CSV conversion. Connection validation must check direction, port family, and detailed schema. Conversion between Fast Stream and JSON Message requires an explicit conversion node.
+
+Existing Flow documents that do not store a connection schema remain valid. `Unspecified`
+schema values are treated as backward-compatible during validation.
 
 The public plugin contracts require conservative versioning. Breaking changes before v1.0 remain possible, but every such change must be documented and tested.

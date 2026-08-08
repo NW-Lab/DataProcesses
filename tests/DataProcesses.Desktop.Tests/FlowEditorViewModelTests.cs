@@ -398,6 +398,52 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void ConnectionFlow_CreatedConnectionUsesSourcePortDataSchema()
+    {
+        var sourceDefinition = new NodeDefinition(
+            "vector-source",
+            "Vector Source",
+            "Test",
+            "0.1.0",
+            [new PortDefinition(
+                "out",
+                "Vector Out",
+                PortDirection.Output,
+                PortDataKind.FastStream,
+                DataSchema: PortDataSchema.NumericVector1D)],
+            NodeType.Input);
+        var sinkDefinition = new NodeDefinition(
+            "vector-sink",
+            "Vector Sink",
+            "Test",
+            "0.1.0",
+            [new PortDefinition(
+                "in",
+                "Vector In",
+                PortDirection.Input,
+                PortDataKind.FastStream,
+                IsRequired: false,
+                DataSchema: PortDataSchema.NumericVector1D)],
+            NodeType.Output);
+        var sourceFactory = new StaticDefinitionNodeFactory(sourceDefinition);
+        var sinkFactory = new StaticDefinitionNodeFactory(sinkDefinition);
+        var viewModel = new FlowEditorViewModel(
+            [sourceFactory, sinkFactory],
+            new FlowRunner([sourceFactory, sinkFactory]),
+            new ProjectFileService());
+
+        var sourceNode = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes, node => node.TypeId == sourceDefinition.TypeId), 0, 0);
+        var targetNode = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes, node => node.TypeId == sinkDefinition.TypeId), 220, 0);
+        var outputPort = Assert.Single(sourceNode.Outputs);
+        var inputPort = Assert.Single(targetNode.Inputs);
+
+        viewModel.HandlePortConnection(outputPort, inputPort);
+
+        var connection = Assert.Single(viewModel.Connections).Connection;
+        Assert.Equal(PortDataSchema.NumericVector1D, connection.DataSchema);
+    }
+
+    [Fact]
     public void DeleteNodeCommand_RemovesSpecifiedNode()
     {
         var factory = new TestNodeFactory();
@@ -978,7 +1024,35 @@ public sealed class FlowEditorViewModelTests
 
         Assert.Equal("P", port.KindLabel);
         Assert.Equal("payload", port.ShapeClass);
+        Assert.Equal("#D92D20", port.KindBadgeBackground);
+        Assert.Equal("#FEE2E2", port.SchemaBadgeBackground);
         Assert.Contains("Payload", port.AccessibleName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CanvasPortViewModel_ExposesDetailedSchemaLabels()
+    {
+        var definition = new NodeDefinition(
+            "vector.block",
+            "Vector Block",
+            "Test",
+            "0.1.0",
+            [new PortDefinition(
+                "vector",
+                "Vector",
+                PortDirection.Output,
+                PortDataKind.FastStream,
+                DataSchema: PortDataSchema.NumericVector1D)]);
+        var node = new CanvasNodeViewModel(new NodeInstance("node-1", "vector.block", 0, 0, "{}"), definition);
+
+        var port = Assert.Single(node.Outputs);
+
+        Assert.True(port.HasDetailedSchema);
+        Assert.Equal("Numeric Vector (1D)", port.SchemaLabel);
+        Assert.Equal("1D", port.SchemaBadge);
+        Assert.Equal("#1D70B8", port.KindBadgeBackground);
+        Assert.Equal("#DBEAFE", port.SchemaBadgeBackground);
+        Assert.Contains("Numeric Vector (1D)", port.ToolTipText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1008,6 +1082,51 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal("Payload", connection.KindLabel);
         Assert.Equal("#D92D20", connection.StrokeColor);
         Assert.Equal("6,4", connection.StrokeDashArray);
+    }
+
+    [Fact]
+    public void CanvasConnectionViewModel_IncludesSchemaInConnectionLabel()
+    {
+        var sourceDefinition = new NodeDefinition(
+            "source",
+            "Source",
+            "Test",
+            "0.1.0",
+            [new PortDefinition(
+                "out",
+                "Matrix Out",
+                PortDirection.Output,
+                PortDataKind.FastStream,
+                DataSchema: PortDataSchema.NumericMatrix2D)]);
+        var targetDefinition = new NodeDefinition(
+            "target",
+            "Target",
+            "Test",
+            "0.1.0",
+            [new PortDefinition(
+                "in",
+                "Matrix In",
+                PortDirection.Input,
+                PortDataKind.FastStream,
+                DataSchema: PortDataSchema.NumericMatrix2D)]);
+        var source = new CanvasNodeViewModel(new NodeInstance("source-1", "source", 0, 0, "{}"), sourceDefinition);
+        var target = new CanvasNodeViewModel(new NodeInstance("target-1", "target", 100, 0, "{}"), targetDefinition);
+        var connection = new CanvasConnectionViewModel(
+            new Core.Connection(
+                "source-1",
+                "out",
+                "target-1",
+                "in",
+                PortDataKind.FastStream,
+                DataSchema: PortDataSchema.NumericMatrix2D),
+            source,
+            Assert.Single(source.Outputs),
+            target,
+            Assert.Single(target.Inputs));
+
+        Assert.True(connection.HasDetailedSchema);
+        Assert.Equal("Numeric Matrix (2D)", connection.SchemaLabel);
+        Assert.Equal("Fast Stream / Numeric Matrix (2D)", connection.ConnectionLabel);
     }
 
     [Fact]
@@ -1213,6 +1332,17 @@ public sealed class FlowEditorViewModelTests
         public ValueTask StopAsync(CancellationToken cancellationToken)
         {
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class StaticDefinitionNodeFactory(NodeDefinition definition) : INodeFactory
+    {
+        public NodeDefinition Definition { get; } = definition;
+
+        public INode CreateNode(string nodeId)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nodeId);
+            return new TestNode(Definition, packetToEmit: null);
         }
     }
 }

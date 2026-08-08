@@ -31,6 +31,7 @@ public sealed class TriggerBlockTests
         Assert.Equal(TriggerBlock.PayloadOutputPortId, output.Id);
         Assert.Equal(PortDirection.Output, output.Direction);
         Assert.Equal(PortDataKind.JsonMessage, output.DataKind);
+        Assert.Equal(PortDataSchema.JsonEnvelope, output.DataSchema);
     }
 
     [Fact]

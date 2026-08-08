@@ -46,7 +46,8 @@ public static class CsvInputBlock
                 DisplayName: $"Stream{index}",
                 Direction: PortDirection.Output,
                 DataKind: PortDataKind.FastStream,
-                IsRequired: false));
+                IsRequired: false,
+                DataSchema: PortDataSchema.TimeSeries1D));
         }
 
         return ports;

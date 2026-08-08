@@ -18,7 +18,12 @@ public static class StreamOutputBlock
         Version: "0.1.0",
         Ports:
         [
-            new PortDefinition(InputPortId, "Input", PortDirection.Input, PortDataKind.FastStream),
+            new PortDefinition(
+                InputPortId,
+                "Input",
+                PortDirection.Input,
+                PortDataKind.FastStream,
+                DataSchema: PortDataSchema.TimeSeries1D),
         ],
         NodeType: NodeType.Debug,
         Title: "Stream Output",

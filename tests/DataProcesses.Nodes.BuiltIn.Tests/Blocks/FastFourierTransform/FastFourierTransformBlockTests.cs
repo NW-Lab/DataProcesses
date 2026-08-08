@@ -17,12 +17,14 @@ public sealed class FastFourierTransformBlockTests
                 Assert.Equal(FastFourierTransformBlock.InputPortId, input.Id);
                 Assert.Equal(PortDirection.Input, input.Direction);
                 Assert.Equal(PortDataKind.FastStream, input.DataKind);
+                Assert.Equal(PortDataSchema.TimeSeries1D, input.DataSchema);
             },
             output =>
             {
                 Assert.Equal(FastFourierTransformBlock.OutputPortId, output.Id);
                 Assert.Equal(PortDirection.Output, output.Direction);
                 Assert.Equal(PortDataKind.FastStream, output.DataKind);
+                Assert.Equal(PortDataSchema.Spectrum1D, output.DataSchema);
             });
     }
 

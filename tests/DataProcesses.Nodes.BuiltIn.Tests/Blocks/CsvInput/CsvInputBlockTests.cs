@@ -32,6 +32,7 @@ public sealed class CsvInputBlockTests
             {
                 Assert.Equal(PortDirection.Output, port.Direction);
                 Assert.Equal(PortDataKind.FastStream, port.DataKind);
+                Assert.Equal(PortDataSchema.TimeSeries1D, port.DataSchema);
                 Assert.False(port.IsRequired);
             });
 

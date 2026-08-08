@@ -11,14 +11,14 @@ Each built-in Block has one self-contained directory under `Blocks/<BlockName>/`
 | `<BlockName>NodeFactory.cs` | Yes | Create runtime instances and expose the Block definition. |
 | `<BlockName>Settings.cs` | When needed | Immutable settings model and validation. |
 | `icon.png` | Recommended | 64 x 64 PNG icon shown in the Node Library and on placed canvas Blocks. |
-| `README.md` | Recommended | Explain port schema, settings, signal-processing, Payload, or interoperability behavior. See template below. |
+| `README.md` | Yes | Document port schema, settings, signal-processing, Payload, and interoperability behavior. See template below. |
 | `Resources/` | When needed | Block-local localization keys or non-code assets. |
 
 Mirror the same structure under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`. Keep tests deterministic and use synthetic data only.
 
 ## README Template
 
-Create a Block-local `README.md` using the structure below whenever the Block defines non-trivial settings, multiple ports, Payload fields, Payload pass-through behavior, timing semantics, numerical behavior, or interoperability behavior. Use [TestSignal/README.md](TestSignal/README.md) as the reference template.
+Create a Block-local `README.md` for every Block. For simple Blocks, keep sections concise; for complex Blocks, include full details for ports, schema, settings, timing, numerical behavior, and interoperability. Use [TestSignal/README.md](TestSignal/README.md) as the reference template.
 
 ```markdown
 # <BlockName> Block
@@ -76,8 +76,11 @@ Block-specific settings use this JSON shape:
 | `LowPassFilter/` | `dataprocesses.filter.low-pass` | Stateful first-order Fast Stream smoothing processor. |
 | `FastFourierTransform/` | `dataprocesses.analysis.fft` | Fast Stream to one-sided `SpectrumFrame` analysis processor. |
 | `StreamOutput/` | `dataprocesses.output.stream` | Debug-oriented Fast Stream output adapter with bounded downsampling. |
+| `NumericVectorOutput/` | `dataprocesses.output.numeric-vector` | Debug-oriented Fast Stream vector sink for `NumericVectorFrame` snapshots. |
+| `ImageOutput/` | `dataprocesses.output.image` | Debug-oriented Fast Stream image sink for `ImageFrame` previews. |
 | `PythonOutput/` | `dataprocesses.output.python` | Typed Fast Stream/JSON boundary that emits deferred-delivery status; it does not launch Python yet. |
 | `PayloadOutput/` | `dataprocesses.output.payload` | Debug-oriented Payload sink that appends timestamped entries for dashboard inspection. |
+| `CsvOutput/` | `dataprocesses.output.csv` | Fast Stream CSV sink that writes configured spans and tagged channels. |
 
 ## Adding a Block
 

@@ -12,6 +12,34 @@ This document describes the user-facing contract for built-in Node Blocks. A Blo
 | Fast Stream | High-rate numeric data path for time series and derived numeric frames. |
 | Payload | User-facing name for the JSON Message data path. Internally this uses the existing `JsonMessage` contract. |
 
+In this document, use `Payload` for user-facing text, `JSON Message` for the data-family contract name,
+and `JsonMessage` for the C# type name.
+
+## Detailed schemas
+
+Detailed schema compatibility is declared with `PortDataSchema`. Current schema values are:
+
+| Schema | Intended use |
+|---|---|
+| `Unspecified` | Family-level compatibility only; used for backward compatibility and broad adapters. |
+| `TimeSeries1D` | Regularly sampled time-series frames (`FastStreamFrame`). |
+| `Spectrum1D` | Frequency-domain one-sided magnitudes (`SpectrumFrame`). |
+| `NumericVector1D` | Dense one-dimensional numeric vectors (`NumericVectorFrame`). |
+| `NumericMatrix2D` | Dense row-major two-dimensional numeric matrices (`NumericMatrixFrame`). |
+| `Image2D` | Interleaved HxWxC images (`ImageFrame`). |
+| `JsonEnvelope` | Topic/payload/timestamp/correlation JSON envelope (`JsonMessage`). |
+
+Fast Stream currently includes these concrete packet contracts:
+
+1. `FastStreamFrame` for time-series channels.
+2. `SpectrumFrame` for FFT-like spectral outputs.
+3. `NumericVectorFrame` for dense 1D numeric data.
+4. `NumericMatrixFrame` for dense 2D numeric data.
+5. `ImageFrame` for interleaved image bytes (HxWxC).
+
+If both ports declare non-`Unspecified` schemas, those schemas must match exactly. When one side uses
+`Unspecified`, the connection is treated as schema-compatible for migration and adapter scenarios.
+
 ## Placed Block settings
 
 Every Block instance placed on a Flow has common settings. Block implementations may define additional settings in their own directory.

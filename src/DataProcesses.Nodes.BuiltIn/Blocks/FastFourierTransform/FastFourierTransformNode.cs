@@ -103,12 +103,21 @@ public sealed class FastFourierTransformNode : INode
         {
             var real = 0.0;
             var imaginary = 0.0;
+            var angleStep = 2.0 * Math.PI * bin / samples.Length;
+            var cosineStep = Math.Cos(angleStep);
+            var sineStep = Math.Sin(angleStep);
+            var cosine = 1.0;
+            var sine = 0.0;
 
             for (var sampleIndex = 0; sampleIndex < samples.Length; sampleIndex++)
             {
-                var angle = 2.0 * Math.PI * bin * sampleIndex / samples.Length;
-                real += samples[sampleIndex] * Math.Cos(angle);
-                imaginary -= samples[sampleIndex] * Math.Sin(angle);
+                var sample = samples[sampleIndex];
+                real += sample * cosine;
+                imaginary -= sample * sine;
+
+                var nextCosine = cosine * cosineStep - sine * sineStep;
+                sine = sine * cosineStep + cosine * sineStep;
+                cosine = nextCosine;
             }
 
             var magnitude = Math.Sqrt(real * real + imaginary * imaginary) / samples.Length;

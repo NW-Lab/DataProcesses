@@ -19,8 +19,18 @@ public static class FastFourierTransformBlock
         Version: "0.1.0",
         Ports:
         [
-            new PortDefinition(InputPortId, "Input", PortDirection.Input, PortDataKind.FastStream),
-            new PortDefinition(OutputPortId, "Spectrum", PortDirection.Output, PortDataKind.FastStream),
+            new PortDefinition(
+                InputPortId,
+                "Input",
+                PortDirection.Input,
+                PortDataKind.FastStream,
+                DataSchema: PortDataSchema.TimeSeries1D),
+            new PortDefinition(
+                OutputPortId,
+                "Spectrum",
+                PortDirection.Output,
+                PortDataKind.FastStream,
+                DataSchema: PortDataSchema.Spectrum1D),
         ],
         NodeType: NodeType.BasicProcess,
         Title: "FFT",

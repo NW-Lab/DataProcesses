@@ -4,6 +4,8 @@ using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
+using DataProcesses.Nodes.BuiltIn.Blocks.ImageOutput;
+using DataProcesses.Nodes.BuiltIn.Blocks.NumericVectorOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
@@ -24,6 +26,8 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new LowPassFilterNodeFactory(),
         new FastFourierTransformNodeFactory(),
         new StreamOutputNodeFactory(),
+        new NumericVectorOutputNodeFactory(),
+        new ImageOutputNodeFactory(),
         new PythonOutputNodeFactory(),
         new PayloadOutputNodeFactory(),
         new CsvOutputNodeFactory(),

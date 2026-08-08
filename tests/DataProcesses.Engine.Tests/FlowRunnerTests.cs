@@ -168,6 +168,99 @@ public sealed class FlowRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_DeliversNumericVectorPacketsAlongConnections()
+    {
+        var packet = new NumericVectorFrame(
+            Name: "fft",
+            Values: new double[] { 1, 2, 3, 4 }.AsMemory(),
+            SequenceNumber: 3,
+            Timestamp: DateTimeOffset.UnixEpoch);
+        var receivedPackets = new List<IDataPacket>();
+        var factories = new INodeFactory[]
+        {
+            new TestNodeFactory(
+                new NodeDefinition(
+                    "source",
+                    "Source",
+                    "Sources",
+                    "0.1.0",
+                    [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.NumericVector1D)]),
+                nodeId => new SourceNode(nodeId, packet)),
+            new TestNodeFactory(
+                new NodeDefinition(
+                    "sink",
+                    "Sink",
+                    "Visualization",
+                    "0.1.0",
+                    [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.NumericVector1D)]),
+                nodeId => new SinkNode(nodeId, receivedPackets)),
+        };
+        var runner = new FlowRunner(factories);
+        var document = new FlowDocument(
+            Guid.NewGuid(),
+            "Vector flow",
+            [
+                new NodeInstance("source-1", "source", 0, 0, "{}"),
+                new NodeInstance("sink-1", "sink", 100, 0, "{}"),
+            ],
+            [new Connection("source-1", "out", "sink-1", "in", PortDataKind.FastStream, DataSchema: PortDataSchema.NumericVector1D)]);
+
+        var result = await runner.RunAsync(document, CancellationToken.None);
+
+        Assert.Equal(FlowExecutionState.Stopped, result.State);
+        Assert.Empty(result.ValidationIssues);
+        Assert.Same(packet, Assert.Single(receivedPackets));
+    }
+
+    [Fact]
+    public async Task RunAsync_DeliversImagePacketsAlongConnections()
+    {
+        var packet = new ImageFrame(
+            name: "camera",
+            width: 2,
+            height: 1,
+            pixelFormat: ImagePixelFormat.Rgb24,
+            pixelsInterleaved: new byte[] { 255, 0, 0, 0, 255, 0 }.AsMemory(),
+            sequenceNumber: 4,
+            timestamp: DateTimeOffset.UnixEpoch);
+        var receivedPackets = new List<IDataPacket>();
+        var factories = new INodeFactory[]
+        {
+            new TestNodeFactory(
+                new NodeDefinition(
+                    "source",
+                    "Source",
+                    "Sources",
+                    "0.1.0",
+                    [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.Image2D)]),
+                nodeId => new SourceNode(nodeId, packet)),
+            new TestNodeFactory(
+                new NodeDefinition(
+                    "sink",
+                    "Sink",
+                    "Visualization",
+                    "0.1.0",
+                    [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.Image2D)]),
+                nodeId => new SinkNode(nodeId, receivedPackets)),
+        };
+        var runner = new FlowRunner(factories);
+        var document = new FlowDocument(
+            Guid.NewGuid(),
+            "Image flow",
+            [
+                new NodeInstance("source-1", "source", 0, 0, "{}"),
+                new NodeInstance("sink-1", "sink", 100, 0, "{}"),
+            ],
+            [new Connection("source-1", "out", "sink-1", "in", PortDataKind.FastStream, DataSchema: PortDataSchema.Image2D)]);
+
+        var result = await runner.RunAsync(document, CancellationToken.None);
+
+        Assert.Equal(FlowExecutionState.Stopped, result.State);
+        Assert.Empty(result.ValidationIssues);
+        Assert.Same(packet, Assert.Single(receivedPackets));
+    }
+
+    [Fact]
     public async Task RunAsync_DoesNotCreateOrStartDisabledNodes()
     {
         var createCount = 0;

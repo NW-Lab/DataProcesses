@@ -38,6 +38,7 @@ public sealed class TestSignalBlockTests
                 Assert.Equal(TestSignalBlock.PayloadInputPortId, payloadIn.Id);
                 Assert.Equal(PortDirection.Input, payloadIn.Direction);
                 Assert.Equal(PortDataKind.JsonMessage, payloadIn.DataKind);
+                Assert.Equal(PortDataSchema.JsonEnvelope, payloadIn.DataSchema);
                 Assert.False(payloadIn.IsRequired);
             },
             stream =>
@@ -45,12 +46,14 @@ public sealed class TestSignalBlockTests
                 Assert.Equal(TestSignalBlock.StreamOutputPortId, stream.Id);
                 Assert.Equal(PortDirection.Output, stream.Direction);
                 Assert.Equal(PortDataKind.FastStream, stream.DataKind);
+                Assert.Equal(PortDataSchema.TimeSeries1D, stream.DataSchema);
             },
             payloadOut =>
             {
                 Assert.Equal(TestSignalBlock.PayloadOutputPortId, payloadOut.Id);
                 Assert.Equal(PortDirection.Output, payloadOut.Direction);
                 Assert.Equal(PortDataKind.JsonMessage, payloadOut.DataKind);
+                Assert.Equal(PortDataSchema.JsonEnvelope, payloadOut.DataSchema);
                 Assert.False(payloadOut.IsRequired);
             });
     }

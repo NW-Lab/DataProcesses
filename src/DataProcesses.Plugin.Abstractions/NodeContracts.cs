@@ -14,12 +14,27 @@ public enum NodeType
     Debug = 3,
 }
 
+/// <summary>
+/// Refines the shape or semantic contract within a <see cref="PortDataKind"/> family.
+/// </summary>
+public enum PortDataSchema
+{
+    Unspecified = 0,
+    TimeSeries1D = 1,
+    Spectrum1D = 2,
+    NumericVector1D = 3,
+    NumericMatrix2D = 4,
+    Image2D = 5,
+    JsonEnvelope = 6,
+}
+
 public sealed record PortDefinition(
     string Id,
     string DisplayName,
     PortDirection Direction,
     PortDataKind DataKind,
-    bool IsRequired = true);
+    bool IsRequired = true,
+    PortDataSchema DataSchema = PortDataSchema.Unspecified);
 
 /// <summary>
 /// Stable metadata and port contract for a Block type.

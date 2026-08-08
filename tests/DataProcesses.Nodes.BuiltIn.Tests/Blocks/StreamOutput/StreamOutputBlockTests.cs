@@ -13,6 +13,7 @@ public sealed class StreamOutputBlockTests
         Assert.Equal(StreamOutputBlock.InputPortId, port.Id);
         Assert.Equal(PortDirection.Input, port.Direction);
         Assert.Equal(PortDataKind.FastStream, port.DataKind);
+        Assert.Equal(PortDataSchema.TimeSeries1D, port.DataSchema);
     }
 
     [Fact]

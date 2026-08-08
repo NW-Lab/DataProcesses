@@ -463,7 +463,13 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 return;
             }
 
-            var connection = new Connection(sourcePort.Node.Id, sourcePort.Id, targetPort.Node.Id, targetPort.Id, sourcePort.DataKind);
+            var connection = new Connection(
+                sourcePort.Node.Id,
+                sourcePort.Id,
+                targetPort.Node.Id,
+                targetPort.Id,
+                sourcePort.DataKind,
+                DataSchema: sourcePort.Definition.DataSchema);
             var connections = Connections.Select(static connectionViewModel => connectionViewModel.Connection).Append(connection).ToArray();
             RebuildConnections(connections);
             Validate();
@@ -704,7 +710,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
             && string.Equals(left.SourcePortId, right.SourcePortId, StringComparison.Ordinal)
             && string.Equals(left.TargetNodeId, right.TargetNodeId, StringComparison.Ordinal)
             && string.Equals(left.TargetPortId, right.TargetPortId, StringComparison.Ordinal)
-            && left.DataKind == right.DataKind;
+            && left.DataKind == right.DataKind
+            && left.DataSchema == right.DataSchema;
     }
 
     private void HandlePortClick(CanvasPortViewModel? port)
@@ -763,7 +770,13 @@ public sealed class FlowEditorViewModel : ViewModelBase
             return;
         }
 
-        var connection = new Connection(source.Node.Id, source.Id, port.Node.Id, port.Id, source.DataKind);
+        var connection = new Connection(
+            source.Node.Id,
+            source.Id,
+            port.Node.Id,
+            port.Id,
+            source.DataKind,
+            DataSchema: source.Definition.DataSchema);
         var connections = Connections.Select(static connectionViewModel => connectionViewModel.Connection).Append(connection).ToArray();
         RebuildConnections(connections);
         Validate();

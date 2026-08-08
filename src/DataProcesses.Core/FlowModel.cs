@@ -28,7 +28,8 @@ public sealed record Connection(
     string TargetNodeId,
     string TargetPortId,
     PortDataKind DataKind,
-    string? Tag = null);
+    string? Tag = null,
+    PortDataSchema DataSchema = PortDataSchema.Unspecified);
 
 public sealed record FlowValidationResult(IReadOnlyList<FlowValidationIssue> Issues)
 {
@@ -157,7 +158,9 @@ public static class FlowValidator
                 continue;
             }
 
-            if (!ConnectionValidator.CanConnect(sourcePort, targetPort) || connection.DataKind != sourcePort.DataKind)
+            if (!ConnectionValidator.CanConnect(sourcePort, targetPort)
+                || connection.DataKind != sourcePort.DataKind
+                || !IsConnectionSchemaCompatible(connection.DataSchema, sourcePort.DataSchema))
             {
                 issues.Add(new FlowValidationIssue(
                     FlowValidationSeverity.Error,
@@ -175,6 +178,22 @@ public static class FlowValidator
         AddCycleIssues(validConnectionEdges, issues);
 
         return new FlowValidationResult(issues);
+    }
+
+    private static bool IsConnectionSchemaCompatible(PortDataSchema connectionSchema, PortDataSchema sourceSchema)
+    {
+        if (connectionSchema == PortDataSchema.Unspecified)
+        {
+            // Backward compatibility with existing flow files.
+            return true;
+        }
+
+        if (sourceSchema == PortDataSchema.Unspecified)
+        {
+            return true;
+        }
+
+        return connectionSchema == sourceSchema;
     }
 
     private static void AddMissingRequiredInputIssues(
@@ -287,6 +306,18 @@ public static class ConnectionValidator
 
         return source.Direction == PortDirection.Output
             && target.Direction == PortDirection.Input
-            && source.DataKind == target.DataKind;
+            && source.DataKind == target.DataKind
+            && AreSchemasCompatible(source.DataSchema, target.DataSchema);
+    }
+
+    private static bool AreSchemasCompatible(PortDataSchema source, PortDataSchema target)
+    {
+        if (source == PortDataSchema.Unspecified || target == PortDataSchema.Unspecified)
+        {
+            // Keep existing flows compatible: unspecified means "family-level only".
+            return true;
+        }
+
+        return source == target;
     }
 }

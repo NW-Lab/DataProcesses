@@ -22,9 +22,27 @@ public static class PythonOutputBlock
         Version: "0.1.0",
         Ports:
         [
-            new PortDefinition(FastStreamInputPortId, "Fast Stream", PortDirection.Input, PortDataKind.FastStream, IsRequired: false),
-            new PortDefinition(JsonMessageInputPortId, "JSON Message", PortDirection.Input, PortDataKind.JsonMessage, IsRequired: false),
-            new PortDefinition(StatusOutputPortId, "Status", PortDirection.Output, PortDataKind.JsonMessage, IsRequired: false),
+            new PortDefinition(
+                FastStreamInputPortId,
+                "Fast Stream",
+                PortDirection.Input,
+                PortDataKind.FastStream,
+                IsRequired: false,
+                DataSchema: PortDataSchema.Unspecified),
+            new PortDefinition(
+                JsonMessageInputPortId,
+                "JSON Message",
+                PortDirection.Input,
+                PortDataKind.JsonMessage,
+                IsRequired: false,
+                DataSchema: PortDataSchema.JsonEnvelope),
+            new PortDefinition(
+                StatusOutputPortId,
+                "Status",
+                PortDirection.Output,
+                PortDataKind.JsonMessage,
+                IsRequired: false,
+                DataSchema: PortDataSchema.JsonEnvelope),
         ],
         NodeType: NodeType.Output,
         Title: "Python Output",

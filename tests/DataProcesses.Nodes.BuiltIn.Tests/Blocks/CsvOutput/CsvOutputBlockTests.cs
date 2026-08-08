@@ -17,6 +17,7 @@ public sealed class CsvOutputBlockTests : IDisposable
         Assert.Equal(CsvOutputBlock.InputPortId, port.Id);
         Assert.Equal(PortDirection.Input, port.Direction);
         Assert.Equal(PortDataKind.FastStream, port.DataKind);
+        Assert.Equal(PortDataSchema.TimeSeries1D, port.DataSchema);
         Assert.Equal(NodeType.Output, CsvOutputBlock.Definition.NodeType);
     }
 

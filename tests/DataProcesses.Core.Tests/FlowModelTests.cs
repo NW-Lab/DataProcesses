@@ -79,6 +79,63 @@ public sealed class FlowModelTests
     }
 
     [Fact]
+    public void CanConnect_ReturnsTrue_WhenEitherSchemaIsUnspecified()
+    {
+        var source = new PortDefinition(
+            "out",
+            "Output",
+            PortDirection.Output,
+            PortDataKind.FastStream,
+            DataSchema: PortDataSchema.NumericVector1D);
+        var target = new PortDefinition(
+            "in",
+            "Input",
+            PortDirection.Input,
+            PortDataKind.FastStream,
+            DataSchema: PortDataSchema.Unspecified);
+
+        Assert.True(ConnectionValidator.CanConnect(source, target));
+    }
+
+    [Fact]
+    public void CanConnect_ReturnsFalse_ForDifferentSpecifiedSchemas()
+    {
+        var source = new PortDefinition(
+            "out",
+            "Output",
+            PortDirection.Output,
+            PortDataKind.FastStream,
+            DataSchema: PortDataSchema.Image2D);
+        var target = new PortDefinition(
+            "in",
+            "Input",
+            PortDirection.Input,
+            PortDataKind.FastStream,
+            DataSchema: PortDataSchema.NumericMatrix2D);
+
+        Assert.False(ConnectionValidator.CanConnect(source, target));
+    }
+
+    [Fact]
+    public void CanConnect_ReturnsTrue_ForMatchingSpecifiedSchemas()
+    {
+        var source = new PortDefinition(
+            "out",
+            "Output",
+            PortDirection.Output,
+            PortDataKind.FastStream,
+            DataSchema: PortDataSchema.Image2D);
+        var target = new PortDefinition(
+            "in",
+            "Input",
+            PortDirection.Input,
+            PortDataKind.FastStream,
+            DataSchema: PortDataSchema.Image2D);
+
+        Assert.True(ConnectionValidator.CanConnect(source, target));
+    }
+
+    [Fact]
     public void FastStreamFrame_ReportsChannelAndSampleCounts()
     {
         var frame = new FastStreamFrame(
@@ -94,6 +151,52 @@ public sealed class FlowModelTests
 
         Assert.Equal(2, frame.ChannelCount);
         Assert.Equal(3, frame.SampleCount);
+    }
+
+    [Fact]
+    public void NumericVectorFrame_ReportsLength()
+    {
+        var frame = new NumericVectorFrame(
+            Name: "fft-magnitude",
+            Values: new double[] { 1, 2, 3, 4 }.AsMemory(),
+            SequenceNumber: 7,
+            Timestamp: DateTimeOffset.UnixEpoch);
+
+        Assert.Equal(4, frame.Length);
+        Assert.Equal(PortDataKind.FastStream, frame.Kind);
+    }
+
+    [Fact]
+    public void NumericMatrixFrame_Throws_WhenShapeDoesNotMatchBufferLength()
+    {
+        var values = new double[] { 1, 2, 3 }.AsMemory();
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+            new NumericMatrixFrame("matrix", rowCount: 2, columnCount: 2, values, sequenceNumber: 1));
+
+        Assert.Contains("Values length", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ImageFrame_UsesInterleavedHwcBuffer()
+    {
+        var pixels = new byte[]
+        {
+            255, 0, 0,
+            0, 255, 0,
+        }.AsMemory();
+
+        var frame = new ImageFrame(
+            name: "preview",
+            width: 2,
+            height: 1,
+            pixelFormat: ImagePixelFormat.Rgb24,
+            pixelsInterleaved: pixels,
+            sequenceNumber: 2,
+            timestamp: DateTimeOffset.UnixEpoch);
+
+        Assert.Equal(3, frame.ChannelCount);
+        Assert.Equal(PortDataKind.FastStream, frame.Kind);
     }
 
     [Fact]
@@ -198,5 +301,57 @@ public sealed class FlowModelTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Issues, issue => issue.Code == FlowValidationIssueCode.CycleDetected);
+    }
+
+    [Fact]
+    public void Validate_ReturnsInvalid_WhenConnectionSchemaConflictsWithSourcePortSchema()
+    {
+        var sourceDefinition = SourceDefinition with
+        {
+            Ports =
+            [
+                new PortDefinition(
+                    "out",
+                    "Output",
+                    PortDirection.Output,
+                    PortDataKind.FastStream,
+                    DataSchema: PortDataSchema.NumericVector1D),
+            ],
+        };
+
+        var sinkDefinition = SinkDefinition with
+        {
+            Ports =
+            [
+                new PortDefinition(
+                    "in",
+                    "Input",
+                    PortDirection.Input,
+                    PortDataKind.FastStream,
+                    DataSchema: PortDataSchema.NumericVector1D),
+            ],
+        };
+
+        var document = new FlowDocument(
+            Guid.NewGuid(),
+            "Mismatched connection schema",
+            [
+                new NodeInstance("source-1", sourceDefinition.TypeId, 0, 0, "{}"),
+                new NodeInstance("sink-1", sinkDefinition.TypeId, 100, 0, "{}"),
+            ],
+            [
+                new Connection(
+                    "source-1",
+                    "out",
+                    "sink-1",
+                    "in",
+                    PortDataKind.FastStream,
+                    DataSchema: PortDataSchema.Image2D),
+            ]);
+
+        var result = FlowValidator.Validate(document, [sourceDefinition, sinkDefinition]);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Issues, issue => issue.Code == FlowValidationIssueCode.IncompatiblePorts);
     }
 }
