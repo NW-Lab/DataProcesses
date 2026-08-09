@@ -1049,7 +1049,7 @@ public sealed class FlowEditorViewModelTests
 
         Assert.True(port.HasDetailedSchema);
         Assert.Equal("Numeric Vector (1D)", port.SchemaLabel);
-        Assert.Equal("1D", port.SchemaBadge);
+        Assert.Equal("VEC", port.SchemaBadge);
         Assert.Equal("#1D70B8", port.KindBadgeBackground);
         Assert.Equal("#DBEAFE", port.SchemaBadgeBackground);
         Assert.Contains("Numeric Vector (1D)", port.ToolTipText, StringComparison.Ordinal);

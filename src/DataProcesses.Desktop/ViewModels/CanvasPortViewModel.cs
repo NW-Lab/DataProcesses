@@ -47,10 +47,10 @@ public sealed class CanvasPortViewModel(CanvasNodeViewModel node, PortDefinition
     public string SchemaBadge => DataSchema switch
     {
         PortDataSchema.Unspecified => string.Empty,
-        PortDataSchema.TimeSeries1D => "1D-T",
-        PortDataSchema.Spectrum1D => "1D-S",
-        PortDataSchema.NumericVector1D => "1D",
-        PortDataSchema.NumericMatrix2D => "2D",
+        PortDataSchema.TimeSeries1D => "TS",
+        PortDataSchema.Spectrum1D => "VEC",
+        PortDataSchema.NumericVector1D => "VEC",
+        PortDataSchema.NumericMatrix2D => "VEC",
         PortDataSchema.Image2D => "IMG",
         PortDataSchema.JsonEnvelope => "JSON",
         _ => "?",
