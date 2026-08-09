@@ -30,10 +30,24 @@
         </Border>
 
         <Border Grid.Row="1" Grid.Column="0" BorderBrush="#D5D9E2" BorderThickness="0,0,1,0" Padding="12">
-            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
                 <TextBlock Text="Node Library" FontSize="14" FontWeight="SemiBold" />
                 <TextBox Grid.Row="1" PlaceholderText="Search nodes" Text="{Binding Palette.SearchText}" />
-                <ScrollViewer Grid.Row="2">
+                <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Input" FontSize="11" FontWeight="SemiBold" Foreground="#475569" />
+                        <ComboBox ItemsSource="{Binding Palette.DataTypeOptions}"
+                                  SelectedItem="{Binding Palette.SelectedInputDataType}"
+                                  MinWidth="96" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Text="Output" FontSize="11" FontWeight="SemiBold" Foreground="#475569" />
+                        <ComboBox ItemsSource="{Binding Palette.DataTypeOptions}"
+                                  SelectedItem="{Binding Palette.SelectedOutputDataType}"
+                                  MinWidth="96" />
+                    </StackPanel>
+                </Grid>
+                <ScrollViewer Grid.Row="3">
                     <ItemsControl ItemsSource="{Binding Palette.Groups}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:PaletteNodeGroupViewModel">
@@ -209,13 +223,9 @@
                                                             Background="Transparent"
                                                             BorderThickness="0"
                                                             HorizontalAlignment="Left"
+                                                            HorizontalContentAlignment="Left"
                                                             CommandParameter="{Binding}"
                                                             ToolTip.Tip="{Binding ToolTipText}">
-                                                        <Button.Styles>
-                                                            <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                                                <Setter Property="Background" Value="#FDE68A" />
-                                                            </Style>
-                                                        </Button.Styles>
                                                         <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Left">
                                                             <Border IsVisible="{Binding HasDetailedSchema}"
                                                                     Background="{Binding SchemaBadgeBackground}"
@@ -229,20 +239,13 @@
                                                                            FontSize="9"
                                                                            FontWeight="SemiBold" />
                                                             </Border>
-                                                            <Grid Width="74" ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                                            <Grid Width="74" ColumnDefinitions="*" ColumnSpacing="4">
                                                                 <TextBlock Grid.Column="0"
                                                                            Text="{Binding DisplayName}"
                                                                            VerticalAlignment="Center"
                                                                            FontSize="10"
                                                                            TextAlignment="Right"
                                                                            TextTrimming="CharacterEllipsis" />
-                                                                <Border Grid.Column="1"
-                                                                        Width="18"
-                                                                        Height="18"
-                                                                        Background="{Binding KindBadgeBackground}"
-                                                                        CornerRadius="9">
-                                                                    <TextBlock Text="{Binding KindLabel}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
-                                                                </Border>
                                                             </Grid>
                                                         </StackPanel>
                                                     </Button>
@@ -257,16 +260,19 @@
                                                             Padding="0"
                                                             Background="Transparent"
                                                             BorderThickness="0"
-                                                            HorizontalAlignment="Right"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Stretch"
                                                             CommandParameter="{Binding}"
                                                             ToolTip.Tip="{Binding ToolTipText}">
-                                                        <Button.Styles>
-                                                            <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                                                <Setter Property="Background" Value="#FDE68A" />
-                                                            </Style>
-                                                        </Button.Styles>
-                                                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                                        <Grid Width="74" ColumnDefinitions="*,Auto" ColumnSpacing="4" HorizontalAlignment="Right">
+                                                            <TextBlock Grid.Column="0"
+                                                                       Text="{Binding DisplayName}"
+                                                                       VerticalAlignment="Center"
+                                                                       FontSize="10"
+                                                                       TextAlignment="Right"
+                                                                       TextTrimming="CharacterEllipsis" />
                                                             <Border IsVisible="{Binding HasDetailedSchema}"
+                                                                    Grid.Column="1"
                                                                     Background="{Binding SchemaBadgeBackground}"
                                                                     BorderBrush="{Binding SchemaBadgeBorderBrush}"
                                                                     BorderThickness="1"
@@ -278,22 +284,7 @@
                                                                            FontSize="9"
                                                                            FontWeight="SemiBold" />
                                                             </Border>
-                                                            <Grid Width="74" ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                                                <TextBlock Grid.Column="0"
-                                                                           Text="{Binding DisplayName}"
-                                                                           VerticalAlignment="Center"
-                                                                           FontSize="10"
-                                                                           TextAlignment="Right"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                                <Border Grid.Column="1"
-                                                                        Width="18"
-                                                                        Height="18"
-                                                                        Background="{Binding KindBadgeBackground}"
-                                                                        CornerRadius="9">
-                                                                    <TextBlock Text="{Binding KindLabel}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="9" FontWeight="Bold" />
-                                                                </Border>
-                                                            </Grid>
-                                                        </StackPanel>
+                                                        </Grid>
                                                     </Button>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>

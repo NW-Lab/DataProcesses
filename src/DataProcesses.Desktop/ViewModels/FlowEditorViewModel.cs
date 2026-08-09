@@ -10,6 +10,8 @@ using CommunityToolkit.Mvvm.Input;
 using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Engine;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Desktop.ViewModels;
@@ -1313,13 +1315,24 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private void TriggerNode(CanvasNodeViewModel? node)
     {
-        if (node is null || !string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal))
+        if (node is null)
         {
             return;
         }
 
-        node.RequestTriggerNow();
-        InteractionStatus = $"Triggered {node.DisplayName}.";
+        if (string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal))
+        {
+            node.RequestTriggerNow();
+            InteractionStatus = $"Triggered {node.DisplayName}.";
+            return;
+        }
+
+        if (string.Equals(node.TypeId, TestSignalVecBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(node.TypeId, TestSignalImgBlock.TypeId, StringComparison.Ordinal))
+        {
+            node.ToggleStartStop();
+            InteractionStatus = $"Toggled {node.DisplayName}.";
+        }
     }
 
     private void SynchronizeDashboardWidgetForNode(CanvasNodeViewModel node, string? contentOverride = null)
@@ -1518,9 +1531,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private static string CreateDashboardWidgetSettingsJson(CanvasNodeViewModel node, string content)
     {
-        var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal);
+        var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal)
+            || string.Equals(node.TypeId, TestSignalVecBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(node.TypeId, TestSignalImgBlock.TypeId, StringComparison.Ordinal);
         var contentKind = isTriggerNode ? TriggerButtonContentKind : "text";
-        var textContent = isTriggerNode ? "Trigger" : content;
+        var textContent = isTriggerNode ? (string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal) ? "Trigger" : "Start") : content;
 
         return JsonSerializer.Serialize(new
         {

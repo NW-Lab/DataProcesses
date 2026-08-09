@@ -1,0 +1,74 @@
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
+using DataProcesses.Plugin.Abstractions;
+
+namespace DataProcesses.Nodes.BuiltIn.Tests.Blocks.TestSignalImg;
+
+public sealed class TestSignalImgBlockTests
+{
+    [Fact]
+    public void BuiltInCatalog_RegistersTestSignalImgBlock()
+    {
+        var plugin = new BuiltInNodePlugin();
+
+        var factory = Assert.Single(
+            plugin.NodeFactories,
+            factory => string.Equals(factory.Definition.TypeId, TestSignalImgBlock.TypeId, StringComparison.Ordinal));
+
+        Assert.Equal(TestSignalImgBlock.TypeId, factory.Definition.TypeId);
+        Assert.Equal("TestSignal(Img)ブロック", factory.Definition.DisplayName);
+        Assert.Equal("TestSignal(Img)ブロック", factory.Definition.Title);
+        Assert.Equal("Img", factory.Definition.Subtitle);
+    }
+
+    [Fact]
+    public void TestSignalImgBlock_DefinesExpectedPorts()
+    {
+        Assert.Collection(
+            TestSignalImgBlock.Definition.Ports,
+            payloadIn =>
+            {
+                Assert.Equal(TestSignalImgBlock.PayloadInputPortId, payloadIn.Id);
+                Assert.Equal(PortDirection.Input, payloadIn.Direction);
+                Assert.Equal(PortDataKind.JsonMessage, payloadIn.DataKind);
+            },
+            stream =>
+            {
+                Assert.Equal(TestSignalImgBlock.StreamOutputPortId, stream.Id);
+                Assert.Equal(PortDirection.Output, stream.Direction);
+                Assert.Equal(PortDataKind.FastStream, stream.DataKind);
+                Assert.Equal(PortDataSchema.Image2D, stream.DataSchema);
+            },
+            payloadOut =>
+            {
+                Assert.Equal(TestSignalImgBlock.PayloadOutputPortId, payloadOut.Id);
+                Assert.Equal(PortDirection.Output, payloadOut.Direction);
+                Assert.Equal(PortDataKind.JsonMessage, payloadOut.DataKind);
+            });
+    }
+
+    [Fact]
+    public async Task StartAsync_EmitsImageFrame()
+    {
+        var context = new RecordingNodeContext();
+        var node = new TestSignalImgNode(TestSignalImgSettings.Default, () => DateTimeOffset.UnixEpoch);
+        await node.InitializeAsync(context, CancellationToken.None);
+
+        await node.StartAsync(CancellationToken.None);
+
+        var emitted = Assert.Single(context.EmittedPackets, packet => packet.OutputPortId == TestSignalImgBlock.StreamOutputPortId);
+        var frame = Assert.IsType<ImageFrame>(emitted.Packet);
+        Assert.Equal(100, frame.Width);
+        Assert.Equal(100, frame.Height);
+        Assert.Equal(ImagePixelFormat.Gray8, frame.PixelFormat);
+        Assert.Equal(10_000, frame.PixelsInterleaved.Length);
+    }
+
+    [Fact]
+    public void Factory_CreatesConfiguredNodeFromSettingsJson()
+    {
+        var factory = new TestSignalImgNodeFactory();
+        var node = factory.CreateNode("test-signal-img-1", "{\"width\":80,\"height\":60}");
+
+        Assert.IsType<TestSignalImgNode>(node);
+    }
+}

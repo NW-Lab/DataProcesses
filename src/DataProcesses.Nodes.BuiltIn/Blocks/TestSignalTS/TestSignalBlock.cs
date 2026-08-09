@@ -11,11 +11,11 @@ public static class TestSignalBlock
     public const string PayloadInputPortId = "payload-in";
     public const string StreamOutputPortId = "stream";
     public const string PayloadOutputPortId = "payload-out";
-    public const string IconPath = "Blocks/TestSignal/icon.png";
+    public const string IconPath = "Blocks/TestSignalTS/icon.png";
 
     public static NodeDefinition Definition { get; } = new(
         TypeId: TypeId,
-        DisplayName: "Test Signal",
+        DisplayName: "TestSignal(TS)ブロック",
         Category: "Sources",
         Version: "0.1.0",
         Ports:
@@ -42,8 +42,8 @@ public static class TestSignalBlock
                 DataSchema: PortDataSchema.JsonEnvelope),
         ],
             NodeType: NodeType.Input,
-            Title: "TestSignal",
-            Subtitle: "Sin&squeare",
+            Title: "TestSignal(TS)ブロック",
+            Subtitle: "TS",
             IconPath: IconPath,
             DashboardWidget: new DashboardWidgetDefinition(
                 IsVisibleByDefault: true,

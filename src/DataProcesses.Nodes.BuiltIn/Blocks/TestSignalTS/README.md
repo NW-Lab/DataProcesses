@@ -6,8 +6,8 @@ Generates a synthetic waveform as a Fast Stream frame and accepts Payload messag
 
 | Field | Value |
 |---|---|
-| Title | `TestSignal` |
-| Subtitle | `Sin&squeare` |
+| Title | `TestSignal(TS)ブロック` |
+| Subtitle | `TS` |
 | Icon | `icon.png`, 64 x 64 PNG source rendered at 32 x 32 in the Node Library and 28 x 28 on the canvas. |
 
 ## Dashboard

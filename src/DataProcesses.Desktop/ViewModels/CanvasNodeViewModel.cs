@@ -12,6 +12,8 @@ namespace DataProcesses.Desktop.ViewModels;
 public sealed class CanvasNodeViewModel : ViewModelBase
 {
     private const string TestSignalTypeId = "dataprocesses.test-signal";
+    private const string TestSignalVecTypeId = "dataprocesses.test-signal-vec";
+    private const string TestSignalImgTypeId = "dataprocesses.test-signal-img";
     private const string TriggerTypeId = "dataprocesses.trigger";
     private const string CsvInputTypeId = "dataprocesses.input.csv";
     private const string CsvOutputTypeId = "dataprocesses.output.csv";
@@ -80,6 +82,9 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     public bool IsTestSignal => string.Equals(TypeId, TestSignalTypeId, StringComparison.Ordinal);
 
     public bool IsTriggerNode => string.Equals(TypeId, TriggerTypeId, StringComparison.Ordinal);
+
+    public bool IsStartStopNode => string.Equals(TypeId, TestSignalVecTypeId, StringComparison.Ordinal)
+        || string.Equals(TypeId, TestSignalImgTypeId, StringComparison.Ordinal);
 
     public bool IsCsvInputNode => string.Equals(TypeId, CsvInputTypeId, StringComparison.Ordinal);
 
@@ -399,14 +404,18 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public string BuildRuntimeSettingsJson(long triggerExecutionSessionId)
     {
-        if (!IsTriggerNode)
+        if (!IsTriggerNode && !IsStartStopNode)
         {
             return SettingsJson;
         }
 
         var settings = ReadSettingsObject();
-        settings["executionSessionId"] = triggerExecutionSessionId;
-        settings["manualTriggerNonce"] = triggerManualTriggerNonce;
+        if (IsTriggerNode)
+        {
+            settings["executionSessionId"] = triggerExecutionSessionId;
+            settings["manualTriggerNonce"] = triggerManualTriggerNonce;
+        }
+
         return settings.ToJsonString();
     }
 
@@ -418,6 +427,26 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         }
 
         triggerManualTriggerNonce++;
+    }
+
+    public void ToggleStartStop()
+    {
+        if (!IsStartStopNode)
+        {
+            return;
+        }
+
+        var settings = ReadSettingsObject();
+        if (settings["isEnabled"] is JsonValue jsonValue && jsonValue.TryGetValue<bool>(out var currentEnabled))
+        {
+            settings["isEnabled"] = !currentEnabled;
+        }
+        else
+        {
+            settings["isEnabled"] = true;
+        }
+
+        SettingsJson = settings.ToJsonString();
     }
 
     public void RefreshDynamicPortsFromSettings()

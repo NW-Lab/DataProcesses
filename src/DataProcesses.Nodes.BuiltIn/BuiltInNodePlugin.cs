@@ -8,6 +8,8 @@ using DataProcesses.Nodes.BuiltIn.Blocks.ImageOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.NumericVectorOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Plugin.Abstractions;
 
@@ -22,6 +24,8 @@ public sealed class BuiltInNodePlugin : INodePlugin
     [
         new CsvInputNodeFactory(),
         new TestSignalNodeFactory(),
+        new TestSignalVecNodeFactory(),
+        new TestSignalImgNodeFactory(),
         new TriggerNodeFactory(),
         new LowPassFilterNodeFactory(),
         new FastFourierTransformNodeFactory(),

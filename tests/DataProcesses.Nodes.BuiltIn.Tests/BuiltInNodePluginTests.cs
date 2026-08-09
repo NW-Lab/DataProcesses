@@ -9,6 +9,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Plugin.Abstractions;
 
@@ -27,6 +28,7 @@ public sealed class BuiltInNodePluginTests
             {
                 CsvInputBlock.TypeId,
                 TestSignalBlock.TypeId,
+                TestSignalVecBlock.TypeId,
                 TriggerBlock.TypeId,
                 LowPassFilterBlock.TypeId,
                 FastFourierTransformBlock.TypeId,

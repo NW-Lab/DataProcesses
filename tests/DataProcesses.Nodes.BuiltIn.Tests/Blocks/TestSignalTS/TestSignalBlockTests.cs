@@ -18,9 +18,9 @@ public sealed class TestSignalBlockTests
             factory => string.Equals(factory.Definition.TypeId, TestSignalBlock.TypeId, StringComparison.Ordinal));
 
         Assert.Equal(TestSignalBlock.TypeId, factory.Definition.TypeId);
-        Assert.Equal("Test Signal", factory.Definition.DisplayName);
-        Assert.Equal("TestSignal", factory.Definition.Title);
-        Assert.Equal("Sin&squeare", factory.Definition.Subtitle);
+        Assert.Equal("TestSignal(TS)ブロック", factory.Definition.DisplayName);
+        Assert.Equal("TestSignal(TS)ブロック", factory.Definition.Title);
+        Assert.Equal("TS", factory.Definition.Subtitle);
         Assert.Equal(TestSignalBlock.IconPath, factory.Definition.IconPath);
         var dashboardWidget = Assert.IsType<DashboardWidgetDefinition>(factory.Definition.DashboardWidget);
         Assert.True(dashboardWidget.IsVisibleByDefault);

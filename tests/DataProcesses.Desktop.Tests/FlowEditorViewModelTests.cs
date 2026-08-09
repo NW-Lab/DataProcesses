@@ -515,7 +515,7 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal("dataprocesses.dashboard.node-block", widget.WidgetType);
         Assert.Equal(2, widget.GridWidth);
         Assert.Equal(1, widget.GridHeight);
-        Assert.Equal("TestSignal", widget.Title);
+        Assert.Equal("TestSignal(TS)ブロック", widget.Title);
     }
 
     [Fact]
@@ -844,7 +844,7 @@ public sealed class FlowEditorViewModelTests
     [Fact]
     public void NodeViewModels_ResolveIconPathsFromDefinitionPath()
     {
-        var iconPath = GetRepositoryFilePath("src", "DataProcesses.Nodes.BuiltIn", "Blocks", "TestSignal", "icon.png");
+        var iconPath = GetRepositoryFilePath("src", "DataProcesses.Nodes.BuiltIn", "Blocks", "TestSignalTS", "icon.png");
         var factory = new TestNodeFactory(iconPath: iconPath);
 
         var paletteNode = new PaletteNodeViewModel(factory);
@@ -913,8 +913,8 @@ public sealed class FlowEditorViewModelTests
             "test.signal",
             "Legacy Name",
             NodeType.Input,
-            title: "TestSignal",
-            subtitle: "Sin&squeare");
+            title: "TestSignal(TS)ブロック",
+            subtitle: "TS");
         var viewModel = new FlowEditorViewModel(
             [factory],
             new FlowRunner([factory]),
@@ -922,9 +922,9 @@ public sealed class FlowEditorViewModelTests
 
         var paletteNode = Assert.Single(viewModel.Palette.FilteredNodes);
 
-        Assert.Equal("TestSignal", paletteNode.Title);
-        Assert.Equal("Sin&squeare", paletteNode.Subtitle);
-        Assert.Equal("TestSignal", paletteNode.DisplayName);
+        Assert.Equal("TestSignal(TS)ブロック", paletteNode.Title);
+        Assert.Equal("TS", paletteNode.Subtitle);
+        Assert.Equal("TestSignal(TS)ブロック", paletteNode.DisplayName);
     }
 
     [Fact]
@@ -934,16 +934,101 @@ public sealed class FlowEditorViewModelTests
             "test.signal",
             "Legacy Name",
             NodeType.Input,
-            title: "TestSignal",
-            subtitle: "Sin&squeare");
+            title: "TestSignal(TS)ブロック",
+            subtitle: "TS");
         var viewModel = new FlowEditorViewModel(
             [factory],
             new FlowRunner([factory]),
             new ProjectFileService());
 
-        viewModel.Palette.SearchText = "squeare";
+        viewModel.Palette.SearchText = "TS";
 
         Assert.Equal("test.signal", Assert.Single(viewModel.Palette.FilteredNodes).TypeId);
+    }
+
+    [Fact]
+    public void Palette_InputDataTypeFilter_MatchesJsonInputNodes()
+    {
+        var factories = new INodeFactory[]
+        {
+            new StaticDefinitionNodeFactory(new NodeDefinition(
+                "payload.input",
+                "Payload Input",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.JsonMessage, DataSchema: PortDataSchema.JsonEnvelope)])),
+            new StaticDefinitionNodeFactory(new NodeDefinition(
+                "signal.input",
+                "Signal Input",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.TimeSeries1D)])),
+        };
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService());
+
+        viewModel.Palette.SelectedInputDataType = "JSON";
+
+        Assert.Equal("payload.input", Assert.Single(viewModel.Palette.FilteredNodes).TypeId);
+    }
+
+    [Fact]
+    public void Palette_OutputDataTypeFilter_MatchesVectorOutputNodes()
+    {
+        var factories = new INodeFactory[]
+        {
+            new StaticDefinitionNodeFactory(new NodeDefinition(
+                "vector.output",
+                "Vector Output",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.NumericVector1D)])),
+            new StaticDefinitionNodeFactory(new NodeDefinition(
+                "image.output",
+                "Image Output",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.Image2D)])),
+        };
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService());
+
+        viewModel.Palette.SelectedOutputDataType = "VEC";
+
+        Assert.Equal("vector.output", Assert.Single(viewModel.Palette.FilteredNodes).TypeId);
+    }
+
+    [Fact]
+    public void Palette_SearchAndPortFilter_CombineWithAndCondition()
+    {
+        var factories = new INodeFactory[]
+        {
+            new StaticDefinitionNodeFactory(new NodeDefinition(
+                "vector.process",
+                "Vector Processor",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.NumericVector1D)])),
+            new StaticDefinitionNodeFactory(new NodeDefinition(
+                "image.process",
+                "Image Processor",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.Image2D)])),
+        };
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService());
+
+        viewModel.Palette.SearchText = "Processor";
+        viewModel.Palette.SelectedOutputDataType = "IMG";
+
+        Assert.Equal("image.process", Assert.Single(viewModel.Palette.FilteredNodes).TypeId);
     }
 
     [Fact]
@@ -1000,13 +1085,13 @@ public sealed class FlowEditorViewModelTests
             "Test",
             "0.1.0",
             [],
-            Title: "TestSignal",
-            Subtitle: "Sin&squeare");
+            Title: "TestSignal(TS)ブロック",
+            Subtitle: "TS");
         var node = new CanvasNodeViewModel(
             new NodeInstance("node-1", "test.signal", 10, 20, "{}", Name: string.Empty),
             definition);
 
-        Assert.Equal("TestSignal", node.DisplayName);
+        Assert.Equal("TestSignal(TS)ブロック", node.DisplayName);
     }
 
     [Fact]
@@ -1134,7 +1219,7 @@ public sealed class FlowEditorViewModelTests
     {
         var settingsJson = JsonSerializer.Serialize(new
         {
-            title = "TestSignal",
+            title = "TestSignal(TS)ブロック",
             contentKind = "text",
             content = "millis,value\n0,0",
             displayData = new
@@ -1155,7 +1240,7 @@ public sealed class FlowEditorViewModelTests
             2,
             settingsJson: settingsJson);
 
-        Assert.Equal("TestSignal", widget.Title);
+        Assert.Equal("TestSignal(TS)ブロック", widget.Title);
         Assert.Equal("text", widget.ContentKind);
         Assert.True(widget.IsTextContent);
         Assert.Equal("millis,value\n0,0", widget.Content);

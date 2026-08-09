@@ -18,7 +18,7 @@ Mirror the same structure under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/
 
 ## README Template
 
-Create a Block-local `README.md` for every Block. For simple Blocks, keep sections concise; for complex Blocks, include full details for ports, schema, settings, timing, numerical behavior, and interoperability. Use [TestSignal/README.md](TestSignal/README.md) as the reference template.
+Create a Block-local `README.md` for every Block. For simple Blocks, keep sections concise; for complex Blocks, include full details for ports, schema, settings, timing, numerical behavior, and interoperability. Use [TestSignalTS/README.md](TestSignalTS/README.md) as the reference template.
 
 ```markdown
 # <BlockName> Block
