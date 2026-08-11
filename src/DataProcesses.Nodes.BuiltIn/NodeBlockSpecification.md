@@ -149,4 +149,4 @@ Create a `README.md` in a Block directory when the Block has any non-trivial por
 6. Fast Stream timing, units, and channel behavior when applicable.
 7. Validation and test expectations.
 
-See `Blocks/TestSignal/README.md` for the first template-style Block specification.
+See `Blocks/TestSignalTS/README.md` for the first template-style Block specification.

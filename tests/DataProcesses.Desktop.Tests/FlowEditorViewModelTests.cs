@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Reflection;
 
 using DataProcesses.Core;
@@ -7,8 +7,8 @@ using DataProcesses.Desktop.ViewModels;
 using DataProcesses.Engine;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
+using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Plugin.Abstractions;
 
@@ -632,7 +632,7 @@ public sealed class FlowEditorViewModelTests
         INodeFactory[] factories =
         [
             new CsvInputNodeFactory(),
-            new StreamOutputNodeFactory(),
+            new StremOutputTSNodeFactory(),
         ];
 
         var viewModel = new FlowEditorViewModel(
@@ -641,7 +641,7 @@ public sealed class FlowEditorViewModelTests
             new ProjectFileService());
 
         var csvInputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == CsvInputBlock.TypeId);
-        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputBlock.TypeId);
+        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StremOutputTSBlock.TypeId);
 
         var csvInputNode = viewModel.PlacePaletteNode(csvInputPaletteNode, 100, 100);
         var streamOutputNode1 = viewModel.PlacePaletteNode(streamOutputPaletteNode, 380, 80);
@@ -913,7 +913,7 @@ public sealed class FlowEditorViewModelTests
             "test.signal",
             "Legacy Name",
             NodeType.Input,
-            title: "TestSignal(TS)ブロック",
+            title: "TestSignal(TS)繝悶Ο繝・け",
             subtitle: "TS");
         var viewModel = new FlowEditorViewModel(
             [factory],
@@ -922,9 +922,9 @@ public sealed class FlowEditorViewModelTests
 
         var paletteNode = Assert.Single(viewModel.Palette.FilteredNodes);
 
-        Assert.Equal("TestSignal(TS)ブロック", paletteNode.Title);
+        Assert.Equal("TestSignal(TS)繝悶Ο繝・け", paletteNode.Title);
         Assert.Equal("TS", paletteNode.Subtitle);
-        Assert.Equal("TestSignal(TS)ブロック", paletteNode.DisplayName);
+        Assert.Equal("TestSignal(TS)繝悶Ο繝・け", paletteNode.DisplayName);
     }
 
     [Fact]
@@ -934,7 +934,7 @@ public sealed class FlowEditorViewModelTests
             "test.signal",
             "Legacy Name",
             NodeType.Input,
-            title: "TestSignal(TS)ブロック",
+            title: "TestSignal(TS)繝悶Ο繝・け",
             subtitle: "TS");
         var viewModel = new FlowEditorViewModel(
             [factory],
@@ -1085,13 +1085,13 @@ public sealed class FlowEditorViewModelTests
             "Test",
             "0.1.0",
             [],
-            Title: "TestSignal(TS)ブロック",
+            Title: "TestSignal(TS)繝悶Ο繝・け",
             Subtitle: "TS");
         var node = new CanvasNodeViewModel(
             new NodeInstance("node-1", "test.signal", 10, 20, "{}", Name: string.Empty),
             definition);
 
-        Assert.Equal("TestSignal(TS)ブロック", node.DisplayName);
+        Assert.Equal("TestSignal(TS)繝悶Ο繝・け", node.DisplayName);
     }
 
     [Fact]
@@ -1219,7 +1219,7 @@ public sealed class FlowEditorViewModelTests
     {
         var settingsJson = JsonSerializer.Serialize(new
         {
-            title = "TestSignal(TS)ブロック",
+            title = "TestSignal(TS)繝悶Ο繝・け",
             contentKind = "text",
             content = "millis,value\n0,0",
             displayData = new
@@ -1240,7 +1240,7 @@ public sealed class FlowEditorViewModelTests
             2,
             settingsJson: settingsJson);
 
-        Assert.Equal("TestSignal(TS)ブロック", widget.Title);
+        Assert.Equal("TestSignal(TS)繝悶Ο繝・け", widget.Title);
         Assert.Equal("text", widget.ContentKind);
         Assert.True(widget.IsTextContent);
         Assert.Equal("millis,value\n0,0", widget.Content);

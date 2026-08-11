@@ -1,13 +1,13 @@
-using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
+﻿using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
 using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.ImageOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.NumericVectorOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.TestSignal;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
+using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
@@ -29,9 +29,9 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new TriggerNodeFactory(),
         new LowPassFilterNodeFactory(),
         new FastFourierTransformNodeFactory(),
-        new StreamOutputNodeFactory(),
-        new NumericVectorOutputNodeFactory(),
-        new ImageOutputNodeFactory(),
+        new StremOutputTSNodeFactory(),
+        new StreamOutputVectorNodeFactory(),
+        new StreamOutputImageNodeFactory(),
         new PythonOutputNodeFactory(),
         new PayloadOutputNodeFactory(),
         new CsvOutputNodeFactory(),
@@ -43,3 +43,4 @@ public sealed class BuiltInNodePlugin : INodePlugin
 
     public IReadOnlyCollection<INodeFactory> NodeFactories => Factories;
 }
+

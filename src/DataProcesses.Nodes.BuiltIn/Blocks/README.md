@@ -1,4 +1,4 @@
-# Built-in Block layout
+﻿# Built-in Block layout
 
 Human-facing Block behavior, common placed-Block settings, port appearance, and connection rules are defined in [../NodeBlockSpecification.md](../NodeBlockSpecification.md). Keep this layout guide focused on repository organization and per-Block ownership.
 
@@ -71,13 +71,13 @@ Block-specific settings use this JSON shape:
 | Directory | Type ID | Current role |
 |---|---|---|
 | `CsvInput/` | `dataprocesses.input.csv` | CSV source that reads `millis,CH1...` records from file or COM input and emits per-channel Fast Stream outputs as `millis,value`. |
-| `TestSignal/` | `dataprocesses.test-signal` | Configurable Test Signal source with Payload settings input, Fast Stream output, and Payload status output. |
+| `TestSignalTS/` | `dataprocesses.test-signal` | Configurable Test Signal source with Payload settings input, Fast Stream output, and Payload status output. |
 | `Trigger/` | `dataprocesses.trigger` | Payload source that emits configured values on manual action, execution start, and periodic timing. |
 | `LowPassFilter/` | `dataprocesses.filter.low-pass` | Stateful first-order Fast Stream smoothing processor. |
 | `FastFourierTransform/` | `dataprocesses.analysis.fft` | Fast Stream to one-sided `SpectrumFrame` analysis processor. |
-| `StreamOutput/` | `dataprocesses.output.stream` | Debug-oriented Fast Stream output adapter with bounded downsampling. |
-| `NumericVectorOutput/` | `dataprocesses.output.numeric-vector` | Debug-oriented Fast Stream vector sink for `NumericVectorFrame` snapshots. |
-| `ImageOutput/` | `dataprocesses.output.image` | Debug-oriented Fast Stream image sink for `ImageFrame` previews. |
+| `StremOutputTS/` | `dataprocesses.output.stream` | Debug-oriented Fast Stream output adapter with bounded downsampling. |
+| `StreamOutputVector/` | `dataprocesses.output.numeric-vector` | Debug-oriented Fast Stream vector sink for `NumericVectorFrame` snapshots. |
+| `StreamOutputImage/` | `dataprocesses.output.image` | Debug-oriented Fast Stream image sink for `ImageFrame` previews. |
 | `PythonOutput/` | `dataprocesses.output.python` | Typed Fast Stream/JSON boundary that emits deferred-delivery status; it does not launch Python yet. |
 | `PayloadOutput/` | `dataprocesses.output.payload` | Debug-oriented Payload sink that appends timestamped entries for dashboard inspection. |
 | `CsvOutput/` | `dataprocesses.output.csv` | Fast Stream CSV sink that writes configured spans and tagged channels. |
@@ -92,3 +92,4 @@ Block-specific settings use this JSON shape:
 6. Run the Release build and complete test suite.
 
 Do not place implementation files directly under `DataProcesses.Nodes.BuiltIn`. That project root is reserved for the built-in plugin catalog and project-level composition.
+
