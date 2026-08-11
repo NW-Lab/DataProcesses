@@ -86,6 +86,8 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     public bool IsStartStopNode => string.Equals(TypeId, TestSignalVecTypeId, StringComparison.Ordinal)
         || string.Equals(TypeId, TestSignalImgTypeId, StringComparison.Ordinal);
 
+    public bool IsDashboardToggleNode => IsStartStopNode || IsTestSignal;
+
     public bool IsCsvInputNode => string.Equals(TypeId, CsvInputTypeId, StringComparison.Ordinal);
 
     public bool IsCsvOutputNode => string.Equals(TypeId, CsvOutputTypeId, StringComparison.Ordinal);
@@ -119,6 +121,8 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         get => ReadSettingsDouble("samplePeriodMillis", 1.0);
         set => UpdateSettingsDouble("samplePeriodMillis", value, minimumExclusive: 0);
     }
+
+    public bool TestSignalIsEnabled => ReadSettingsBoolean("isEnabled", true);
 
     public bool TriggerEmitOnExecutionStart
     {
@@ -347,6 +351,7 @@ public sealed class CanvasNodeViewModel : ViewModelBase
                 OnPropertyChanged(nameof(TestSignalWaveType));
                 OnPropertyChanged(nameof(TestSignalFrequencyHertz));
                 OnPropertyChanged(nameof(TestSignalSamplePeriodMilliseconds));
+                OnPropertyChanged(nameof(TestSignalIsEnabled));
                 OnPropertyChanged(nameof(TriggerEmitOnExecutionStart));
                 OnPropertyChanged(nameof(TriggerEmitPeriodically));
                 OnPropertyChanged(nameof(TriggerInitialDelayMilliseconds));
@@ -431,20 +436,14 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public void ToggleStartStop()
     {
-        if (!IsStartStopNode)
+        if (!IsDashboardToggleNode)
         {
             return;
         }
 
         var settings = ReadSettingsObject();
-        if (settings["isEnabled"] is JsonValue jsonValue && jsonValue.TryGetValue<bool>(out var currentEnabled))
-        {
-            settings["isEnabled"] = !currentEnabled;
-        }
-        else
-        {
-            settings["isEnabled"] = true;
-        }
+        var currentEnabled = ReadSettingsBoolean("isEnabled", true);
+        settings["isEnabled"] = !currentEnabled;
 
         SettingsJson = settings.ToJsonString();
     }

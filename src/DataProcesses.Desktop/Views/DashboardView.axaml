@@ -116,7 +116,7 @@
                                                 </TextBox.ContextMenu>
                                             </TextBox>
 
-                                            <Border Grid.Row="1"
+                                                <Border Grid.Row="1"
                                                     Margin="6"
                                                     Padding="6"
                                                     Background="#1D4ED8"
@@ -126,16 +126,19 @@
                                                     HorizontalAlignment="Stretch"
                                                     VerticalAlignment="Stretch"
                                                     IsVisible="{Binding IsTriggerButtonContent}"
-                                                    PointerPressed="TriggerSurfacePointerPressed"
                                                     ToolTip.Tip="Trigger now">
-                                                <TextBlock Text="{Binding Content}"
-                                                           Foreground="White"
-                                                           FontWeight="Bold"
-                                                           FontSize="12"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           TextAlignment="Center" />
-                                            </Border>
+                                                <Grid Background="Transparent"
+                                                      PointerPressed="TriggerSurfacePointerPressed">
+                                                    <TextBlock Text="{Binding Content}"
+                                                               Foreground="White"
+                                                               FontWeight="Bold"
+                                                               FontSize="12"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               TextAlignment="Center"
+                                                               IsHitTestVisible="False" />
+                                                </Grid>
+                                                </Border>
 
                                                 <Border x:Name="ResizeLeftHandle"
                                                     Grid.RowSpan="2"

@@ -10,6 +10,8 @@ using CommunityToolkit.Mvvm.Input;
 using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Engine;
+using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Plugin.Abstractions;
@@ -1101,7 +1103,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
         var node = Nodes.FirstOrDefault(candidate =>
             string.Equals(candidate.Id, nodeId, StringComparison.Ordinal)
-            && string.Equals(candidate.TypeId, TriggerNodeTypeId, StringComparison.Ordinal));
+            && (string.Equals(candidate.TypeId, TriggerNodeTypeId, StringComparison.Ordinal)
+                || candidate.IsDashboardToggleNode));
 
         if (node is null)
         {
@@ -1309,6 +1312,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 Validate();
             }
 
+            if (node.IsDashboardToggleNode)
+            {
+                SynchronizeDashboardWidgetForNode(node);
+            }
+
             MarkCurrentFlowDirty();
         }
     }
@@ -1327,8 +1335,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
             return;
         }
 
-        if (string.Equals(node.TypeId, TestSignalVecBlock.TypeId, StringComparison.Ordinal)
-            || string.Equals(node.TypeId, TestSignalImgBlock.TypeId, StringComparison.Ordinal))
+        if (node.IsDashboardToggleNode)
         {
             node.ToggleStartStop();
             InteractionStatus = $"Toggled {node.DisplayName}.";
@@ -1398,20 +1405,48 @@ public sealed class FlowEditorViewModel : ViewModelBase
             .Select(static group => group.Last())
             .ToArray();
 
+        var nodesById = Nodes.ToDictionary(static node => node.Id, StringComparer.Ordinal);
+
         foreach (var output in latestFastStreamByNode)
         {
-            var node = Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, output.NodeId, StringComparison.Ordinal));
-            if (node is null || !node.ShowOnDashboard || output.Packet is not FastStreamFrame frame)
+            if (!nodesById.TryGetValue(output.NodeId, out var sourceNode)
+                || output.Packet is not FastStreamFrame frame)
             {
                 continue;
             }
 
-            SynchronizeDashboardWidgetForNode(node, FormatFastStreamFrame(frame, GetRunStartedUnixNanoseconds(frame)));
+            var content = FormatFastStreamFrame(frame, GetRunStartedUnixNanoseconds(frame));
+
+            if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardToggleNode)
+            {
+                SynchronizeDashboardWidgetForNode(sourceNode, content);
+            }
+
+            var targetStreamOutputNodeIds = Connections
+                .Select(static connection => connection.Connection)
+                .Where(connection =>
+                    string.Equals(connection.SourceNodeId, sourceNode.Id, StringComparison.Ordinal)
+                    && string.Equals(connection.SourcePortId, output.OutputPortId, StringComparison.Ordinal)
+                    && connection.DataKind == PortDataKind.FastStream)
+                .Select(static connection => connection.TargetNodeId)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            foreach (var targetNodeId in targetStreamOutputNodeIds)
+            {
+                if (!nodesById.TryGetValue(targetNodeId, out var targetNode)
+                    || !targetNode.ShowOnDashboard
+                    || !string.Equals(targetNode.TypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                SynchronizeDashboardWidgetForNode(targetNode, content);
+            }
         }
 
         var dashboardContentByNodeId = GetNodeDashboardWidgetContentByNodeId();
         var payloadLogByNodeId = new Dictionary<string, string>(StringComparer.Ordinal);
-        var nodesById = Nodes.ToDictionary(static node => node.Id, StringComparer.Ordinal);
 
         foreach (var output in result.OutputPackets)
         {
@@ -1531,11 +1566,22 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private static string CreateDashboardWidgetSettingsJson(CanvasNodeViewModel node, string content)
     {
-        var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal)
-            || string.Equals(node.TypeId, TestSignalVecBlock.TypeId, StringComparison.Ordinal)
-            || string.Equals(node.TypeId, TestSignalImgBlock.TypeId, StringComparison.Ordinal);
-        var contentKind = isTriggerNode ? TriggerButtonContentKind : "text";
-        var textContent = isTriggerNode ? (string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal) ? "Trigger" : "Start") : content;
+        var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal);
+        var isToggleNode = node.IsDashboardToggleNode;
+        var contentKind = (isTriggerNode || isToggleNode) ? TriggerButtonContentKind : "text";
+        var textContent = content;
+
+        if (isTriggerNode)
+        {
+            textContent = "Trigger";
+        }
+        else if (isToggleNode)
+        {
+            var isEnabled = string.Equals(node.TypeId, TestSignalBlock.TypeId, StringComparison.Ordinal)
+                ? node.TestSignalIsEnabled
+                : node.IsEnabled;
+            textContent = isEnabled ? "ON" : "OFF";
+        }
 
         return JsonSerializer.Serialize(new
         {

@@ -331,7 +331,7 @@ public partial class DashboardView : UserControl
 
     private void TriggerSurfacePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not Control { DataContext: DashboardWidgetViewModel widget }
+        if (sender is not StyledElement { DataContext: DashboardWidgetViewModel widget }
             || DataContext is not DashboardViewModel viewModel)
         {
             return;

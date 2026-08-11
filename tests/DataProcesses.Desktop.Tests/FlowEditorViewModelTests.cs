@@ -534,6 +534,37 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void PlacePaletteNode_TestSignalNodeCreatesOnOffButtonDashboardWidget()
+    {
+        var mainViewModel = new MainViewModel();
+        var testSignal = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+
+        mainViewModel.FlowEditor.PlacePaletteNode(testSignal, 260, 220);
+
+        var widget = Assert.Single(mainViewModel.Dashboard.Widgets);
+        Assert.True(widget.IsTriggerButtonContent);
+        Assert.Equal("ON", widget.Content);
+    }
+
+    [Fact]
+    public void TriggerNodeById_TogglesTestSignalSettingsAndDashboardLabel()
+    {
+        var mainViewModel = new MainViewModel();
+        var testSignalPaletteNode = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+
+        var node = mainViewModel.FlowEditor.PlacePaletteNode(testSignalPaletteNode, 260, 220);
+        var widget = Assert.Single(mainViewModel.Dashboard.Widgets);
+        Assert.Equal("ON", widget.Content);
+
+        mainViewModel.FlowEditor.TriggerNodeById(node.Id);
+
+        using var settings = JsonDocument.Parse(node.SettingsJson);
+        Assert.False(settings.RootElement.GetProperty("isEnabled").GetBoolean());
+        var refreshedWidget = Assert.Single(mainViewModel.Dashboard.Widgets);
+        Assert.Equal("OFF", refreshedWidget.Content);
+    }
+
+    [Fact]
     public void PlacePaletteNode_PlacesDashboardWidgetWithoutOverlap()
     {
         IReadOnlyList<DashboardDocument> dashboards =
@@ -708,6 +739,60 @@ public sealed class FlowEditorViewModelTests
         Assert.Contains("millis,value", content, StringComparison.Ordinal);
         Assert.Contains("0.5", content, StringComparison.Ordinal);
         Assert.Equal(content, displayText);
+    }
+
+    [Fact]
+    public async Task RunAsync_DoesNotRenderFastStreamTextIntoTestSignalDashboardWidget()
+    {
+        IReadOnlyList<DashboardDocument> dashboards = [];
+        INodeFactory[] factories =
+        [
+            new TestSignalNodeFactory(),
+            new StremOutputTSNodeFactory(),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService(),
+            () => dashboards,
+            documents => dashboards = documents);
+
+        var testSignalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StremOutputTSBlock.TypeId);
+
+        var testSignalNode = viewModel.PlacePaletteNode(testSignalPaletteNode, 120, 120);
+        var streamOutputNode = viewModel.PlacePaletteNode(streamOutputPaletteNode, 440, 120);
+
+        streamOutputNode.ShowOnDashboard = true;
+
+        var sourcePort = testSignalNode.Outputs.Single(port => port.Id == TestSignalBlock.StreamOutputPortId);
+        var targetPort = streamOutputNode.Inputs.Single(port => port.Id == StremOutputTSBlock.InputPortId);
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(() => dashboards, "millis,value");
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+
+        var dashboard = Assert.Single(dashboards);
+        var testSignalWidget = Assert.Single(dashboard.Widgets, widget => widget.SourcePortId == testSignalNode.Id);
+        var streamOutputWidget = Assert.Single(dashboard.Widgets, widget => widget.SourcePortId == streamOutputNode.Id);
+
+        using var testSignalSettings = JsonDocument.Parse(testSignalWidget.SettingsJson);
+        Assert.Equal("button-trigger", testSignalSettings.RootElement.GetProperty("contentKind").GetString());
+        Assert.Equal("ON", testSignalSettings.RootElement.GetProperty("content").GetString());
+
+        using var streamOutputSettings = JsonDocument.Parse(streamOutputWidget.SettingsJson);
+        Assert.Equal("text", streamOutputSettings.RootElement.GetProperty("contentKind").GetString());
+        var streamContent = streamOutputSettings.RootElement.GetProperty("content").GetString();
+        Assert.Contains("millis,value", streamContent, StringComparison.Ordinal);
     }
 
     [Fact]
