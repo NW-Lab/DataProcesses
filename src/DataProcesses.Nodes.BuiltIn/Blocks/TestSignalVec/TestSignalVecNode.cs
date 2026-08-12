@@ -6,6 +6,7 @@ namespace DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 
 public sealed class TestSignalVecNode : INode
 {
+    private const double BaseSineFrequencyHertz = 0.2;
     private readonly TestSignalVecSettings settings;
     private readonly Func<DateTimeOffset> getTimestamp;
     private INodeContext? context;
@@ -103,22 +104,42 @@ public sealed class TestSignalVecNode : INode
         }
 
         var values = new double[settings.Length];
-        var phaseStep = 2 * Math.PI * settings.FrequencyHertz * settings.SamplePeriodMilliseconds / 1000.0;
-        for (var index = 0; index < values.Length; index++)
+        var timestamp = getTimestamp();
+
+        switch (settings.WaveType)
         {
-            var radians = phaseStep * index;
-            values[index] = settings.WaveType switch
+            case TestSignalVecWaveType.OneShot:
             {
-                TestSignalVecWaveType.Square => settings.Amplitude * (Math.Sin(radians) >= 0 ? 1 : -1),
-                _ => settings.Amplitude * Math.Sin(radians),
-            };
+                var activeIndex = (int)(Math.Abs(settings.ExecutionStep) % values.Length);
+                values[activeIndex] = 1.0;
+                break;
+            }
+            case TestSignalVecWaveType.Square:
+            case TestSignalVecWaveType.Sine:
+            {
+                var cycleSteps = Math.Max(1, (int)Math.Round(settings.FrequencyHertz / BaseSineFrequencyHertz, MidpointRounding.AwayFromZero));
+                var cycleIndex = (double)(((settings.ExecutionStep % cycleSteps) + cycleSteps) % cycleSteps);
+                var basePhase = (2 * Math.PI * cycleIndex) / cycleSteps;
+                for (var index = 0; index < values.Length; index++)
+                {
+                    var phaseOffset = (double)index / values.Length;
+                    var radians = basePhase + (2 * Math.PI * phaseOffset);
+                    values[index] = settings.WaveType switch
+                    {
+                        TestSignalVecWaveType.Square => settings.Amplitude * (Math.Sin(radians) >= 0 ? 1 : -1),
+                        _ => settings.Amplitude * Math.Sin(radians),
+                    };
+                }
+
+                break;
+            }
         }
 
         var vector = new NumericVectorFrame(
             Name: "signal",
             Values: values.AsMemory(),
             SequenceNumber: 0,
-            Timestamp: getTimestamp());
+            Timestamp: timestamp);
 
         await nodeContext.EmitAsync(TestSignalVecBlock.StreamOutputPortId, vector, cancellationToken);
     }

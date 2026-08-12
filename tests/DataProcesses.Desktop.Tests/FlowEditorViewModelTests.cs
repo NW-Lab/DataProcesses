@@ -8,7 +8,9 @@ using DataProcesses.Engine;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Plugin.Abstractions;
 
@@ -547,6 +549,21 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void PlacePaletteNode_TestSignalVecNodeInitializesOneShotDefaults()
+    {
+        var mainViewModel = new MainViewModel();
+        var testSignalVec = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalVecBlock.TypeId);
+
+        var node = mainViewModel.FlowEditor.PlacePaletteNode(testSignalVec, 260, 220);
+
+        using var settings = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("oneShot", settings.RootElement.GetProperty("waveType").GetString());
+        Assert.Equal(10.0, settings.RootElement.GetProperty("frequency").GetDouble());
+        Assert.Equal(16, settings.RootElement.GetProperty("length").GetInt32());
+        Assert.True(settings.RootElement.GetProperty("isEnabled").GetBoolean());
+    }
+
+    [Fact]
     public void PlacePaletteNode_StreamOutputTSNodeIsShownOnDashboardByDefault()
     {
         var mainViewModel = new MainViewModel();
@@ -567,6 +584,24 @@ public sealed class FlowEditorViewModelTests
         var testSignalPaletteNode = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
 
         var node = mainViewModel.FlowEditor.PlacePaletteNode(testSignalPaletteNode, 260, 220);
+        var widget = Assert.Single(mainViewModel.Dashboard.Widgets);
+        Assert.Equal("ON", widget.Content);
+
+        mainViewModel.FlowEditor.TriggerNodeById(node.Id);
+
+        using var settings = JsonDocument.Parse(node.SettingsJson);
+        Assert.False(settings.RootElement.GetProperty("isEnabled").GetBoolean());
+        var refreshedWidget = Assert.Single(mainViewModel.Dashboard.Widgets);
+        Assert.Equal("OFF", refreshedWidget.Content);
+    }
+
+    [Fact]
+    public void TriggerNodeById_TogglesTestSignalVecSettingsAndDashboardLabel()
+    {
+        var mainViewModel = new MainViewModel();
+        var testSignalVecPaletteNode = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalVecBlock.TypeId);
+
+        var node = mainViewModel.FlowEditor.PlacePaletteNode(testSignalVecPaletteNode, 260, 220);
         var widget = Assert.Single(mainViewModel.Dashboard.Widgets);
         Assert.Equal("ON", widget.Content);
 
@@ -651,6 +686,46 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal("square", document.RootElement.GetProperty("waveType").GetString());
         Assert.Equal(25.5, document.RootElement.GetProperty("frequency").GetDouble());
         Assert.Equal(0.5, document.RootElement.GetProperty("samplePeriodMillis").GetDouble());
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_UpdatesTestSignalVecSettingsJsonFromTypedInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", TestSignalVecBlock.TypeId, 0, 0, "{}"),
+            TestSignalVecBlock.Definition);
+
+        node.TestSignalFrequencyHertz = 12.5;
+        node.TestSignalVectorLength = 24;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal(12.5, document.RootElement.GetProperty("frequency").GetDouble());
+        Assert.Equal(24, document.RootElement.GetProperty("length").GetInt32());
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_TestSignalVec_DefaultWaveTypeAndOptions()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", TestSignalVecBlock.TypeId, 0, 0, "{}"),
+            TestSignalVecBlock.Definition);
+
+        Assert.Equal("oneShot", node.TestSignalWaveType);
+        Assert.Equal(["oneShot", "sine"], node.TestSignalWaveTypes);
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_TestSignalVec_WaveTypeNullDefaultsToOneShot()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", TestSignalVecBlock.TypeId, 0, 0, "{}"),
+            TestSignalVecBlock.Definition);
+
+        node.TestSignalWaveType = null!;
+
+        Assert.Equal("oneShot", node.TestSignalWaveType);
+        using var settings = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("oneShot", settings.RootElement.GetProperty("waveType").GetString());
     }
 
     [Fact]
@@ -807,6 +882,57 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal("text", streamOutputSettings.RootElement.GetProperty("contentKind").GetString());
         var streamContent = streamOutputSettings.RootElement.GetProperty("content").GetString();
         Assert.Contains("millis,value", streamContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_UpdatesDashboardWidgetContentForStreamOutputVector()
+    {
+        IReadOnlyList<DashboardDocument> dashboards = [];
+        INodeFactory[] factories =
+        [
+            new TestSignalVecNodeFactory(),
+            new StreamOutputVectorNodeFactory(),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService(),
+            () => dashboards,
+            documents => dashboards = documents);
+
+        var testSignalVecPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalVecBlock.TypeId);
+        var streamOutputVectorPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputVectorBlock.TypeId);
+
+        var testSignalVecNode = viewModel.PlacePaletteNode(testSignalVecPaletteNode, 120, 120);
+        var streamOutputVectorNode = viewModel.PlacePaletteNode(streamOutputVectorPaletteNode, 440, 120);
+
+        streamOutputVectorNode.ShowOnDashboard = true;
+
+        var sourcePort = testSignalVecNode.Outputs.Single(port => port.Id == TestSignalVecBlock.StreamOutputPortId);
+        var targetPort = streamOutputVectorNode.Inputs.Single(port => port.Id == StreamOutputVectorBlock.InputPortId);
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(() => dashboards, "millis,v0,v1");
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+
+        var dashboard = Assert.Single(dashboards);
+        var streamOutputWidget = Assert.Single(dashboard.Widgets, widget => widget.SourcePortId == streamOutputVectorNode.Id);
+
+        using var streamOutputSettings = JsonDocument.Parse(streamOutputWidget.SettingsJson);
+        Assert.Equal("text", streamOutputSettings.RootElement.GetProperty("contentKind").GetString());
+        var streamContent = streamOutputSettings.RootElement.GetProperty("content").GetString();
+        Assert.Contains("millis,v0,v1", streamContent, StringComparison.Ordinal);
+        Assert.Contains("0,1.0,0.0", streamContent, StringComparison.Ordinal);
+        Assert.Contains(",0.0,0.0,0.0", streamContent, StringComparison.Ordinal);
     }
 
     [Fact]

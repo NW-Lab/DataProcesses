@@ -4,22 +4,24 @@ namespace DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 
 public enum TestSignalVecWaveType
 {
+    OneShot,
     Sine,
     Square,
 }
 
 public sealed record TestSignalVecSettings(
     bool IsEnabled = true,
-    TestSignalVecWaveType WaveType = TestSignalVecWaveType.Sine,
+    TestSignalVecWaveType WaveType = TestSignalVecWaveType.OneShot,
     double FrequencyHertz = 10.0,
     double Amplitude = 1.0,
-    int Length = 128,
+    int Length = 16,
     double SamplePeriodMilliseconds = 1.0,
-    bool PayloadThrough = true)
+    bool PayloadThrough = true,
+    long ExecutionStep = 0)
 {
     public const int MinimumLength = 1;
     public const int MaximumLength = 1_024;
-    public const int DefaultLength = 128;
+    public const int DefaultLength = 16;
 
     public static TestSignalVecSettings Default { get; } = new();
 
@@ -68,7 +70,8 @@ public sealed record TestSignalVecSettings(
                 Amplitude: GetOptionalDouble(document.RootElement, "amplitude", Default.Amplitude),
                 Length: GetOptionalInt(document.RootElement, "length", Default.Length),
                 SamplePeriodMilliseconds: GetOptionalDouble(document.RootElement, "samplePeriodMillis", Default.SamplePeriodMilliseconds),
-                PayloadThrough: GetOptionalBoolean(document.RootElement, "payloadThrough", Default.PayloadThrough));
+                PayloadThrough: GetOptionalBoolean(document.RootElement, "payloadThrough", Default.PayloadThrough),
+                ExecutionStep: GetOptionalLong(document.RootElement, "executionStep", Default.ExecutionStep));
         }
         catch (JsonException ex)
         {
@@ -90,7 +93,8 @@ public sealed record TestSignalVecSettings(
             Amplitude: GetOptionalDouble(payload, "amplitude", Amplitude),
             Length: GetOptionalInt(payload, "length", Length),
             SamplePeriodMilliseconds: GetOptionalDouble(payload, "samplePeriodMillis", SamplePeriodMilliseconds),
-            PayloadThrough: GetOptionalBoolean(payload, "payloadThrough", PayloadThrough));
+            PayloadThrough: GetOptionalBoolean(payload, "payloadThrough", PayloadThrough),
+            ExecutionStep: GetOptionalLong(payload, "executionStep", ExecutionStep));
     }
 
     private static bool GetOptionalBoolean(JsonElement element, string propertyName, bool defaultValue)
@@ -138,6 +142,21 @@ public sealed record TestSignalVecSettings(
         return property.GetInt32();
     }
 
+    private static long GetOptionalLong(JsonElement element, string propertyName, long defaultValue)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+        {
+            return defaultValue;
+        }
+
+        if (property.ValueKind != JsonValueKind.Number || !property.TryGetInt64(out var value))
+        {
+            throw new ArgumentException($"TestSignalVec payload field '{propertyName}' must be an integer number.", nameof(property));
+        }
+
+        return value;
+    }
+
     private static TestSignalVecWaveType GetOptionalWaveType(JsonElement element, string propertyName, TestSignalVecWaveType defaultValue)
     {
         if (!element.TryGetProperty(propertyName, out var property))
@@ -152,6 +171,8 @@ public sealed record TestSignalVecSettings(
 
         return property.GetString() switch
         {
+            "oneShot" => TestSignalVecWaveType.OneShot,
+            "oneshot" => TestSignalVecWaveType.OneShot,
             "sine" => TestSignalVecWaveType.Sine,
             "square" => TestSignalVecWaveType.Square,
             _ => throw new ArgumentException($"Unsupported TestSignalVec waveType '{property.GetString()}'.", nameof(property)),

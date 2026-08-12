@@ -11,6 +11,7 @@ using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Engine;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
@@ -59,6 +60,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private bool isCanvasEditingEnabled = true;
     private bool isDebugExecution;
     private long triggerExecutionSessionId;
+    private long runtimeExecutionStep;
     private long? runStartedUnixNanoseconds;
     private CanvasNodeViewModel? selectedNode;
     private PaletteNodeViewModel? selectedPaletteNode;
@@ -588,8 +590,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private CanvasNodeViewModel AddNodeAt(PaletteNodeViewModel paletteNode, double x, double y)
     {
+        var initialSettingsJson = CreateInitialSettingsJson(paletteNode.TypeId);
         var node = new CanvasNodeViewModel(
-            new NodeInstance(GetNextNodeId(), paletteNode.TypeId, Math.Max(0, x), Math.Max(0, y), "{}", Name: paletteNode.Title),
+            new NodeInstance(GetNextNodeId(), paletteNode.TypeId, Math.Max(0, x), Math.Max(0, y), initialSettingsJson, Name: paletteNode.Title),
             paletteNode.Definition);
 
         AddCanvasNode(node);
@@ -598,6 +601,25 @@ public sealed class FlowEditorViewModel : ViewModelBase
         SynchronizeDashboardWidgetForNode(node);
         MarkCurrentFlowDirty();
         return node;
+    }
+
+    private static string CreateInitialSettingsJson(string nodeTypeId)
+    {
+        if (string.Equals(nodeTypeId, TestSignalVecBlock.TypeId, StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                waveType = "oneShot",
+                frequency = 10.0,
+                amplitude = 1.0,
+                length = 16,
+                samplePeriodMillis = 1.0,
+                isEnabled = true,
+                payloadThrough = true,
+            });
+        }
+
+        return "{}";
     }
 
     private void SelectPaletteNode(PaletteNodeViewModel? paletteNode)
@@ -809,6 +831,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
             ? "Running flow in debug mode."
             : "Running flow.";
         ExecutionState = FlowExecutionState.Starting;
+        runtimeExecutionStep = 0;
         runStartedUnixNanoseconds = null;
 
         try
@@ -826,6 +849,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 }
 
                 ExecutionState = FlowExecutionState.Running;
+                runtimeExecutionStep++;
                 await Task.Delay(RunLoopDelayMilliseconds, cancellationToken).ConfigureAwait(true);
             }
         }
@@ -838,6 +862,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
             {
                 ExecutionState = FlowExecutionState.Stopped;
                 InteractionStatus = "Flow stopped.";
+                runtimeExecutionStep = 0;
                 runStartedUnixNanoseconds = null;
             }
         }
@@ -1055,12 +1080,18 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private string BuildRuntimeSettingsJsonForNode(CanvasNodeViewModel node)
     {
         var runtimeSettingsJson = node.BuildRuntimeSettingsJson(triggerExecutionSessionId);
-        if (!string.Equals(node.TypeId, CsvOutputNodeTypeId, StringComparison.Ordinal))
+        var settings = ReadSettingsObject(runtimeSettingsJson);
+
+        if (node.IsStartStopNode)
         {
-            return runtimeSettingsJson;
+            settings["executionStep"] = runtimeExecutionStep;
         }
 
-        var settings = ReadSettingsObject(runtimeSettingsJson);
+        if (!string.Equals(node.TypeId, CsvOutputNodeTypeId, StringComparison.Ordinal))
+        {
+            return settings.ToJsonString();
+        }
+
         settings["executionSessionId"] = triggerExecutionSessionId;
 
         var bindings = new JsonArray();
@@ -1368,7 +1399,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 var isAutoScrollEnabled = ReadDashboardWidgetAutoScrollEnabled(existing?.SettingsJson);
                 var shouldFreezeStreamContent = contentOverride is not null
                     && !isAutoScrollEnabled
-                    && string.Equals(node.TypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal);
+                    && IsAutoScrollCapableOutputNode(node.TypeId);
                 var content = shouldFreezeStreamContent
                     ? existingContent
                     : contentOverride ?? existingContent;
@@ -1459,6 +1490,68 @@ public sealed class FlowEditorViewModel : ViewModelBase
         }
 
         var dashboardContentByNodeId = GetNodeDashboardWidgetContentByNodeId();
+        var vectorLogByNodeId = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        var latestNumericVectorByNode = result.OutputPackets
+            .Where(static output => output.Packet is NumericVectorFrame)
+            .GroupBy(static output => output.NodeId, StringComparer.Ordinal)
+            .Select(static group => group.Last())
+            .ToArray();
+
+        foreach (var output in latestNumericVectorByNode)
+        {
+            if (!nodesById.TryGetValue(output.NodeId, out var sourceNode)
+                || output.Packet is not NumericVectorFrame vector)
+            {
+                continue;
+            }
+
+            var contentLine = FormatNumericVectorFrameRow(
+                vector,
+                runtimeExecutionStep);
+
+            if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardToggleNode)
+            {
+                var currentContent = vectorLogByNodeId.TryGetValue(sourceNode.Id, out var stagedSourceContent)
+                    ? stagedSourceContent
+                    : dashboardContentByNodeId.GetValueOrDefault(sourceNode.Id, string.Empty);
+                vectorLogByNodeId[sourceNode.Id] = AppendVectorLogEntry(currentContent, contentLine, vector.Length);
+            }
+
+            var targetVectorOutputNodeIds = Connections
+                .Select(static connection => connection.Connection)
+                .Where(connection =>
+                    string.Equals(connection.SourceNodeId, sourceNode.Id, StringComparison.Ordinal)
+                    && string.Equals(connection.SourcePortId, output.OutputPortId, StringComparison.Ordinal)
+                    && connection.DataKind == PortDataKind.FastStream)
+                .Select(static connection => connection.TargetNodeId)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            foreach (var targetNodeId in targetVectorOutputNodeIds)
+            {
+                if (!nodesById.TryGetValue(targetNodeId, out var targetNode)
+                    || !targetNode.ShowOnDashboard
+                    || !string.Equals(targetNode.TypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var currentContent = vectorLogByNodeId.TryGetValue(targetNode.Id, out var stagedTargetContent)
+                    ? stagedTargetContent
+                    : dashboardContentByNodeId.GetValueOrDefault(targetNode.Id, string.Empty);
+                vectorLogByNodeId[targetNode.Id] = AppendVectorLogEntry(currentContent, contentLine, vector.Length);
+            }
+        }
+
+        foreach (var vectorLog in vectorLogByNodeId)
+        {
+            if (nodesById.TryGetValue(vectorLog.Key, out var node))
+            {
+                SynchronizeDashboardWidgetForNode(node, vectorLog.Value);
+            }
+        }
+
         var payloadLogByNodeId = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var output in result.OutputPackets)
@@ -1519,7 +1612,12 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private long GetRunStartedUnixNanoseconds(FastStreamFrame frame)
     {
-        runStartedUnixNanoseconds ??= frame.StartTimeUnixNanoseconds;
+        return GetRunStartedUnixNanoseconds(frame.StartTimeUnixNanoseconds);
+    }
+
+    private long GetRunStartedUnixNanoseconds(long frameStartUnixNanoseconds)
+    {
+        runStartedUnixNanoseconds ??= frameStartUnixNanoseconds;
         return runStartedUnixNanoseconds.Value;
     }
 
@@ -1582,7 +1680,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     {
         var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal);
         var isToggleNode = node.IsDashboardToggleNode;
-        var supportsAutoScroll = string.Equals(node.TypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal);
+        var supportsAutoScroll = IsAutoScrollCapableOutputNode(node.TypeId);
         var contentKind = (isTriggerNode || isToggleNode) ? TriggerButtonContentKind : "text";
         var textContent = content;
 
@@ -1592,9 +1690,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
         }
         else if (isToggleNode)
         {
-            var isEnabled = string.Equals(node.TypeId, TestSignalBlock.TypeId, StringComparison.Ordinal)
-                ? node.TestSignalIsEnabled
-                : node.IsEnabled;
+            var isEnabled = node.TestSignalIsEnabled;
             textContent = isEnabled ? "ON" : "OFF";
         }
 
@@ -1671,6 +1767,83 @@ public sealed class FlowEditorViewModel : ViewModelBase
         }
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string FormatNumericVectorFrameRow(NumericVectorFrame frame, long executionStep)
+    {
+        var elapsedMillis = Math.Max(0, executionStep) * RunLoopDelayMilliseconds;
+
+        if (frame.Length == 0)
+        {
+            return FormattableString.Invariant($"{elapsedMillis}");
+        }
+
+        var samples = frame.Values.Span;
+        var sampleCount = Math.Min(samples.Length, MaximumStreamDashboardSamples);
+        var firstSourceIndex = samples.Length - sampleCount;
+        var values = new List<string>(sampleCount + 1)
+        {
+            FormattableString.Invariant($"{elapsedMillis}"),
+        };
+
+        for (var index = 0; index < sampleCount; index++)
+        {
+            var sourceIndex = firstSourceIndex + index;
+            values.Add(FormattableString.Invariant($"{samples[sourceIndex]:0.0###}"));
+        }
+
+        return string.Join(",", values);
+    }
+
+    private static string AppendVectorLogEntry(string currentContent, string entry, int vectorLength)
+    {
+        var header = CreateVectorHeader(vectorLength);
+
+        if (string.IsNullOrWhiteSpace(currentContent))
+        {
+            return string.Join(Environment.NewLine, header, entry);
+        }
+
+        var body = currentContent;
+        if (currentContent.StartsWith("index,value", StringComparison.Ordinal)
+            || currentContent.StartsWith("millis", StringComparison.Ordinal))
+        {
+            var lineBreakIndex = currentContent.IndexOf(Environment.NewLine, StringComparison.Ordinal);
+            body = lineBreakIndex >= 0
+                ? currentContent[(lineBreakIndex + Environment.NewLine.Length)..]
+                : string.Empty;
+        }
+
+        var updatedBody = AppendLogEntry(body, entry);
+        return string.IsNullOrWhiteSpace(updatedBody)
+            ? header
+            : string.Join(Environment.NewLine, header, updatedBody);
+    }
+
+    private static string CreateVectorHeader(int vectorLength)
+    {
+        if (vectorLength <= 0)
+        {
+            return "millis";
+        }
+
+        var columns = new List<string>(vectorLength + 1)
+        {
+            "millis",
+        };
+
+        for (var index = 0; index < vectorLength; index++)
+        {
+            columns.Add(FormattableString.Invariant($"v{index}"));
+        }
+
+        return string.Join(",", columns);
+    }
+
+    private static bool IsAutoScrollCapableOutputNode(string nodeTypeId)
+    {
+        return string.Equals(nodeTypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(nodeTypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal);
     }
 
     private static string FormatPayloadMessage(JsonMessage message)

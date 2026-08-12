@@ -60,7 +60,84 @@ public sealed class TestSignalVecBlockTests
         var frame = Assert.IsType<NumericVectorFrame>(emitted.Packet);
         Assert.Equal("signal", frame.Name);
         Assert.Equal(TestSignalVecSettings.DefaultLength, frame.Length);
-        Assert.Equal(128, frame.Values.Length);
+        Assert.Equal(16, frame.Values.Length);
+        var values = frame.Values.ToArray();
+        Assert.Equal(1.0, values[0]);
+        Assert.Equal(1, values.Count(static sample => sample == 1.0));
+        Assert.Equal(15, values.Count(static sample => sample == 0.0));
+    }
+
+    [Fact]
+    public void DefaultSettings_UseOneShotWaveType()
+    {
+        Assert.Equal(TestSignalVecWaveType.OneShot, TestSignalVecSettings.Default.WaveType);
+    }
+
+    [Fact]
+    public async Task StartAsync_OneHotIndexWrapsFrom15To0()
+    {
+        var settings = TestSignalVecSettings.Default with
+        {
+            FrequencyHertz = 10.0,
+            Length = 16,
+            ExecutionStep = 15,
+        };
+
+        var contextAtIndex15 = new RecordingNodeContext();
+        var nodeAtIndex15 = new TestSignalVecNode(
+            settings,
+            () => DateTimeOffset.FromUnixTimeMilliseconds(0));
+        await nodeAtIndex15.InitializeAsync(contextAtIndex15, CancellationToken.None);
+        await nodeAtIndex15.StartAsync(CancellationToken.None);
+
+        var frameAtIndex15 = Assert.IsType<NumericVectorFrame>(
+            Assert.Single(contextAtIndex15.EmittedPackets, packet => packet.OutputPortId == TestSignalVecBlock.StreamOutputPortId).Packet);
+        var valuesAtIndex15 = frameAtIndex15.Values.ToArray();
+        Assert.Equal(1.0, valuesAtIndex15[15]);
+        Assert.Equal(1, valuesAtIndex15.Count(static sample => sample == 1.0));
+
+        var contextAtIndex0 = new RecordingNodeContext();
+        var nodeAtIndex0 = new TestSignalVecNode(
+            settings with { ExecutionStep = 16 },
+            () => DateTimeOffset.FromUnixTimeMilliseconds(0));
+        await nodeAtIndex0.InitializeAsync(contextAtIndex0, CancellationToken.None);
+        await nodeAtIndex0.StartAsync(CancellationToken.None);
+
+        var frameAtIndex0 = Assert.IsType<NumericVectorFrame>(
+            Assert.Single(contextAtIndex0.EmittedPackets, packet => packet.OutputPortId == TestSignalVecBlock.StreamOutputPortId).Packet);
+        var valuesAtIndex0 = frameAtIndex0.Values.ToArray();
+        Assert.Equal(1.0, valuesAtIndex0[0]);
+        Assert.Equal(1, valuesAtIndex0.Count(static sample => sample == 1.0));
+    }
+
+    [Fact]
+    public async Task StartAsync_SineWave_UsesFrequencyBasedCycleStepsAndVectorPhaseOffsets()
+    {
+        var settings = TestSignalVecSettings.Default with
+        {
+            WaveType = TestSignalVecWaveType.Sine,
+            FrequencyHertz = 10.0,
+            Length = 4,
+            Amplitude = 1.0,
+            ExecutionStep = 1,
+        };
+
+        var context = new RecordingNodeContext();
+        var node = new TestSignalVecNode(
+            settings,
+            () => DateTimeOffset.FromUnixTimeMilliseconds(100));
+        await node.InitializeAsync(context, CancellationToken.None);
+        await node.StartAsync(CancellationToken.None);
+
+        var frame = Assert.IsType<NumericVectorFrame>(
+            Assert.Single(context.EmittedPackets, packet => packet.OutputPortId == TestSignalVecBlock.StreamOutputPortId).Packet);
+        var values = frame.Values.ToArray();
+
+        Assert.Equal(4, values.Length);
+        Assert.InRange(values[0], 0.12, 0.13);
+        Assert.InRange(values[1], 0.99, 1.0);
+        Assert.InRange(values[2], -0.13, -0.12);
+        Assert.InRange(values[3], -1.0, -0.99);
     }
 
     [Fact]

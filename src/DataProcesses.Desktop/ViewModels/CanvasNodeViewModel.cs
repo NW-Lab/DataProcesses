@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Avalonia.Media.Imaging;
 
 using DataProcesses.Core;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Desktop.ViewModels;
@@ -81,6 +82,10 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public bool IsTestSignal => string.Equals(TypeId, TestSignalTypeId, StringComparison.Ordinal);
 
+    public bool IsTestSignalVec => string.Equals(TypeId, TestSignalVecTypeId, StringComparison.Ordinal);
+
+    public bool IsTestSignalOrVector => IsTestSignal || IsTestSignalVec;
+
     public bool IsTriggerNode => string.Equals(TypeId, TriggerTypeId, StringComparison.Ordinal);
 
     public bool IsStartStopNode => string.Equals(TypeId, TestSignalVecTypeId, StringComparison.Ordinal)
@@ -92,7 +97,9 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public bool IsCsvOutputNode => string.Equals(TypeId, CsvOutputTypeId, StringComparison.Ordinal);
 
-    public IReadOnlyList<string> TestSignalWaveTypes { get; } = ["sine", "square"];
+    public IReadOnlyList<string> TestSignalWaveTypes => IsTestSignalVec
+        ? ["oneShot", "sine"]
+        : ["sine", "square"];
 
     public IReadOnlyList<string> TriggerPayloadValueTypes { get; } = ["datetime", "boolean", "string", "numberArray", "number"];
 
@@ -106,7 +113,7 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public string TestSignalWaveType
     {
-        get => ReadSettingsString("waveType", "sine");
+        get => NormalizeTestSignalWaveType(ReadSettingsString("waveType", GetDefaultWaveType()));
         set => UpdateSettingsString("waveType", NormalizeTestSignalWaveType(value));
     }
 
@@ -120,6 +127,16 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     {
         get => ReadSettingsDouble("samplePeriodMillis", 1.0);
         set => UpdateSettingsDouble("samplePeriodMillis", value, minimumExclusive: 0);
+    }
+
+    public double TestSignalVectorLength
+    {
+        get => ReadSettingsDouble("length", TestSignalVecSettings.DefaultLength);
+        set => UpdateSettingsInt(
+            "length",
+            (int)Math.Round(value, MidpointRounding.AwayFromZero),
+            minimumInclusive: TestSignalVecSettings.MinimumLength,
+            maximumInclusive: TestSignalVecSettings.MaximumLength);
     }
 
     public bool TestSignalIsEnabled => ReadSettingsBoolean("isEnabled", true);
@@ -351,6 +368,7 @@ public sealed class CanvasNodeViewModel : ViewModelBase
                 OnPropertyChanged(nameof(TestSignalWaveType));
                 OnPropertyChanged(nameof(TestSignalFrequencyHertz));
                 OnPropertyChanged(nameof(TestSignalSamplePeriodMilliseconds));
+                OnPropertyChanged(nameof(TestSignalVectorLength));
                 OnPropertyChanged(nameof(TestSignalIsEnabled));
                 OnPropertyChanged(nameof(TriggerEmitOnExecutionStart));
                 OnPropertyChanged(nameof(TriggerEmitPeriodically));
@@ -600,8 +618,29 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         }
     }
 
-    private static string NormalizeTestSignalWaveType(string? value)
+    private string GetDefaultWaveType()
     {
+        return IsTestSignalVec ? "oneShot" : "sine";
+    }
+
+    private string NormalizeTestSignalWaveType(string? value)
+    {
+        if (IsTestSignalVec)
+        {
+            if (string.Equals(value, "oneshot", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "oneShot", StringComparison.OrdinalIgnoreCase))
+            {
+                return "oneShot";
+            }
+
+            if (string.Equals(value, "sine", StringComparison.OrdinalIgnoreCase))
+            {
+                return "sine";
+            }
+
+            return "oneShot";
+        }
+
         return string.Equals(value, "square", StringComparison.OrdinalIgnoreCase) ? "square" : "sine";
     }
 

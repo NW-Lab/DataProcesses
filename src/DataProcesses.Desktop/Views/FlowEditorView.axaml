@@ -352,8 +352,8 @@
                                   IsChecked="{Binding SelectedNode.DashboardTextWrapEnabled}"
                                   IsVisible="{Binding SelectedNode.ShowOnDashboard}" />
                     </StackPanel>
-                    <TextBlock Grid.Row="8" Text="TestSignal settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignal}" />
-                    <StackPanel Grid.Row="9" Spacing="5" IsVisible="{Binding SelectedNode.IsTestSignal}">
+                    <TextBlock Grid.Row="8" Text="TestSignal settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalOrVector}" />
+                    <StackPanel Grid.Row="9" Spacing="5" IsVisible="{Binding SelectedNode.IsTestSignalOrVector}">
                         <TextBlock Text="Wave type" FontWeight="SemiBold" />
                         <ComboBox ItemsSource="{Binding SelectedNode.TestSignalWaveTypes}"
                                   SelectedItem="{Binding SelectedNode.TestSignalWaveType}" />
@@ -361,10 +361,17 @@
                         <NumericUpDown Minimum="0.001"
                                        Increment="1"
                                        Value="{Binding SelectedNode.TestSignalFrequencyHertz}" />
-                        <TextBlock Text="Sampling time (ms)" FontWeight="SemiBold" />
+                        <TextBlock Text="Sampling time (ms)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignal}" />
                         <NumericUpDown Minimum="0.001"
                                        Increment="0.1"
-                                       Value="{Binding SelectedNode.TestSignalSamplePeriodMilliseconds}" />
+                                       Value="{Binding SelectedNode.TestSignalSamplePeriodMilliseconds}"
+                                       IsVisible="{Binding SelectedNode.IsTestSignal}" />
+                        <TextBlock Text="Vector length" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalVec}" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="1024"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.TestSignalVectorLength}"
+                                       IsVisible="{Binding SelectedNode.IsTestSignalVec}" />
                     </StackPanel>
                     <TextBlock Grid.Row="10" Text="Trigger settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTriggerNode}" />
                     <StackPanel Grid.Row="11" Spacing="5" IsVisible="{Binding SelectedNode.IsTriggerNode}">
