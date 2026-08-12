@@ -547,6 +547,20 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void PlacePaletteNode_StreamOutputTSNodeIsShownOnDashboardByDefault()
+    {
+        var mainViewModel = new MainViewModel();
+        var streamOutput = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == StremOutputTSBlock.TypeId);
+
+        mainViewModel.FlowEditor.PlacePaletteNode(streamOutput, 260, 220);
+
+        var widget = Assert.Single(mainViewModel.Dashboard.Widgets);
+        Assert.Equal("StremOutputTS", widget.Title);
+        Assert.Equal(3, widget.GridWidth);
+        Assert.Equal(3, widget.GridHeight);
+    }
+
+    [Fact]
     public void TriggerNodeById_TogglesTestSignalSettingsAndDashboardLabel()
     {
         var mainViewModel = new MainViewModel();
@@ -793,6 +807,97 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal("text", streamOutputSettings.RootElement.GetProperty("contentKind").GetString());
         var streamContent = streamOutputSettings.RootElement.GetProperty("content").GetString();
         Assert.Contains("millis,value", streamContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_StreamOutputDashboardContent_DoesNotAdvanceWhenAutoScrollIsOff()
+    {
+        IReadOnlyList<DashboardDocument> dashboards = [];
+        INodeFactory[] factories =
+        [
+            new TestSignalNodeFactory(),
+            new StremOutputTSNodeFactory(),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService(),
+            () => dashboards,
+            documents => dashboards = documents);
+
+        var testSignalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StremOutputTSBlock.TypeId);
+
+        var testSignalNode = viewModel.PlacePaletteNode(testSignalPaletteNode, 120, 120);
+        var streamOutputNode = viewModel.PlacePaletteNode(streamOutputPaletteNode, 440, 120);
+        streamOutputNode.ShowOnDashboard = true;
+
+        var sourcePort = testSignalNode.Outputs.Single(port => port.Id == TestSignalBlock.StreamOutputPortId);
+        var targetPort = streamOutputNode.Inputs.Single(port => port.Id == StremOutputTSBlock.InputPortId);
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var initialRunTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(() => dashboards, "millis,value");
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await initialRunTask;
+        }
+
+        var dashboard = Assert.Single(dashboards);
+        var streamWidget = Assert.Single(dashboard.Widgets, widget => widget.SourcePortId == streamOutputNode.Id);
+        var frozenContent = "frozen-content-marker";
+
+        using var streamSettingsBefore = JsonDocument.Parse(streamWidget.SettingsJson);
+        Assert.True(streamSettingsBefore.RootElement.GetProperty("supportsAutoScroll").GetBoolean());
+
+        var updatedSettings = JsonSerializer.Serialize(new
+        {
+            title = streamSettingsBefore.RootElement.GetProperty("title").GetString(),
+            contentKind = streamSettingsBefore.RootElement.GetProperty("contentKind").GetString(),
+            content = frozenContent,
+            displayData = new
+            {
+                text = frozenContent,
+            },
+            isTextWrapEnabled = streamSettingsBefore.RootElement.GetProperty("isTextWrapEnabled").GetBoolean(),
+            isSourceNodeEnabled = streamSettingsBefore.RootElement.GetProperty("isSourceNodeEnabled").GetBoolean(),
+            supportsAutoScroll = true,
+            isAutoScrollEnabled = false,
+        });
+
+        dashboards =
+        [
+            dashboard with
+            {
+                Widgets = dashboard.Widgets
+                    .Select(widget => widget.Id == streamWidget.Id
+                        ? widget with { SettingsJson = updatedSettings }
+                        : widget)
+                    .ToArray(),
+            },
+        ];
+
+        var secondRunTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await Task.Delay(400);
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await secondRunTask;
+        }
+
+        var streamWidgetAfterRun = Assert
+            .Single(Assert.Single(dashboards).Widgets, widget => widget.SourcePortId == streamOutputNode.Id);
+        using var streamSettingsAfter = JsonDocument.Parse(streamWidgetAfterRun.SettingsJson);
+        Assert.False(streamSettingsAfter.RootElement.GetProperty("isAutoScrollEnabled").GetBoolean());
+        Assert.Equal(frozenContent, streamSettingsAfter.RootElement.GetProperty("content").GetString());
     }
 
     [Fact]
@@ -1377,6 +1482,74 @@ public sealed class FlowEditorViewModelTests
         Assert.False(widget.IsTextContent);
         Assert.Contains("series", widget.DisplayDataJson, StringComparison.Ordinal);
         Assert.Equal(string.Empty, widget.Content);
+    }
+
+    [Fact]
+    public void DashboardWidgetViewModel_AutoScrollToggle_UpdatesSettingsAndLabel()
+    {
+        var settingsJson = JsonSerializer.Serialize(new
+        {
+            title = "StremOutputTS",
+            contentKind = "text",
+            content = "millis,value\n0,1",
+            displayData = new
+            {
+                text = "millis,value\n0,1",
+            },
+            supportsAutoScroll = true,
+            isAutoScrollEnabled = true,
+        });
+
+        var widget = new DashboardWidgetViewModel(
+            Guid.NewGuid(),
+            "Fallback",
+            "dataprocesses.dashboard.node-block",
+            0,
+            0,
+            3,
+            3,
+            settingsJson: settingsJson);
+
+        Assert.True(widget.IsAutoScrollToggleVisible);
+        Assert.True(widget.IsAutoScrollEnabled);
+        Assert.Equal("AutoScroll ON", widget.AutoScrollButtonLabel);
+
+        widget.ToggleAutoScroll();
+
+        Assert.False(widget.IsAutoScrollEnabled);
+        Assert.Equal("AutoScroll OFF", widget.AutoScrollButtonLabel);
+        using var updatedSettings = JsonDocument.Parse(widget.SettingsJson);
+        Assert.False(updatedSettings.RootElement.GetProperty("isAutoScrollEnabled").GetBoolean());
+    }
+
+    [Fact]
+    public void DashboardWidgetViewModel_LegacyStreamSettings_ShowsAutoScrollToggle()
+    {
+        var legacySettingsJson = JsonSerializer.Serialize(new
+        {
+            title = "StremOutputTS",
+            contentKind = "text",
+            content = "millis,value\n1289,-0.1874",
+            displayData = new
+            {
+                text = "millis,value\n1289,-0.1874",
+            },
+            isTextWrapEnabled = true,
+            isSourceNodeEnabled = true,
+        });
+
+        var widget = new DashboardWidgetViewModel(
+            Guid.NewGuid(),
+            "Fallback",
+            "dataprocesses.dashboard.node-block",
+            0,
+            0,
+            3,
+            3,
+            settingsJson: legacySettingsJson);
+
+        Assert.True(widget.IsAutoScrollToggleVisible);
+        Assert.True(widget.IsAutoScrollEnabled);
     }
 
     [Fact]

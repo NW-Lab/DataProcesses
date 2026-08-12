@@ -1364,12 +1364,25 @@ public sealed class FlowEditorViewModel : ViewModelBase
             if (node.ShowOnDashboard && dashboardIndex == 0)
             {
                 var existing = dashboard.Widgets.FirstOrDefault(widget => IsDashboardWidgetForNode(widget, node.Id));
-                var content = contentOverride ?? ReadDashboardWidgetContent(existing?.SettingsJson);
+                var existingContent = ReadDashboardWidgetContent(existing?.SettingsJson);
+                var isAutoScrollEnabled = ReadDashboardWidgetAutoScrollEnabled(existing?.SettingsJson);
+                var shouldFreezeStreamContent = contentOverride is not null
+                    && !isAutoScrollEnabled
+                    && string.Equals(node.TypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal);
+                var content = shouldFreezeStreamContent
+                    ? existingContent
+                    : contentOverride ?? existingContent;
+
+                if (shouldFreezeStreamContent)
+                {
+                    Console.WriteLine($"[FlowEditor] Stream dashboard update skipped because AutoScroll is OFF: {node.DisplayName} ({node.Id})");
+                }
+
                 var widget = existing is null
-                    ? CreateDashboardWidgetForNode(node, widgets, content)
+                    ? CreateDashboardWidgetForNode(node, widgets, content, isAutoScrollEnabled)
                     : existing with
                     {
-                        SettingsJson = CreateDashboardWidgetSettingsJson(node, content),
+                        SettingsJson = CreateDashboardWidgetSettingsJson(node, content, isAutoScrollEnabled),
                     };
 
                 widgets.Add(widget);
@@ -1513,7 +1526,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private DashboardWidget CreateDashboardWidgetForNode(
         CanvasNodeViewModel node,
         IReadOnlyList<DashboardWidget> existingWidgets,
-        string content)
+        string content,
+        bool isAutoScrollEnabled)
     {
         var (gridX, gridY) = FindDashboardPlacement(existingWidgets, node.DashboardGridWidth, node.DashboardGridHeight);
         return new DashboardWidget(
@@ -1525,7 +1539,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
             node.DashboardGridHeight,
             flowId.ToString("D", CultureInfo.InvariantCulture),
             node.Id,
-            CreateDashboardWidgetSettingsJson(node, content));
+                CreateDashboardWidgetSettingsJson(node, content, isAutoScrollEnabled));
     }
 
     private static (int GridX, int GridY) FindDashboardPlacement(
@@ -1564,10 +1578,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
             && string.Equals(widget.SourcePortId, nodeId, StringComparison.Ordinal);
     }
 
-    private static string CreateDashboardWidgetSettingsJson(CanvasNodeViewModel node, string content)
+    private static string CreateDashboardWidgetSettingsJson(CanvasNodeViewModel node, string content, bool isAutoScrollEnabled)
     {
         var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal);
         var isToggleNode = node.IsDashboardToggleNode;
+        var supportsAutoScroll = string.Equals(node.TypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal);
         var contentKind = (isTriggerNode || isToggleNode) ? TriggerButtonContentKind : "text";
         var textContent = content;
 
@@ -1594,6 +1609,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
             },
             isTextWrapEnabled = node.DashboardTextWrapEnabled,
             isSourceNodeEnabled = node.IsEnabled,
+            supportsAutoScroll,
+            isAutoScrollEnabled = supportsAutoScroll && isAutoScrollEnabled,
         });
     }
 
@@ -1610,6 +1627,24 @@ public sealed class FlowEditorViewModel : ViewModelBase
             && content.ValueKind == JsonValueKind.String
             ? content.GetString() ?? string.Empty
             : string.Empty;
+    }
+
+    private static bool ReadDashboardWidgetAutoScrollEnabled(string? settingsJson)
+    {
+        if (string.IsNullOrWhiteSpace(settingsJson))
+        {
+            return true;
+        }
+
+        using var document = JsonDocument.Parse(settingsJson);
+        if (document.RootElement.ValueKind == JsonValueKind.Object
+            && document.RootElement.TryGetProperty("isAutoScrollEnabled", out var autoScrollEnabled)
+            && autoScrollEnabled.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            return autoScrollEnabled.GetBoolean();
+        }
+
+        return true;
     }
 
     private static string FormatFastStreamFrame(FastStreamFrame frame, long runStartedUnixNanoseconds)

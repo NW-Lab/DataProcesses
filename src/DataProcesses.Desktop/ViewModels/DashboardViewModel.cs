@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -300,8 +301,6 @@ public sealed class DashboardViewModel : ViewModelBase
 
         try
         {
-            Widgets.Clear();
-            SelectedWidget = null;
             nextDefaultGridX = 0;
             nextDefaultGridY = 0;
             additionalDashboards.Clear();
@@ -389,23 +388,68 @@ public sealed class DashboardViewModel : ViewModelBase
         DashboardName = document.Name;
         ApplyWorkspaceMode(workspaceMode);
 
+        var existingWidgetsById = Widgets.ToDictionary(static widget => widget.Id);
+        var shouldUpdateInPlace = Widgets.Count == document.Widgets.Count
+            && Widgets.Select(static widget => widget.Id).SequenceEqual(document.Widgets.Select(static widget => widget.Id));
+
+        if (shouldUpdateInPlace)
+        {
+            for (var index = 0; index < document.Widgets.Count; index++)
+            {
+                var widget = Widgets[index];
+                var documentWidget = document.Widgets[index];
+                var widgetTitle = ResolveWidgetTitle(documentWidget.SettingsJson, index + 1);
+                widget.UpdateFromDocument(
+                    documentWidget.Id,
+                    widgetTitle,
+                    documentWidget.GridX,
+                    documentWidget.GridY,
+                    documentWidget.GridWidth,
+                    documentWidget.GridHeight,
+                    documentWidget.SourceFlowId,
+                    documentWidget.SourcePortId,
+                    documentWidget.SettingsJson);
+            }
+
+            return;
+        }
+
         Widgets.Clear();
+        SelectedWidget = null;
         nextDefaultGridX = 0;
         nextDefaultGridY = 0;
 
         foreach (var widget in document.Widgets)
         {
-            Widgets.Add(new DashboardWidgetViewModel(
-                widget.Id,
-                $"Widget {Widgets.Count + 1}",
-                widget.WidgetType,
-                widget.GridX,
-                widget.GridY,
-                widget.GridWidth,
-                widget.GridHeight,
-                widget.SourceFlowId,
-                widget.SourcePortId,
-                widget.SettingsJson));
+            var widgetTitle = ResolveWidgetTitle(widget.SettingsJson, Widgets.Count + 1);
+            if (existingWidgetsById.TryGetValue(widget.Id, out var existingWidget))
+            {
+                existingWidget.UpdateFromDocument(
+                    widget.Id,
+                    widgetTitle,
+                    widget.GridX,
+                    widget.GridY,
+                    widget.GridWidth,
+                    widget.GridHeight,
+                    widget.SourceFlowId,
+                    widget.SourcePortId,
+                    widget.SettingsJson);
+                Widgets.Add(existingWidget);
+            }
+            else
+            {
+                Widgets.Add(new DashboardWidgetViewModel(
+                    widget.Id,
+                    widgetTitle,
+                    widget.WidgetType,
+                    widget.GridX,
+                    widget.GridY,
+                    widget.GridWidth,
+                    widget.GridHeight,
+                    widget.SourceFlowId,
+                    widget.SourcePortId,
+                    widget.SettingsJson));
+            }
         }
     }
 
@@ -510,5 +554,32 @@ public sealed class DashboardViewModel : ViewModelBase
         }
 
         SelectedDashboard.IsDirty = false;
+    }
+
+    private static string ResolveWidgetTitle(string settingsJson, int fallbackNumber)
+    {
+        if (!string.IsNullOrWhiteSpace(settingsJson))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(settingsJson);
+                if (document.RootElement.ValueKind == JsonValueKind.Object
+                    && document.RootElement.TryGetProperty("title", out var titleElement)
+                    && titleElement.ValueKind == JsonValueKind.String)
+                {
+                    var title = titleElement.GetString();
+                    if (!string.IsNullOrWhiteSpace(title))
+                    {
+                        return title;
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Keep fallback title when settings JSON is malformed.
+            }
+        }
+
+        return $"Widget {fallbackNumber}";
     }
 }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace DataProcesses.Desktop.ViewModels;
 
@@ -22,6 +23,9 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     private string displayDataJson = "{}";
     private bool isTextWrapEnabled = true;
     private bool isSourceNodeEnabled = true;
+    private bool supportsAutoScroll;
+    private bool supportsAutoScrollFallback;
+    private bool isAutoScrollEnabled = true;
     private bool isInteractionAdornerVisible;
 
     public DashboardWidgetViewModel(
@@ -89,6 +93,10 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
 
     public bool IsTriggerButtonContent => string.Equals(ContentKind, TriggerButtonContentKind, StringComparison.OrdinalIgnoreCase);
 
+    public bool IsAutoScrollToggleVisible => IsTextContent;
+
+    public string AutoScrollButtonLabel => IsAutoScrollEnabled ? "AutoScroll ON" : "AutoScroll OFF";
+
     public string DisplayDataJson
     {
         get => displayDataJson;
@@ -119,6 +127,42 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
             if (SetProperty(ref isSourceNodeEnabled, value))
             {
                 OnPropertyChanged(nameof(HeaderBackground));
+            }
+        }
+    }
+
+    public bool SupportsAutoScroll
+    {
+        get => supportsAutoScroll;
+        private set
+        {
+            if (SetProperty(ref supportsAutoScroll, value))
+            {
+                OnPropertyChanged(nameof(IsAutoScrollToggleVisible));
+            }
+        }
+    }
+
+    public bool SupportsAutoScrollFallback
+    {
+        get => supportsAutoScrollFallback;
+        private set
+        {
+            if (SetProperty(ref supportsAutoScrollFallback, value))
+            {
+                OnPropertyChanged(nameof(IsAutoScrollToggleVisible));
+            }
+        }
+    }
+
+    public bool IsAutoScrollEnabled
+    {
+        get => isAutoScrollEnabled;
+        private set
+        {
+            if (SetProperty(ref isAutoScrollEnabled, value))
+            {
+                OnPropertyChanged(nameof(AutoScrollButtonLabel));
             }
         }
     }
@@ -214,6 +258,41 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
 
     public double PixelHeight => GridHeight * DashboardViewModel.GridSizePixels;
 
+    public void UpdateFromDocument(
+        Guid id,
+        string title,
+        int gridX,
+        int gridY,
+        int gridWidth,
+        int gridHeight,
+        string? sourceFlowId,
+        string? sourcePortId,
+        string settingsJson)
+    {
+        if (Id != id)
+        {
+            throw new ArgumentException("The widget identifier cannot be changed.", nameof(id));
+        }
+
+        Title = title;
+        GridX = gridX;
+        GridY = gridY;
+        GridWidth = gridWidth;
+        GridHeight = gridHeight;
+        SourceFlowId = sourceFlowId;
+        SourcePortId = sourcePortId;
+        SettingsJson = settingsJson;
+    }
+
+    public void ToggleAutoScroll()
+    {
+        var updatedIsAutoScrollEnabled = !IsAutoScrollEnabled;
+        var settings = ReadSettingsObject();
+        settings["supportsAutoScroll"] = true;
+        settings["isAutoScrollEnabled"] = updatedIsAutoScrollEnabled;
+        SettingsJson = settings.ToJsonString();
+    }
+
     private void ApplySettingsJson(string value)
     {
         settingsJson = value;
@@ -228,6 +307,9 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
         var parsedDisplayDataJson = "{}";
         var parsedIsTextWrapEnabled = true;
         var parsedIsEnabled = true;
+        var parsedSupportsAutoScroll = false;
+        var parsedSupportsAutoScrollFallback = false;
+        var parsedIsAutoScrollEnabled = true;
 
         using var document = JsonDocument.Parse(value);
         if (document.RootElement.ValueKind == JsonValueKind.Object)
@@ -275,6 +357,26 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
             {
                 parsedIsTextWrapEnabled = textWrapElement.GetBoolean();
             }
+
+            if (document.RootElement.TryGetProperty("supportsAutoScroll", out var supportsAutoScrollElement)
+                && supportsAutoScrollElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                parsedSupportsAutoScroll = supportsAutoScrollElement.GetBoolean();
+            }
+
+            if (document.RootElement.TryGetProperty("isAutoScrollEnabled", out var autoScrollEnabledElement)
+                && autoScrollEnabledElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                parsedIsAutoScrollEnabled = autoScrollEnabledElement.GetBoolean();
+            }
+
+            if (!parsedSupportsAutoScroll)
+            {
+                parsedSupportsAutoScrollFallback =
+                    string.Equals(parsedTitle, "StremOutputTS", StringComparison.Ordinal)
+                    || string.Equals(parsedTitle, "StreamOutputTS", StringComparison.Ordinal)
+                    || parsedContent.StartsWith("millis,value", StringComparison.Ordinal);
+            }
         }
 
         Title = parsedTitle;
@@ -283,5 +385,20 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
         DisplayDataJson = parsedDisplayDataJson;
         IsTextWrapEnabled = parsedIsTextWrapEnabled;
         IsSourceNodeEnabled = parsedIsEnabled;
+        SupportsAutoScroll = parsedSupportsAutoScroll;
+        SupportsAutoScrollFallback = parsedSupportsAutoScrollFallback;
+        IsAutoScrollEnabled = parsedIsAutoScrollEnabled;
+    }
+
+    private JsonObject ReadSettingsObject()
+    {
+        try
+        {
+            return JsonNode.Parse(SettingsJson) as JsonObject ?? new JsonObject();
+        }
+        catch (JsonException)
+        {
+            return new JsonObject();
+        }
     }
 }

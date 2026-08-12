@@ -76,7 +76,7 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
 
     public string StrokeColor => DataKind == PortDataKind.FastStream ? "#1D70B8" : "#D92D20";
 
-    public string StrokeDashArray => DataKind == PortDataKind.FastStream ? "" : "6,4";
+    public string? StrokeDashArray => DataKind == PortDataKind.FastStream ? null : "6,4";
 
     public string PathData
     {

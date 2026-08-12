@@ -1,3 +1,8 @@
+using System.Collections.Generic;
+using System.Diagnostics;
+using System;
+using System.Linq;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
@@ -5,6 +10,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Avalonia.Collections;
 
 using DataProcesses.Desktop.ViewModels;
@@ -31,6 +37,9 @@ public partial class DashboardView : UserControl
     private int dragStartGridY;
     private int dragStartGridWidth;
     private int dragStartGridHeight;
+    private readonly Dictionary<Guid, Avalonia.Vector> manualTextOffsets = [];
+    private readonly HashSet<Guid> restoringManualOffsets = [];
+    private const double OffsetEpsilon = 0.5;
 
     public DashboardView()
     {
@@ -269,20 +278,202 @@ public partial class DashboardView : UserControl
         await dialog.ShowDialog(owner).ConfigureAwait(true);
     }
 
-    private void ContentTextBoxTextChanged(object? sender, TextChangedEventArgs e)
+    private void ContentTextPresenterSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        if (sender is not TextBox textBox)
+        if (sender is not TextBlock textPresenter
+            || textPresenter.DataContext is not DashboardWidgetViewModel widget)
+        {
+            return;
+        }
+
+        var scrollViewer = FindPresenterScrollViewer(textPresenter);
+        if (scrollViewer is null)
+        {
+            return;
+        }
+
+        if (!widget.IsAutoScrollEnabled)
+        {
+            if (manualTextOffsets.TryGetValue(widget.Id, out var manualOffset))
+            {
+                if (Math.Abs(scrollViewer.Offset.X - manualOffset.X) > OffsetEpsilon
+                    || Math.Abs(scrollViewer.Offset.Y - manualOffset.Y) > OffsetEpsilon)
+                {
+                    Debug.WriteLine($"[Dashboard][AutoScroll] Offset drift detected while disabled: widgetId={widget.Id}, current=({scrollViewer.Offset.X:0.###},{scrollViewer.Offset.Y:0.###}), manual=({manualOffset.X:0.###},{manualOffset.Y:0.###})");
+                }
+
+                RestoreManualOffset(scrollViewer, textPresenter, widget.Id);
+            }
+            else
+            {
+                manualTextOffsets[widget.Id] = scrollViewer.Offset;
+            }
+
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (textPresenter.DataContext is not DashboardWidgetViewModel currentWidget
+                || !currentWidget.IsAutoScrollEnabled)
+            {
+                return;
+            }
+
+            var currentScrollViewer = FindPresenterScrollViewer(textPresenter);
+            if (currentScrollViewer is not null)
+            {
+                var maxVerticalOffset = Math.Max(0, currentScrollViewer.Extent.Height - currentScrollViewer.Viewport.Height);
+                currentScrollViewer.Offset = new Avalonia.Vector(currentScrollViewer.Offset.X, maxVerticalOffset);
+                manualTextOffsets[currentWidget.Id] = currentScrollViewer.Offset;
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    private void ContentScrollViewerPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (sender is not ScrollViewer scrollViewer
+            || scrollViewer.DataContext is not DashboardWidgetViewModel widget
+            || widget.IsAutoScrollEnabled)
         {
             return;
         }
 
         Dispatcher.UIThread.Post(() =>
         {
-            var end = textBox.Text?.Length ?? 0;
-            textBox.CaretIndex = end;
-            textBox.SelectionStart = end;
-            textBox.SelectionEnd = end;
+            manualTextOffsets[widget.Id] = scrollViewer.Offset;
+            Debug.WriteLine($"[Dashboard][AutoScroll] Manual offset updated by wheel: widgetId={widget.Id}, x={scrollViewer.Offset.X:0.###}, y={scrollViewer.Offset.Y:0.###}");
         }, DispatcherPriority.Background);
+    }
+
+    private void ContentScrollViewerScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (sender is not ScrollViewer scrollViewer
+            || scrollViewer.DataContext is not DashboardWidgetViewModel widget
+            || widget.IsAutoScrollEnabled)
+        {
+            return;
+        }
+
+        if (restoringManualOffsets.Contains(widget.Id))
+        {
+            return;
+        }
+
+        if (!manualTextOffsets.TryGetValue(widget.Id, out var manualOffset))
+        {
+            manualTextOffsets[widget.Id] = scrollViewer.Offset;
+            Debug.WriteLine($"[Dashboard][AutoScroll] Manual offset initialized on ScrollChanged: widgetId={widget.Id}, x={scrollViewer.Offset.X:0.###}, y={scrollViewer.Offset.Y:0.###}");
+            return;
+        }
+
+        if (Math.Abs(scrollViewer.Offset.X - manualOffset.X) <= OffsetEpsilon
+            && Math.Abs(scrollViewer.Offset.Y - manualOffset.Y) <= OffsetEpsilon)
+        {
+            return;
+        }
+
+        Debug.WriteLine($"[Dashboard][AutoScroll] ScrollChanged drift correction: widgetId={widget.Id}, current=({scrollViewer.Offset.X:0.###},{scrollViewer.Offset.Y:0.###}), manual=({manualOffset.X:0.###},{manualOffset.Y:0.###}), extentDelta=({e.ExtentDelta.X:0.###},{e.ExtentDelta.Y:0.###})");
+
+        restoringManualOffsets.Add(widget.Id);
+        try
+        {
+            ApplyManualOffset(scrollViewer, manualOffset);
+        }
+        finally
+        {
+            restoringManualOffsets.Remove(widget.Id);
+        }
+    }
+
+    private void AutoScrollToggleClicked(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control toggleSurface
+            || toggleSurface.DataContext is not DashboardWidgetViewModel widget)
+        {
+            Debug.WriteLine("[Dashboard][AutoScroll] Toggle click received but DataContext was not a DashboardWidgetViewModel.");
+            return;
+        }
+
+        Debug.WriteLine($"[Dashboard][AutoScroll] Toggle click: widgetId={widget.Id}, title={widget.Title}, before={widget.IsAutoScrollEnabled}");
+
+        widget.ToggleAutoScroll();
+
+        if (!widget.IsAutoScrollEnabled)
+        {
+            var scrollViewer = FindVisibleScrollViewerForWidget(widget.Id);
+            if (scrollViewer is not null)
+            {
+                manualTextOffsets[widget.Id] = scrollViewer.Offset;
+                Debug.WriteLine($"[Dashboard][AutoScroll] Manual offset captured: widgetId={widget.Id}, x={scrollViewer.Offset.X:0.###}, y={scrollViewer.Offset.Y:0.###}");
+            }
+            else
+            {
+                Debug.WriteLine($"[Dashboard][AutoScroll] ScrollViewer not found while disabling: widgetId={widget.Id}");
+            }
+        }
+
+        Debug.WriteLine($"[Dashboard][AutoScroll] Toggle complete: widgetId={widget.Id}, after={widget.IsAutoScrollEnabled}");
+
+        e.Handled = true;
+    }
+
+    private static ScrollViewer? FindPresenterScrollViewer(TextBlock textPresenter)
+    {
+        return textPresenter.FindAncestorOfType<ScrollViewer>();
+    }
+
+    private ScrollViewer? FindVisibleScrollViewerForWidget(Guid widgetId)
+    {
+        return this
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .FirstOrDefault(scrollViewer =>
+                scrollViewer.IsVisible
+                && scrollViewer.DataContext is DashboardWidgetViewModel widget
+                && widget.Id == widgetId);
+    }
+
+    private static void ApplyManualOffset(ScrollViewer scrollViewer, Avalonia.Vector manualOffset)
+    {
+        scrollViewer.Offset = new Avalonia.Vector(
+            Math.Max(0, manualOffset.X),
+            Math.Max(0, manualOffset.Y));
+    }
+
+    private void RestoreManualOffset(ScrollViewer scrollViewer, TextBlock textPresenter, Guid widgetId)
+    {
+        if (!manualTextOffsets.TryGetValue(widgetId, out var manualOffset))
+        {
+            return;
+        }
+
+        ApplyManualOffset(scrollViewer, manualOffset);
+        PostManualOffsetRestore(textPresenter, widgetId, DispatcherPriority.Render);
+        PostManualOffsetRestore(textPresenter, widgetId, DispatcherPriority.Background);
+        PostManualOffsetRestore(textPresenter, widgetId, DispatcherPriority.ContextIdle);
+    }
+
+    private void PostManualOffsetRestore(TextBlock textPresenter, Guid widgetId, DispatcherPriority priority)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (textPresenter.DataContext is not DashboardWidgetViewModel currentWidget
+                || currentWidget.Id != widgetId
+                || currentWidget.IsAutoScrollEnabled)
+            {
+                return;
+            }
+
+            var currentScrollViewer = FindPresenterScrollViewer(textPresenter);
+            if (currentScrollViewer is null
+                || !manualTextOffsets.TryGetValue(currentWidget.Id, out var manualOffset))
+            {
+                return;
+            }
+
+            ApplyManualOffset(currentScrollViewer, manualOffset);
+        }, priority);
     }
 
     private void CopyTextBoxContentClicked(object? sender, RoutedEventArgs e)

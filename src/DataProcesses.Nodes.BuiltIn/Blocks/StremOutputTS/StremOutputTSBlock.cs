@@ -28,7 +28,11 @@ public static class StremOutputTSBlock
         NodeType: NodeType.Debug,
         Title: "StremOutputTS",
         Subtitle: "Debug stream",
-        IconPath: IconPath);
+        IconPath: IconPath,
+        DashboardWidget: new DashboardWidgetDefinition(
+            IsVisibleByDefault: true,
+            GridWidth: 3,
+            GridHeight: 3));
 }
 
 

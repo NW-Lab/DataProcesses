@@ -53,8 +53,8 @@
                                             BorderBrush="#2B4D87"
                                             BorderThickness="2"
                                             CornerRadius="6">
-                                        <Grid RowDefinitions="Auto,*">
-                                                <Border x:Name="MoveHandle"
+                                        <Grid RowDefinitions="Auto,Auto,*">
+                                            <Border x:Name="MoveHandle"
                                                     Background="{Binding HeaderBackground}"
                                                     CornerRadius="4,4,0,0"
                                                     Padding="8,6"
@@ -72,51 +72,63 @@
                                                 </Grid>
                                             </Border>
 
-                                            <TextBox Grid.Row="1"
-                                                     Margin="10"
-                                                     Text="{Binding Content}"
-                                                     Foreground="#475569"
-                                                     Background="Transparent"
-                                                     BorderThickness="0"
-                                                     IsReadOnly="True"
-                                                     AcceptsReturn="True"
-                                                     TextWrapping="Wrap"
-                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                                     TextChanged="ContentTextBoxTextChanged"
-                                                     IsVisible="{Binding IsTextContentAndWrapEnabled}">
-                                                <TextBox.ContextMenu>
-                                                    <ContextMenu>
-                                                        <MenuItem Header="Copy All" Click="CopyAllTextBoxContentClicked" />
-                                                        <MenuItem Header="Copy" Click="CopyTextBoxContentClicked" />
-                                                        <MenuItem Header="Select All" Click="SelectAllTextBoxContentClicked" />
-                                                    </ContextMenu>
-                                                </TextBox.ContextMenu>
-                                            </TextBox>
+                                            <Border Grid.Row="1"
+                                                    Background="#F8FAFC"
+                                                    BorderBrush="#D5E0EF"
+                                                    BorderThickness="0,0,0,1"
+                                                    Padding="8,6"
+                                                    IsVisible="{Binding IsTextContent}">
+                                                <Border HorizontalAlignment="Right"
+                                                        Padding="8,4"
+                                                        MinWidth="110"
+                                                        MinHeight="28"
+                                                        Background="#1D4ED8"
+                                                        BorderBrush="#0F3AA5"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Cursor="Hand"
+                                                        PointerPressed="AutoScrollToggleClicked"
+                                                        IsVisible="{Binding IsAutoScrollToggleVisible}">
+                                                    <TextBlock Text="{Binding AutoScrollButtonLabel}"
+                                                               FontSize="11"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center" />
+                                                </Border>
+                                            </Border>
 
-                                            <TextBox Grid.Row="1"
-                                                     Margin="10"
-                                                     Text="{Binding Content}"
-                                                     Foreground="#475569"
-                                                     Background="Transparent"
-                                                     BorderThickness="0"
-                                                     IsReadOnly="True"
-                                                     AcceptsReturn="True"
-                                                     TextWrapping="NoWrap"
-                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                                     TextChanged="ContentTextBoxTextChanged"
-                                                     IsVisible="{Binding IsTextContentAndNoWrapEnabled}">
-                                                <TextBox.ContextMenu>
-                                                    <ContextMenu>
-                                                        <MenuItem Header="Copy All" Click="CopyAllTextBoxContentClicked" />
-                                                        <MenuItem Header="Copy" Click="CopyTextBoxContentClicked" />
-                                                        <MenuItem Header="Select All" Click="SelectAllTextBoxContentClicked" />
-                                                    </ContextMenu>
-                                                </TextBox.ContextMenu>
-                                            </TextBox>
+                                            <Grid Grid.Row="2"
+                                                  RowDefinitions="Auto,*"
+                                                  IsVisible="{Binding IsTextContent}">
+                                                <ScrollViewer Grid.Row="1"
+                                                              Margin="10,10,10,10"
+                                                              VerticalScrollBarVisibility="Auto"
+                                                              HorizontalScrollBarVisibility="Auto"
+                                                              PointerWheelChanged="ContentScrollViewerPointerWheelChanged"
+                                                              ScrollChanged="ContentScrollViewerScrollChanged"
+                                                              IsVisible="{Binding IsTextWrapEnabled}">
+                                                    <TextBlock Text="{Binding Content}"
+                                                               Foreground="#475569"
+                                                               TextWrapping="Wrap"
+                                                               SizeChanged="ContentTextPresenterSizeChanged" />
+                                                </ScrollViewer>
 
-                                                <Border Grid.Row="1"
+                                                <ScrollViewer Grid.Row="1"
+                                                              Margin="10,10,10,10"
+                                                              VerticalScrollBarVisibility="Auto"
+                                                              HorizontalScrollBarVisibility="Auto"
+                                                              PointerWheelChanged="ContentScrollViewerPointerWheelChanged"
+                                                              ScrollChanged="ContentScrollViewerScrollChanged"
+                                                              IsVisible="{Binding IsTextNoWrapEnabled}">
+                                                    <TextBlock Text="{Binding Content}"
+                                                               Foreground="#475569"
+                                                               TextWrapping="NoWrap"
+                                                               SizeChanged="ContentTextPresenterSizeChanged" />
+                                                </ScrollViewer>
+                                            </Grid>
+
+                                            <Border Grid.Row="1"
                                                     Margin="6"
                                                     Padding="6"
                                                     Background="#1D4ED8"
@@ -138,9 +150,9 @@
                                                                TextAlignment="Center"
                                                                IsHitTestVisible="False" />
                                                 </Grid>
-                                                </Border>
+                                            </Border>
 
-                                                <Border x:Name="ResizeLeftHandle"
+                                            <Border x:Name="ResizeLeftHandle"
                                                     Grid.RowSpan="2"
                                                     Width="12"
                                                     HorizontalAlignment="Left"
@@ -159,7 +171,7 @@
                                                 </Border>
                                             </Border>
 
-                                                <Border x:Name="ResizeRightHandle"
+                                            <Border x:Name="ResizeRightHandle"
                                                     Grid.RowSpan="2"
                                                     Width="12"
                                                     HorizontalAlignment="Right"
@@ -178,7 +190,7 @@
                                                 </Border>
                                             </Border>
 
-                                                <Border x:Name="ResizeTopHandle"
+                                            <Border x:Name="ResizeTopHandle"
                                                     Grid.RowSpan="2"
                                                     Height="12"
                                                     VerticalAlignment="Top"
@@ -197,7 +209,7 @@
                                                 </Border>
                                             </Border>
 
-                                                <Border x:Name="ResizeBottomHandle"
+                                            <Border x:Name="ResizeBottomHandle"
                                                     Grid.RowSpan="2"
                                                     Height="12"
                                                     VerticalAlignment="Bottom"

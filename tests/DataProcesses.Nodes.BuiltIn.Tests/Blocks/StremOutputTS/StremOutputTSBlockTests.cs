@@ -14,6 +14,11 @@ public sealed class StremOutputTSBlockTests
         Assert.Equal(PortDirection.Input, port.Direction);
         Assert.Equal(PortDataKind.FastStream, port.DataKind);
         Assert.Equal(PortDataSchema.TimeSeries1D, port.DataSchema);
+
+        var dashboardWidget = Assert.IsType<DashboardWidgetDefinition>(StremOutputTSBlock.Definition.DashboardWidget);
+        Assert.True(dashboardWidget.IsVisibleByDefault);
+        Assert.Equal(3, dashboardWidget.GridWidth);
+        Assert.Equal(3, dashboardWidget.GridHeight);
     }
 
     [Fact]

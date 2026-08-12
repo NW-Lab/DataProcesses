@@ -81,6 +81,63 @@ public sealed class DashboardViewModelTests
     }
 
     [Fact]
+    public void LoadDocuments_PreservesExistingWidgetInstancesWhenIdsMatch()
+    {
+        var viewModel = new DashboardViewModel();
+        var dashboardId = Guid.NewGuid();
+        var widgetId = Guid.NewGuid();
+
+        viewModel.LoadDocuments([
+            new DashboardDocument(
+                dashboardId,
+                "Main",
+                [new DashboardWidget(widgetId, "dataprocesses.output.stream", 0, 0, 3, 3, null, null, "{\"title\":\"StremOutputTS\",\"contentKind\":\"text\",\"content\":\"millis,value\",\"supportsAutoScroll\":true,\"isAutoScrollEnabled\":true}")]),
+        ]);
+
+        var existingWidget = Assert.Single(viewModel.Widgets);
+        var existingWidgetReference = existingWidget;
+
+        viewModel.LoadDocuments([
+            new DashboardDocument(
+                dashboardId,
+                "Main",
+                [new DashboardWidget(widgetId, "dataprocesses.output.stream", 0, 0, 3, 3, null, null, "{\"title\":\"StremOutputTS\",\"contentKind\":\"text\",\"content\":\"millis,value\",\"supportsAutoScroll\":true,\"isAutoScrollEnabled\":false}")]),
+        ]);
+
+        Assert.Same(existingWidgetReference, Assert.Single(viewModel.Widgets));
+        Assert.False(existingWidgetReference.IsAutoScrollEnabled);
+    }
+
+    [Fact]
+    public void LoadDocuments_UsesTitleFromWidgetSettingsJson()
+    {
+        var viewModel = new DashboardViewModel();
+        var widgetId = Guid.NewGuid();
+
+        viewModel.LoadDocuments(
+        [
+            new DashboardDocument(
+                Guid.NewGuid(),
+                "Dashboard A",
+                [
+                    new DashboardWidget(
+                        widgetId,
+                        "dataprocesses.dashboard.node-block",
+                        0,
+                        0,
+                        3,
+                        3,
+                        null,
+                        "node-1",
+                        "{\"title\":\"FlowEditor Name\",\"contentKind\":\"text\",\"content\":\"millis,value\"}"),
+                ]),
+        ]);
+
+        var widget = Assert.Single(viewModel.Widgets);
+        Assert.Equal("FlowEditor Name", widget.Title);
+    }
+
+    [Fact]
     public void AddDashboardCommand_AddsAnotherDocument()
     {
         var viewModel = new DashboardViewModel();
