@@ -1,5 +1,10 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+
+using Avalonia;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 namespace DataProcesses.Desktop.ViewModels;
 
@@ -8,6 +13,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     private const int DefaultGridWidth = 2;
     private const int DefaultGridHeight = 2;
     private const string DefaultContentKind = "text";
+    private const string ImageContentKind = "image";
     private const string TriggerButtonContentKind = "button-trigger";
 
     private int gridX;
@@ -27,6 +33,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     private bool supportsAutoScrollFallback;
     private bool isAutoScrollEnabled = true;
     private bool isInteractionAdornerVisible;
+    private Bitmap? imageContentBitmap;
 
     public DashboardWidgetViewModel(
         Guid id,
@@ -78,14 +85,18 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
             if (SetProperty(ref contentKind, string.IsNullOrWhiteSpace(value) ? DefaultContentKind : value))
             {
                 OnPropertyChanged(nameof(IsTextContent));
+                OnPropertyChanged(nameof(IsImageContent));
                 OnPropertyChanged(nameof(IsTriggerButtonContent));
                 OnPropertyChanged(nameof(IsTextContentAndWrapEnabled));
                 OnPropertyChanged(nameof(IsTextContentAndNoWrapEnabled));
+                OnPropertyChanged(nameof(IsAutoScrollToggleVisible));
             }
         }
     }
 
     public bool IsTextContent => string.Equals(ContentKind, DefaultContentKind, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsImageContent => string.Equals(ContentKind, ImageContentKind, StringComparison.OrdinalIgnoreCase);
 
     public bool IsTextContentAndWrapEnabled => IsTextContent && IsTextWrapEnabled;
 
@@ -93,9 +104,27 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
 
     public bool IsTriggerButtonContent => string.Equals(ContentKind, TriggerButtonContentKind, StringComparison.OrdinalIgnoreCase);
 
-    public bool IsAutoScrollToggleVisible => IsTextContent;
+    public bool IsAutoScrollToggleVisible => IsTextContent || IsImageContent;
+
+    public string PauseButtonLabel => IsAutoScrollEnabled ? "Pause OFF" : "Pause ON";
 
     public string AutoScrollButtonLabel => IsAutoScrollEnabled ? "AutoScroll ON" : "AutoScroll OFF";
+
+    public Bitmap? ImageContentBitmap
+    {
+        get => imageContentBitmap;
+        private set
+        {
+            if (ReferenceEquals(imageContentBitmap, value))
+            {
+                return;
+            }
+
+            imageContentBitmap?.Dispose();
+            imageContentBitmap = value;
+            OnPropertyChanged();
+        }
+    }
 
     public string DisplayDataJson
     {
@@ -163,6 +192,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
             if (SetProperty(ref isAutoScrollEnabled, value))
             {
                 OnPropertyChanged(nameof(AutoScrollButtonLabel));
+                OnPropertyChanged(nameof(PauseButtonLabel));
             }
         }
     }
@@ -344,6 +374,12 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
                 {
                     parsedContent = textElement.GetString() ?? string.Empty;
                 }
+
+                ImageContentBitmap = TryCreateImageBitmap(displayDataElement);
+            }
+            else
+            {
+                ImageContentBitmap = null;
             }
 
             if (document.RootElement.TryGetProperty("isSourceNodeEnabled", out var enabledElement)
@@ -400,5 +436,148 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
         {
             return new JsonObject();
         }
+    }
+
+    private static Bitmap? TryCreateImageBitmap(JsonElement displayData)
+    {
+        if (displayData.ValueKind != JsonValueKind.Object
+            || !displayData.TryGetProperty("image", out var imageElement)
+            || imageElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!imageElement.TryGetProperty("width", out var widthElement)
+            || widthElement.ValueKind != JsonValueKind.Number
+            || !imageElement.TryGetProperty("height", out var heightElement)
+            || heightElement.ValueKind != JsonValueKind.Number
+            || !imageElement.TryGetProperty("pixelFormat", out var pixelFormatElement)
+            || pixelFormatElement.ValueKind != JsonValueKind.String
+            || !imageElement.TryGetProperty("pixelsBase64", out var pixelsElement)
+            || pixelsElement.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var width = widthElement.GetInt32();
+        var height = heightElement.GetInt32();
+        var pixelFormatName = pixelFormatElement.GetString();
+        var pixelsBase64 = pixelsElement.GetString();
+        if (width <= 0
+            || height <= 0
+            || string.IsNullOrWhiteSpace(pixelFormatName)
+            || string.IsNullOrWhiteSpace(pixelsBase64))
+        {
+            return null;
+        }
+
+        byte[] sourcePixels;
+        try
+        {
+            sourcePixels = Convert.FromBase64String(pixelsBase64);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+
+        if (!TryGetChannelCount(pixelFormatName, out var channelCount)
+            || sourcePixels.Length != width * height * channelCount)
+        {
+            return null;
+        }
+
+        var rgbaPixels = ConvertToRgba8888(sourcePixels, width, height, pixelFormatName);
+        WriteableBitmap bitmap;
+        try
+        {
+            bitmap = new WriteableBitmap(
+                new PixelSize(width, height),
+                new Vector(96, 96),
+                PixelFormat.Rgba8888,
+                AlphaFormat.Unpremul);
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+
+        using var framebuffer = bitmap.Lock();
+        var sourceStride = width * 4;
+        for (var row = 0; row < height; row++)
+        {
+            var sourceOffset = row * sourceStride;
+            var destination = IntPtr.Add(framebuffer.Address, row * framebuffer.RowBytes);
+            Marshal.Copy(rgbaPixels, sourceOffset, destination, sourceStride);
+        }
+
+        return bitmap;
+    }
+
+    private static bool TryGetChannelCount(string pixelFormatName, out int channelCount)
+    {
+        switch (pixelFormatName)
+        {
+            case "Gray8":
+                channelCount = 1;
+                return true;
+            case "Rgb24":
+                channelCount = 3;
+                return true;
+            case "Rgba32":
+                channelCount = 4;
+                return true;
+            default:
+                channelCount = 0;
+                return false;
+        }
+    }
+
+    private static byte[] ConvertToRgba8888(byte[] sourcePixels, int width, int height, string pixelFormatName)
+    {
+        var pixelCount = width * height;
+        var rgbaPixels = new byte[pixelCount * 4];
+
+        if (string.Equals(pixelFormatName, "Gray8", StringComparison.Ordinal))
+        {
+            for (var index = 0; index < pixelCount; index++)
+            {
+                var value = sourcePixels[index];
+                var destination = index * 4;
+                rgbaPixels[destination] = value;
+                rgbaPixels[destination + 1] = value;
+                rgbaPixels[destination + 2] = value;
+                rgbaPixels[destination + 3] = 255;
+            }
+
+            return rgbaPixels;
+        }
+
+        if (string.Equals(pixelFormatName, "Rgb24", StringComparison.Ordinal))
+        {
+            for (var index = 0; index < pixelCount; index++)
+            {
+                var source = index * 3;
+                var destination = index * 4;
+                rgbaPixels[destination] = sourcePixels[source];
+                rgbaPixels[destination + 1] = sourcePixels[source + 1];
+                rgbaPixels[destination + 2] = sourcePixels[source + 2];
+                rgbaPixels[destination + 3] = 255;
+            }
+
+            return rgbaPixels;
+        }
+
+        for (var index = 0; index < pixelCount; index++)
+        {
+            var source = index * 4;
+            var destination = index * 4;
+            rgbaPixels[destination] = sourcePixels[source];
+            rgbaPixels[destination + 1] = sourcePixels[source + 1];
+            rgbaPixels[destination + 2] = sourcePixels[source + 2];
+            rgbaPixels[destination + 3] = sourcePixels[source + 3];
+        }
+
+        return rgbaPixels;
     }
 }

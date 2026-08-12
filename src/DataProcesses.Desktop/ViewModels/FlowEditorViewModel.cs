@@ -11,9 +11,10 @@ using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Engine;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
-using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Plugin.Abstractions;
 
@@ -24,6 +25,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private const string NodeDashboardWidgetType = "dataprocesses.dashboard.node-block";
     private const string TriggerNodeTypeId = "dataprocesses.trigger";
     private const string TriggerButtonContentKind = "button-trigger";
+    private const string ImageContentKind = "image";
     private const string PayloadOutputNodeTypeId = "dataprocesses.output.payload";
     private const string CsvOutputNodeTypeId = "dataprocesses.output.csv";
     private const string CsvOutputInputPortId = "input";
@@ -614,6 +616,20 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 amplitude = 1.0,
                 length = 16,
                 samplePeriodMillis = 1.0,
+                isEnabled = true,
+                payloadThrough = true,
+            });
+        }
+
+        if (string.Equals(nodeTypeId, TestSignalImgBlock.TypeId, StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                type = "number",
+                kind = "mono",
+                frequency = 1.0,
+                width = 100,
+                height = 100,
                 isEnabled = true,
                 payloadThrough = true,
             });
@@ -1373,7 +1389,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
         }
     }
 
-    private void SynchronizeDashboardWidgetForNode(CanvasNodeViewModel node, string? contentOverride = null)
+    private void SynchronizeDashboardWidgetForNode(
+        CanvasNodeViewModel node,
+        string? contentOverride = null,
+        string? contentKindOverride = null,
+        JsonElement? displayDataOverride = null)
     {
         ArgumentNullException.ThrowIfNull(node);
 
@@ -1396,6 +1416,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
             {
                 var existing = dashboard.Widgets.FirstOrDefault(widget => IsDashboardWidgetForNode(widget, node.Id));
                 var existingContent = ReadDashboardWidgetContent(existing?.SettingsJson);
+                var existingContentKind = ReadDashboardWidgetContentKind(existing?.SettingsJson);
+                var existingDisplayData = ReadDashboardWidgetDisplayData(existing?.SettingsJson);
                 var isAutoScrollEnabled = ReadDashboardWidgetAutoScrollEnabled(existing?.SettingsJson);
                 var shouldFreezeStreamContent = contentOverride is not null
                     && !isAutoScrollEnabled
@@ -1403,17 +1425,23 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 var content = shouldFreezeStreamContent
                     ? existingContent
                     : contentOverride ?? existingContent;
+                var contentKind = shouldFreezeStreamContent
+                    ? existingContentKind
+                    : contentKindOverride ?? existingContentKind;
+                var displayData = shouldFreezeStreamContent
+                    ? existingDisplayData
+                    : displayDataOverride;
 
                 if (shouldFreezeStreamContent)
                 {
-                    Console.WriteLine($"[FlowEditor] Stream dashboard update skipped because AutoScroll is OFF: {node.DisplayName} ({node.Id})");
+                    Console.WriteLine($"[FlowEditor] Stream dashboard update skipped because Pause is ON: {node.DisplayName} ({node.Id})");
                 }
 
                 var widget = existing is null
-                    ? CreateDashboardWidgetForNode(node, widgets, content, isAutoScrollEnabled)
+                    ? CreateDashboardWidgetForNode(node, widgets, content, isAutoScrollEnabled, contentKind, displayData)
                     : existing with
                     {
-                        SettingsJson = CreateDashboardWidgetSettingsJson(node, content, isAutoScrollEnabled),
+                        SettingsJson = CreateDashboardWidgetSettingsJson(node, content, isAutoScrollEnabled, contentKind, displayData),
                     };
 
                 widgets.Add(widget);
@@ -1552,6 +1580,51 @@ public sealed class FlowEditorViewModel : ViewModelBase
             }
         }
 
+        var latestImageByNode = result.OutputPackets
+            .Where(static output => output.Packet is ImageFrame)
+            .GroupBy(static output => output.NodeId, StringComparer.Ordinal)
+            .Select(static group => group.Last())
+            .ToArray();
+
+        foreach (var output in latestImageByNode)
+        {
+            if (!nodesById.TryGetValue(output.NodeId, out var sourceNode)
+                || output.Packet is not ImageFrame image)
+            {
+                continue;
+            }
+
+            var content = FormatImageFrameSummary(image);
+            var imageDisplayData = BuildImageDisplayData(image);
+
+            if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardToggleNode)
+            {
+                SynchronizeDashboardWidgetForNode(sourceNode, content, ImageContentKind, imageDisplayData);
+            }
+
+            var targetImageOutputNodeIds = Connections
+                .Select(static connection => connection.Connection)
+                .Where(connection =>
+                    string.Equals(connection.SourceNodeId, sourceNode.Id, StringComparison.Ordinal)
+                    && string.Equals(connection.SourcePortId, output.OutputPortId, StringComparison.Ordinal)
+                    && connection.DataKind == PortDataKind.FastStream)
+                .Select(static connection => connection.TargetNodeId)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            foreach (var targetNodeId in targetImageOutputNodeIds)
+            {
+                if (!nodesById.TryGetValue(targetNodeId, out var targetNode)
+                    || !targetNode.ShowOnDashboard
+                    || !string.Equals(targetNode.TypeId, StreamOutputImageBlock.TypeId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                SynchronizeDashboardWidgetForNode(targetNode, content, ImageContentKind, imageDisplayData);
+            }
+        }
+
         var payloadLogByNodeId = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var output in result.OutputPackets)
@@ -1625,7 +1698,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
         CanvasNodeViewModel node,
         IReadOnlyList<DashboardWidget> existingWidgets,
         string content,
-        bool isAutoScrollEnabled)
+        bool isAutoScrollEnabled,
+        string? contentKindOverride,
+        JsonElement? displayDataOverride)
     {
         var (gridX, gridY) = FindDashboardPlacement(existingWidgets, node.DashboardGridWidth, node.DashboardGridHeight);
         return new DashboardWidget(
@@ -1637,7 +1712,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
             node.DashboardGridHeight,
             flowId.ToString("D", CultureInfo.InvariantCulture),
             node.Id,
-                CreateDashboardWidgetSettingsJson(node, content, isAutoScrollEnabled));
+            CreateDashboardWidgetSettingsJson(node, content, isAutoScrollEnabled, contentKindOverride, displayDataOverride));
     }
 
     private static (int GridX, int GridY) FindDashboardPlacement(
@@ -1676,12 +1751,21 @@ public sealed class FlowEditorViewModel : ViewModelBase
             && string.Equals(widget.SourcePortId, nodeId, StringComparison.Ordinal);
     }
 
-    private static string CreateDashboardWidgetSettingsJson(CanvasNodeViewModel node, string content, bool isAutoScrollEnabled)
+    private static string CreateDashboardWidgetSettingsJson(
+        CanvasNodeViewModel node,
+        string content,
+        bool isAutoScrollEnabled,
+        string? contentKindOverride,
+        JsonElement? displayDataOverride)
     {
         var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal);
         var isToggleNode = node.IsDashboardToggleNode;
         var supportsAutoScroll = IsAutoScrollCapableOutputNode(node.TypeId);
-        var contentKind = (isTriggerNode || isToggleNode) ? TriggerButtonContentKind : "text";
+        var contentKind = isTriggerNode || isToggleNode
+            ? TriggerButtonContentKind
+            : string.Equals(node.TypeId, StreamOutputImageBlock.TypeId, StringComparison.Ordinal)
+                ? ImageContentKind
+                : "text";
         var textContent = content;
 
         if (isTriggerNode)
@@ -1694,20 +1778,60 @@ public sealed class FlowEditorViewModel : ViewModelBase
             textContent = isEnabled ? "ON" : "OFF";
         }
 
+        contentKind = string.IsNullOrWhiteSpace(contentKindOverride)
+            ? contentKind
+            : contentKindOverride;
+
+        var displayData = displayDataOverride ?? JsonSerializer.SerializeToElement(new
+        {
+            text = textContent,
+        });
+
         return JsonSerializer.Serialize(new
         {
             title = node.DisplayName,
             contentKind,
             content = textContent,
-            displayData = new
-            {
-                text = textContent,
-            },
+            displayData,
             isTextWrapEnabled = node.DashboardTextWrapEnabled,
             isSourceNodeEnabled = node.IsEnabled,
             supportsAutoScroll,
             isAutoScrollEnabled = supportsAutoScroll && isAutoScrollEnabled,
         });
+    }
+
+    private static string? ReadDashboardWidgetContentKind(string? settingsJson)
+    {
+        if (string.IsNullOrWhiteSpace(settingsJson))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(settingsJson);
+        return document.RootElement.ValueKind == JsonValueKind.Object
+            && document.RootElement.TryGetProperty("contentKind", out var contentKind)
+            && contentKind.ValueKind == JsonValueKind.String
+            && !string.IsNullOrWhiteSpace(contentKind.GetString())
+            ? contentKind.GetString()!
+            : null;
+    }
+
+    private static JsonElement? ReadDashboardWidgetDisplayData(string? settingsJson)
+    {
+        if (string.IsNullOrWhiteSpace(settingsJson))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(settingsJson);
+        if (document.RootElement.ValueKind == JsonValueKind.Object
+            && document.RootElement.TryGetProperty("displayData", out var displayData)
+            && displayData.ValueKind != JsonValueKind.Undefined)
+        {
+            return displayData.Clone();
+        }
+
+        return null;
     }
 
     private static string ReadDashboardWidgetContent(string? settingsJson)
@@ -1843,7 +1967,29 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private static bool IsAutoScrollCapableOutputNode(string nodeTypeId)
     {
         return string.Equals(nodeTypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal)
-            || string.Equals(nodeTypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal);
+            || string.Equals(nodeTypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(nodeTypeId, StreamOutputImageBlock.TypeId, StringComparison.Ordinal);
+    }
+
+    private static string FormatImageFrameSummary(ImageFrame frame)
+    {
+        return FormattableString.Invariant(
+            $"{frame.Width}x{frame.Height} {frame.PixelFormat} seq={frame.SequenceNumber}");
+    }
+
+    private static JsonElement BuildImageDisplayData(ImageFrame frame)
+    {
+        return JsonSerializer.SerializeToElement(new
+        {
+            image = new
+            {
+                width = frame.Width,
+                height = frame.Height,
+                pixelFormat = frame.PixelFormat.ToString(),
+                pixelsBase64 = Convert.ToBase64String(frame.PixelsInterleaved.Span),
+            },
+            summary = FormatImageFrameSummary(frame),
+        });
     }
 
     private static string FormatPayloadMessage(JsonMessage message)

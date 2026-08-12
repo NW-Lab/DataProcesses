@@ -84,6 +84,8 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public bool IsTestSignalVec => string.Equals(TypeId, TestSignalVecTypeId, StringComparison.Ordinal);
 
+    public bool IsTestSignalImg => string.Equals(TypeId, TestSignalImgTypeId, StringComparison.Ordinal);
+
     public bool IsTestSignalOrVector => IsTestSignal || IsTestSignalVec;
 
     public bool IsTriggerNode => string.Equals(TypeId, TriggerTypeId, StringComparison.Ordinal);
@@ -100,6 +102,10 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     public IReadOnlyList<string> TestSignalWaveTypes => IsTestSignalVec
         ? ["oneShot", "sine"]
         : ["sine", "square"];
+
+    public IReadOnlyList<string> TestSignalImageTypes { get; } = ["number", "circle"];
+
+    public IReadOnlyList<string> TestSignalImageModes { get; } = ["mono", "color"];
 
     public IReadOnlyList<string> TriggerPayloadValueTypes { get; } = ["datetime", "boolean", "string", "numberArray", "number"];
 
@@ -137,6 +143,36 @@ public sealed class CanvasNodeViewModel : ViewModelBase
             (int)Math.Round(value, MidpointRounding.AwayFromZero),
             minimumInclusive: TestSignalVecSettings.MinimumLength,
             maximumInclusive: TestSignalVecSettings.MaximumLength);
+    }
+
+    public string TestSignalImageMode
+    {
+        get => NormalizeTestSignalImageMode(ReadSettingsString("kind", "mono"));
+        set => UpdateSettingsString("kind", NormalizeTestSignalImageMode(value));
+    }
+
+    public string TestSignalImageType
+    {
+        get => NormalizeTestSignalImageType(ReadSettingsString("type", "number"));
+        set => UpdateSettingsString("type", NormalizeTestSignalImageType(value));
+    }
+
+    public double TestSignalImageFrequencyHertz
+    {
+        get => ReadSettingsDouble("frequency", 1.0);
+        set => UpdateSettingsDouble("frequency", value, minimumExclusive: 0);
+    }
+
+    public double TestSignalImageWidth
+    {
+        get => ReadSettingsDouble("width", 100);
+        set => UpdateSettingsInt("width", (int)Math.Round(value, MidpointRounding.AwayFromZero), minimumInclusive: 1, maximumInclusive: 1024);
+    }
+
+    public double TestSignalImageHeight
+    {
+        get => ReadSettingsDouble("height", 100);
+        set => UpdateSettingsInt("height", (int)Math.Round(value, MidpointRounding.AwayFromZero), minimumInclusive: 1, maximumInclusive: 1024);
     }
 
     public bool TestSignalIsEnabled => ReadSettingsBoolean("isEnabled", true);
@@ -369,6 +405,11 @@ public sealed class CanvasNodeViewModel : ViewModelBase
                 OnPropertyChanged(nameof(TestSignalFrequencyHertz));
                 OnPropertyChanged(nameof(TestSignalSamplePeriodMilliseconds));
                 OnPropertyChanged(nameof(TestSignalVectorLength));
+                OnPropertyChanged(nameof(TestSignalImageType));
+                OnPropertyChanged(nameof(TestSignalImageMode));
+                OnPropertyChanged(nameof(TestSignalImageFrequencyHertz));
+                OnPropertyChanged(nameof(TestSignalImageWidth));
+                OnPropertyChanged(nameof(TestSignalImageHeight));
                 OnPropertyChanged(nameof(TestSignalIsEnabled));
                 OnPropertyChanged(nameof(TriggerEmitOnExecutionStart));
                 OnPropertyChanged(nameof(TriggerEmitPeriodically));
@@ -693,6 +734,20 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         }
 
         return "append";
+    }
+
+    private static string NormalizeTestSignalImageMode(string? value)
+    {
+        return string.Equals(value, "color", StringComparison.OrdinalIgnoreCase)
+            ? "color"
+            : "mono";
+    }
+
+    private static string NormalizeTestSignalImageType(string? value)
+    {
+        return string.Equals(value, "circle", StringComparison.OrdinalIgnoreCase)
+            ? "circle"
+            : "number";
     }
 
 }

@@ -8,7 +8,9 @@ using DataProcesses.Engine;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
@@ -564,6 +566,22 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void PlacePaletteNode_TestSignalImgNodeInitializesImageDefaults()
+    {
+        var mainViewModel = new MainViewModel();
+        var testSignalImg = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalImgBlock.TypeId);
+
+        var node = mainViewModel.FlowEditor.PlacePaletteNode(testSignalImg, 260, 220);
+
+        using var settings = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("number", settings.RootElement.GetProperty("type").GetString());
+        Assert.Equal("mono", settings.RootElement.GetProperty("kind").GetString());
+        Assert.Equal(1.0, settings.RootElement.GetProperty("frequency").GetDouble());
+        Assert.Equal(100, settings.RootElement.GetProperty("width").GetInt32());
+        Assert.Equal(100, settings.RootElement.GetProperty("height").GetInt32());
+    }
+
+    [Fact]
     public void PlacePaletteNode_StreamOutputTSNodeIsShownOnDashboardByDefault()
     {
         var mainViewModel = new MainViewModel();
@@ -726,6 +744,38 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal("oneShot", node.TestSignalWaveType);
         using var settings = JsonDocument.Parse(node.SettingsJson);
         Assert.Equal("oneShot", settings.RootElement.GetProperty("waveType").GetString());
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_UpdatesTestSignalImgSettingsFromInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", TestSignalImgBlock.TypeId, 0, 0, "{}"),
+            TestSignalImgBlock.Definition);
+
+        node.TestSignalImageType = "circle";
+        node.TestSignalImageMode = "color";
+        node.TestSignalImageFrequencyHertz = 2.5;
+        node.TestSignalImageWidth = 320;
+        node.TestSignalImageHeight = 240;
+
+        using var settings = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("circle", settings.RootElement.GetProperty("type").GetString());
+        Assert.Equal("color", settings.RootElement.GetProperty("kind").GetString());
+        Assert.Equal(2.5, settings.RootElement.GetProperty("frequency").GetDouble());
+        Assert.Equal(320, settings.RootElement.GetProperty("width").GetInt32());
+        Assert.Equal(240, settings.RootElement.GetProperty("height").GetInt32());
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_TestSignalImg_DefaultTypeAndOptions()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", TestSignalImgBlock.TypeId, 0, 0, "{}"),
+            TestSignalImgBlock.Definition);
+
+        Assert.Equal("number", node.TestSignalImageType);
+        Assert.Equal(["number", "circle"], node.TestSignalImageTypes);
     }
 
     [Fact]
@@ -933,6 +983,58 @@ public sealed class FlowEditorViewModelTests
         Assert.Contains("millis,v0,v1", streamContent, StringComparison.Ordinal);
         Assert.Contains("0,1.0,0.0", streamContent, StringComparison.Ordinal);
         Assert.Contains(",0.0,0.0,0.0", streamContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_UpdatesDashboardWidgetContentForStreamOutputImage()
+    {
+        IReadOnlyList<DashboardDocument> dashboards = [];
+        INodeFactory[] factories =
+        [
+            new TestSignalImgNodeFactory(),
+            new StreamOutputImageNodeFactory(),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService(),
+            () => dashboards,
+            documents => dashboards = documents);
+
+        var testSignalImgPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalImgBlock.TypeId);
+        var streamOutputImagePaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputImageBlock.TypeId);
+
+        var testSignalImgNode = viewModel.PlacePaletteNode(testSignalImgPaletteNode, 120, 120);
+        var streamOutputImageNode = viewModel.PlacePaletteNode(streamOutputImagePaletteNode, 440, 120);
+
+        var sourcePort = testSignalImgNode.Outputs.Single(port => port.Id == TestSignalImgBlock.StreamOutputPortId);
+        var targetPort = streamOutputImageNode.Inputs.Single(port => port.Id == StreamOutputImageBlock.InputPortId);
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(() => dashboards, "Gray8");
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+
+        var dashboard = Assert.Single(dashboards);
+        var streamOutputWidget = Assert.Single(dashboard.Widgets, widget => widget.SourcePortId == streamOutputImageNode.Id);
+
+        using var streamOutputSettings = JsonDocument.Parse(streamOutputWidget.SettingsJson);
+        Assert.Equal("image", streamOutputSettings.RootElement.GetProperty("contentKind").GetString());
+        Assert.Contains("Gray8", streamOutputSettings.RootElement.GetProperty("content").GetString(), StringComparison.Ordinal);
+
+        var imageData = streamOutputSettings.RootElement.GetProperty("displayData").GetProperty("image");
+        Assert.Equal(100, imageData.GetProperty("width").GetInt32());
+        Assert.Equal(100, imageData.GetProperty("height").GetInt32());
+        Assert.Equal("Gray8", imageData.GetProperty("pixelFormat").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(imageData.GetProperty("pixelsBase64").GetString()));
     }
 
     [Fact]
@@ -1611,7 +1713,7 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
-    public void DashboardWidgetViewModel_AutoScrollToggle_UpdatesSettingsAndLabel()
+    public void DashboardWidgetViewModel_AutoScrollToggle_UpdatesSettingsAndPauseLabel()
     {
         var settingsJson = JsonSerializer.Serialize(new
         {
@@ -1638,14 +1740,52 @@ public sealed class FlowEditorViewModelTests
 
         Assert.True(widget.IsAutoScrollToggleVisible);
         Assert.True(widget.IsAutoScrollEnabled);
-        Assert.Equal("AutoScroll ON", widget.AutoScrollButtonLabel);
+        Assert.Equal("Pause OFF", widget.PauseButtonLabel);
 
         widget.ToggleAutoScroll();
 
         Assert.False(widget.IsAutoScrollEnabled);
-        Assert.Equal("AutoScroll OFF", widget.AutoScrollButtonLabel);
+        Assert.Equal("Pause ON", widget.PauseButtonLabel);
         using var updatedSettings = JsonDocument.Parse(widget.SettingsJson);
         Assert.False(updatedSettings.RootElement.GetProperty("isAutoScrollEnabled").GetBoolean());
+    }
+
+    [Fact]
+    public void DashboardWidgetViewModel_ImageContent_ShowsPauseToggle()
+    {
+        var pixels = Convert.ToBase64String(new byte[] { 0, 255, 127, 64 });
+        var settingsJson = JsonSerializer.Serialize(new
+        {
+            title = "StreamOutputImage",
+            contentKind = "image",
+            content = "2x2 Gray8 seq=0",
+            displayData = new
+            {
+                image = new
+                {
+                    width = 2,
+                    height = 2,
+                    pixelFormat = "Gray8",
+                    pixelsBase64 = pixels,
+                },
+            },
+            supportsAutoScroll = true,
+            isAutoScrollEnabled = true,
+        });
+
+        var widget = new DashboardWidgetViewModel(
+            Guid.NewGuid(),
+            "Fallback",
+            "dataprocesses.dashboard.node-block",
+            0,
+            0,
+            3,
+            3,
+            settingsJson: settingsJson);
+
+        Assert.True(widget.IsImageContent);
+        Assert.True(widget.IsAutoScrollToggleVisible);
+        Assert.Contains("pixelsBase64", widget.DisplayDataJson, StringComparison.Ordinal);
     }
 
     [Fact]

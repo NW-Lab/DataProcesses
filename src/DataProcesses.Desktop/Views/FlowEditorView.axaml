@@ -408,6 +408,29 @@
                                  PlaceholderText="1,2,3"
                                  IsVisible="{Binding SelectedNode.IsTriggerNumberArrayEditorVisible}" />
                     </StackPanel>
+                    <TextBlock Grid.Row="10" Text="TestSignal image settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalImg}" />
+                    <StackPanel Grid.Row="11" Spacing="5" IsVisible="{Binding SelectedNode.IsTestSignalImg}">
+                        <TextBlock Text="Type" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.TestSignalImageTypes}"
+                                  SelectedItem="{Binding SelectedNode.TestSignalImageType}" />
+                        <TextBlock Text="Mode" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.TestSignalImageModes}"
+                                  SelectedItem="{Binding SelectedNode.TestSignalImageMode}" />
+                        <TextBlock Text="Frequency (Hz)" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="0.001"
+                                       Increment="0.5"
+                                       Value="{Binding SelectedNode.TestSignalImageFrequencyHertz}" />
+                        <TextBlock Text="Width" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="1024"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.TestSignalImageWidth}" />
+                        <TextBlock Text="Height" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="1024"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.TestSignalImageHeight}" />
+                    </StackPanel>
                     <TextBlock Grid.Row="12" Text="CSV Input settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsCsvInputNode}" />
                     <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsCsvInputNode}">
                         <TextBlock Text="Output stream count" FontWeight="SemiBold" />
