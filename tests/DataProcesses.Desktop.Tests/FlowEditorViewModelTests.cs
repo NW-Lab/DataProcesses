@@ -8,6 +8,7 @@ using DataProcesses.Engine;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
@@ -538,6 +539,55 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void CameraInputImageDashboardAction_RequestsCaptureWithoutTogglingNode()
+    {
+        var mainViewModel = new MainViewModel();
+        var camera = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == "dataprocesses.input.camera-image");
+
+        var node = mainViewModel.FlowEditor.PlacePaletteNode(camera, 240, 220);
+        node.CameraInputImageWidth = 3840;
+        node.CameraInputImageHeight = 2160;
+        node.CameraInputImageContinuousCapture = true;
+        node.CameraInputImageFramesPerSecond = 30;
+        node.CameraWhiteBalanceAuto = false;
+        node.CameraWhiteBalanceTemperature = 5200;
+        var widget = Assert.Single(mainViewModel.Dashboard.Widgets);
+        Assert.True(widget.IsTriggerButtonContent);
+        Assert.Equal("Capture", widget.Content);
+
+        mainViewModel.FlowEditor.TriggerNodeById(node.Id);
+
+        using var settings = JsonDocument.Parse(node.BuildRuntimeSettingsJson(1));
+        Assert.Equal(1, settings.RootElement.GetProperty("manualTriggerNonce").GetInt64());
+        Assert.Equal(0, settings.RootElement.GetProperty("deviceIndex").GetInt32());
+        Assert.Equal(3840, settings.RootElement.GetProperty("width").GetInt32());
+        Assert.Equal(2160, settings.RootElement.GetProperty("height").GetInt32());
+        Assert.True(settings.RootElement.GetProperty("continuousCapture").GetBoolean());
+        Assert.Equal(30, settings.RootElement.GetProperty("fps").GetDouble());
+        Assert.False(settings.RootElement.GetProperty("isWhiteBalanceAuto").GetBoolean());
+        Assert.Equal(5200, settings.RootElement.GetProperty("whiteBalanceTemperature").GetDouble());
+    }
+
+    [Fact]
+    public void PlacePaletteNode_MovieInputImageInitializesInspectableFps()
+    {
+        var mainViewModel = new MainViewModel();
+        var movie = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == "dataprocesses.input.movie-image");
+
+        var node = mainViewModel.FlowEditor.PlacePaletteNode(movie, 240, 220);
+        node.MovieInputImageFramesPerSecond = 24;
+        node.MovieInputImageWidth = 1280;
+        node.MovieInputImageHeight = 720;
+
+        using var settings = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal(string.Empty, settings.RootElement.GetProperty("moviePath").GetString());
+        Assert.Equal(24, settings.RootElement.GetProperty("fps").GetDouble());
+        Assert.Equal(1280, settings.RootElement.GetProperty("width").GetInt32());
+        Assert.Equal(720, settings.RootElement.GetProperty("height").GetInt32());
+        Assert.True(settings.RootElement.GetProperty("isPlay").GetBoolean());
+    }
+
+    [Fact]
     public void PlacePaletteNode_TestSignalNodeCreatesOnOffButtonDashboardWidget()
     {
         var mainViewModel = new MainViewModel();
@@ -1034,6 +1084,58 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal(100, imageData.GetProperty("width").GetInt32());
         Assert.Equal(100, imageData.GetProperty("height").GetInt32());
         Assert.Equal("Gray8", imageData.GetProperty("pixelFormat").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(imageData.GetProperty("pixelsBase64").GetString()));
+    }
+
+    [Fact]
+    public async Task RunAsync_UpdatesDashboardWidgetContentForStreamChartSt()
+    {
+        IReadOnlyList<DashboardDocument> dashboards = [];
+        INodeFactory[] factories =
+        [
+            new TestSignalNodeFactory(),
+            new StreamChartStNodeFactory(),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService(),
+            () => dashboards,
+            documents => dashboards = documents);
+
+        var testSignalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+        var streamChartStPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamChartStBlock.TypeId);
+
+        var testSignalNode = viewModel.PlacePaletteNode(testSignalPaletteNode, 120, 120);
+        var streamChartStNode = viewModel.PlacePaletteNode(streamChartStPaletteNode, 440, 120);
+
+        var sourcePort = testSignalNode.Outputs.Single(port => port.Id == TestSignalBlock.StreamOutputPortId);
+        var targetPort = streamChartStNode.Inputs.Single(port => port.Id == "stream-1");
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(() => dashboards, "pixelsBase64");
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+
+        var dashboard = Assert.Single(dashboards);
+        var streamChartWidget = Assert.Single(dashboard.Widgets, widget => widget.SourcePortId == streamChartStNode.Id);
+
+        using var streamChartSettings = JsonDocument.Parse(streamChartWidget.SettingsJson);
+        Assert.Equal("image", streamChartSettings.RootElement.GetProperty("contentKind").GetString());
+        Assert.Contains("StreamChartSt", streamChartSettings.RootElement.GetProperty("content").GetString(), StringComparison.Ordinal);
+
+        var imageData = streamChartSettings.RootElement.GetProperty("displayData").GetProperty("image");
+        Assert.Equal(StreamChartStHistory.DefaultPixelWidth, imageData.GetProperty("width").GetInt32());
+        Assert.Equal(StreamChartStHistory.DefaultPixelHeight, imageData.GetProperty("height").GetInt32());
+        Assert.Equal("Rgb24", imageData.GetProperty("pixelFormat").GetString());
         Assert.False(string.IsNullOrWhiteSpace(imageData.GetProperty("pixelsBase64").GetString()));
     }
 

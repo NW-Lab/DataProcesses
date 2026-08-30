@@ -71,12 +71,17 @@ Block-specific settings use this JSON shape:
 | Directory | Type ID | Current role |
 |---|---|---|
 | `CsvInput/` | `dataprocesses.input.csv` | CSV source that reads `millis,CH1...` records from file or COM input and emits per-channel Fast Stream outputs as `millis,value`. |
+| `CameraInputImage/` | `dataprocesses.input.camera-image` | Local camera source that captures one RGB24 `ImageFrame` for a JSON `Trigger: true` message or Dashboard Capture action. |
+| `MovieInputImage/` | `dataprocesses.input.movie-image` | Movie source that emits RGB24 `ImageFrame` values at a configured FPS while JSON `isPlay` is true. |
+| `UVCameraInputImage/` | `dataprocesses.input.uv-camera-image` | UV camera source that emits RGB24 `ImageFrame` values while JSON `isPlay` is true. |
 | `TestSignalTS/` | `dataprocesses.test-signal` | Configurable Test Signal source with Payload settings input, Fast Stream output, and Payload status output. |
 | `Trigger/` | `dataprocesses.trigger` | Payload source that emits configured values on manual action, execution start, and periodic timing. |
 | `LowPassFilter/` | `dataprocesses.filter.low-pass` | Stateful first-order Fast Stream smoothing processor. |
 | `FastFourierTransform/` | `dataprocesses.analysis.fft` | Fast Stream to one-sided `SpectrumFrame` analysis processor. |
 | `StremOutputTS/` | `dataprocesses.output.stream` | Debug-oriented Fast Stream output adapter with bounded downsampling. |
 | `StreamOutputVector/` | `dataprocesses.output.numeric-vector` | Debug-oriented Fast Stream vector sink for `NumericVectorFrame` snapshots. |
+| `StreamChartVector/` | `dataprocesses.output.vector-chart` | Debug-oriented Fast Stream vector sink that renders a color-mapped intensity chart over a millisecond time axis. |
+| `StreamChartSt/` | `dataprocesses.output.stream-chart-st` | Interactive multi-channel Fast Stream time-series chart sink (up to 4 channels) with configurable time alignment and channel names. |
 | `StreamOutputImage/` | `dataprocesses.output.image` | Debug-oriented Fast Stream image sink for `ImageFrame` previews. |
 | `PythonOutput/` | `dataprocesses.output.python` | Typed Fast Stream/JSON boundary that emits deferred-delivery status; it does not launch Python yet. |
 | `PayloadOutput/` | `dataprocesses.output.payload` | Debug-oriented Payload sink that appends timestamped entries for dashboard inspection. |

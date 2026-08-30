@@ -1,7 +1,11 @@
 ﻿using DataProcesses.Nodes.BuiltIn;
+using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
+using DataProcesses.Nodes.BuiltIn.Blocks.MovieInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
@@ -12,6 +16,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
+using DataProcesses.Nodes.BuiltIn.Blocks.UVCameraInputImage;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Nodes.BuiltIn.Tests;
@@ -28,6 +33,9 @@ public sealed class BuiltInNodePluginTests
             new[]
             {
                 CsvInputBlock.TypeId,
+                CameraInputImageBlock.TypeId,
+                MovieInputImageBlock.TypeId,
+                UVCameraInputImageBlock.TypeId,
                 TestSignalBlock.TypeId,
                 TestSignalVecBlock.TypeId,
                 TestSignalImgBlock.TypeId,
@@ -36,6 +44,8 @@ public sealed class BuiltInNodePluginTests
                 FastFourierTransformBlock.TypeId,
                 StremOutputTSBlock.TypeId,
                 StreamOutputVectorBlock.TypeId,
+                StreamChartVectorBlock.TypeId,
+                StreamChartStBlock.TypeId,
                 StreamOutputImageBlock.TypeId,
                 PythonOutputBlock.TypeId,
                 PayloadOutputBlock.TypeId,
@@ -69,12 +79,16 @@ public sealed class BuiltInNodePluginTests
 
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[CsvInputBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[CameraInputImageBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[MovieInputImageBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[UVCameraInputImageBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalImgBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TriggerBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[LowPassFilterBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FastFourierTransformBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StremOutputTSBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputVectorBlock.TypeId]);
+        Assert.Equal(NodeType.Output, nodeTypesByTypeId[StreamChartStBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputImageBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[PythonOutputBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[PayloadOutputBlock.TypeId]);

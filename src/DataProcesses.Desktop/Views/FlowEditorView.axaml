@@ -431,6 +431,60 @@
                                        Increment="1"
                                        Value="{Binding SelectedNode.TestSignalImageHeight}" />
                     </StackPanel>
+                    <TextBlock Grid.Row="10" Text="Camera input settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsCameraSourceNode}" />
+                    <StackPanel Grid.Row="11" Spacing="5" IsVisible="{Binding SelectedNode.IsCameraSourceNode}">
+                        <TextBlock Text="Camera device index" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="0"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.CameraInputImageDeviceIndex}" />
+                        <TextBlock Text="Requested width" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="3840"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.CameraInputImageWidth}" />
+                        <TextBlock Text="Requested height" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="2160"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.CameraInputImageHeight}" />
+                        <CheckBox Content="Continuous capture"
+                                  IsChecked="{Binding SelectedNode.CameraInputImageContinuousCapture}"
+                                  IsVisible="{Binding SelectedNode.IsCameraInputImageNode}" />
+                        <TextBlock Text="FPS" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="0.1"
+                                       Maximum="60"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.CameraInputImageFramesPerSecond}" />
+                        <CheckBox Content="Auto white balance" IsChecked="{Binding SelectedNode.CameraWhiteBalanceAuto}" />
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.IsCameraWhiteBalanceTemperatureVisible}">
+                            <TextBlock Text="White balance temperature (K)" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="2000"
+                                           Maximum="10000"
+                                           Increment="100"
+                                           Value="{Binding SelectedNode.CameraWhiteBalanceTemperature}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Grid.Row="10" Text="Movie Input Image settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsMovieInputImageNode}" />
+                    <StackPanel Grid.Row="11" Spacing="5" IsVisible="{Binding SelectedNode.IsMovieInputImageNode}">
+                        <TextBlock Text="Movie file path" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.MovieInputImagePath}"
+                                 PlaceholderText="C:/data/input.mp4" />
+                        <TextBlock Text="FPS" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="0.1"
+                                       Maximum="60"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.MovieInputImageFramesPerSecond}" />
+                        <TextBlock Text="Output width" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="3840"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.MovieInputImageWidth}" />
+                        <TextBlock Text="Output height" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="3840"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.MovieInputImageHeight}" />
+                    </StackPanel>
                     <TextBlock Grid.Row="12" Text="CSV Input settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsCsvInputNode}" />
                     <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsCsvInputNode}">
                         <TextBlock Text="Output stream count" FontWeight="SemiBold" />
@@ -479,6 +533,27 @@
                         <NumericUpDown Minimum="1"
                                        Increment="10"
                                        Value="{Binding SelectedNode.CsvOutputSpanMilliseconds}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="12" Text="StreamChartVector settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsStreamChartVectorNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsStreamChartVectorNode}">
+                        <TextBlock Text="Color map" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.StreamChartVectorColorMaps}"
+                                  SelectedItem="{Binding SelectedNode.StreamChartVectorColorMap}" />
+                        <CheckBox Content="Auto scale" IsChecked="{Binding SelectedNode.StreamChartVectorAutoScale}" />
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.StreamChartVectorIsManualScaleVisible}">
+                            <TextBlock Text="Min value" FontWeight="SemiBold" />
+                            <NumericUpDown Increment="0.1"
+                                           Value="{Binding SelectedNode.StreamChartVectorMinimumValue}" />
+                            <TextBlock Text="Max value" FontWeight="SemiBold" />
+                            <NumericUpDown Increment="0.1"
+                                           Value="{Binding SelectedNode.StreamChartVectorMaximumValue}" />
+                        </StackPanel>
+                        <CheckBox Content="Interpolate between samples" IsChecked="{Binding SelectedNode.StreamChartVectorInterpolate}" />
+                        <TextBlock Text="Time axis span (ms)" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="100"
+                                       Maximum="600000"
+                                       Increment="500"
+                                       Value="{Binding SelectedNode.StreamChartVectorTimeSpanMilliseconds}" />
                     </StackPanel>
                     <TextBox Grid.Row="14"
                              AcceptsReturn="True"

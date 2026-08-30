@@ -1,9 +1,14 @@
 ﻿using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
 using DataProcesses.Nodes.BuiltIn.Blocks.LowPassFilter;
+using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.MovieInputImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.UVCameraInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
@@ -23,6 +28,9 @@ public sealed class BuiltInNodePlugin : INodePlugin
     private static readonly IReadOnlyCollection<INodeFactory> Factories =
     [
         new CsvInputNodeFactory(),
+        new CameraInputImageNodeFactory(),
+        new MovieInputImageNodeFactory(),
+        new UVCameraInputImageNodeFactory(),
         new TestSignalNodeFactory(),
         new TestSignalVecNodeFactory(),
         new TestSignalImgNodeFactory(),
@@ -31,6 +39,8 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new FastFourierTransformNodeFactory(),
         new StremOutputTSNodeFactory(),
         new StreamOutputVectorNodeFactory(),
+        new StreamChartVectorNodeFactory(),
+        new StreamChartStNodeFactory(),
         new StreamOutputImageNodeFactory(),
         new PythonOutputNodeFactory(),
         new PayloadOutputNodeFactory(),

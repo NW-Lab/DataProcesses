@@ -5,6 +5,8 @@ using System.Text.Json.Nodes;
 using Avalonia.Media.Imaging;
 
 using DataProcesses.Core;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Plugin.Abstractions;
 
@@ -16,6 +18,9 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     private const string TestSignalVecTypeId = "dataprocesses.test-signal-vec";
     private const string TestSignalImgTypeId = "dataprocesses.test-signal-img";
     private const string TriggerTypeId = "dataprocesses.trigger";
+    private const string CameraInputImageTypeId = "dataprocesses.input.camera-image";
+    private const string MovieInputImageTypeId = "dataprocesses.input.movie-image";
+    private const string UVCameraInputImageTypeId = "dataprocesses.input.uv-camera-image";
     private const string CsvInputTypeId = "dataprocesses.input.csv";
     private const string CsvOutputTypeId = "dataprocesses.output.csv";
 
@@ -90,14 +95,30 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public bool IsTriggerNode => string.Equals(TypeId, TriggerTypeId, StringComparison.Ordinal);
 
+    public bool IsCameraInputImageNode => string.Equals(TypeId, CameraInputImageTypeId, StringComparison.Ordinal);
+
+    public bool IsUVCameraInputImageNode => string.Equals(TypeId, UVCameraInputImageTypeId, StringComparison.Ordinal);
+
+    public bool IsCameraSourceNode => IsCameraInputImageNode || IsUVCameraInputImageNode;
+
+    public bool IsMovieInputImageNode => string.Equals(TypeId, MovieInputImageTypeId, StringComparison.Ordinal);
+
+    public bool IsManualTriggerNode => IsTriggerNode || IsCameraInputImageNode;
+
     public bool IsStartStopNode => string.Equals(TypeId, TestSignalVecTypeId, StringComparison.Ordinal)
         || string.Equals(TypeId, TestSignalImgTypeId, StringComparison.Ordinal);
 
     public bool IsDashboardToggleNode => IsStartStopNode || IsTestSignal;
 
+    public bool IsDashboardActionNode => IsManualTriggerNode || IsDashboardToggleNode;
+
     public bool IsCsvInputNode => string.Equals(TypeId, CsvInputTypeId, StringComparison.Ordinal);
 
     public bool IsCsvOutputNode => string.Equals(TypeId, CsvOutputTypeId, StringComparison.Ordinal);
+
+    public bool IsStreamChartVectorNode => string.Equals(TypeId, StreamChartVectorBlock.TypeId, StringComparison.Ordinal);
+
+    public bool IsStreamChartStNode => string.Equals(TypeId, StreamChartStBlock.TypeId, StringComparison.Ordinal);
 
     public IReadOnlyList<string> TestSignalWaveTypes => IsTestSignalVec
         ? ["oneShot", "sine"]
@@ -311,6 +332,78 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         set => UpdateSettingsString("filePath", value ?? string.Empty);
     }
 
+    public string MovieInputImagePath
+    {
+        get => ReadSettingsString("moviePath", string.Empty);
+        set => UpdateSettingsString("moviePath", value ?? string.Empty);
+    }
+
+    public double CameraInputImageDeviceIndex
+    {
+        get => ReadSettingsDouble("deviceIndex", 0);
+        set => UpdateSettingsInt("deviceIndex", (int)Math.Round(value, MidpointRounding.AwayFromZero), minimumInclusive: 0, maximumInclusive: int.MaxValue);
+    }
+
+    public double CameraInputImageWidth
+    {
+        get => ReadSettingsDouble("width", 1920);
+        set => UpdateSettingsInt("width", (int)Math.Round(value, MidpointRounding.AwayFromZero), minimumInclusive: 1, maximumInclusive: 3840);
+    }
+
+    public double CameraInputImageHeight
+    {
+        get => ReadSettingsDouble("height", 1080);
+        set => UpdateSettingsInt("height", (int)Math.Round(value, MidpointRounding.AwayFromZero), minimumInclusive: 1, maximumInclusive: 2160);
+    }
+
+    public bool CameraInputImageContinuousCapture
+    {
+        get => ReadSettingsBoolean("continuousCapture", false);
+        set => UpdateSettingsBoolean("continuousCapture", value);
+    }
+
+    public double CameraInputImageFramesPerSecond
+    {
+        get => ReadSettingsDouble("fps", 10.0);
+        set => UpdateSettingsDouble("fps", value, minimumExclusive: 0);
+    }
+
+    public bool CameraWhiteBalanceAuto
+    {
+        get => ReadSettingsBoolean("isWhiteBalanceAuto", true);
+        set
+        {
+            UpdateSettingsBoolean("isWhiteBalanceAuto", value);
+            OnPropertyChanged(nameof(IsCameraWhiteBalanceTemperatureVisible));
+        }
+    }
+
+    public bool IsCameraWhiteBalanceTemperatureVisible => IsCameraSourceNode && !CameraWhiteBalanceAuto;
+
+    public double CameraWhiteBalanceTemperature
+    {
+        get => ReadSettingsDouble("whiteBalanceTemperature", 4_500);
+        set => UpdateSettingsDouble("whiteBalanceTemperature", value, minimumExclusive: 0);
+    }
+
+    public double MovieInputImageFramesPerSecond
+    {
+        get => ReadSettingsDouble("fps", 10.0);
+        set => UpdateSettingsDouble("fps", value, minimumExclusive: 0);
+    }
+
+    public double MovieInputImageWidth
+    {
+        get => ReadSettingsDouble("width", 640);
+        set => UpdateSettingsInt("width", (int)Math.Round(value, MidpointRounding.AwayFromZero), minimumInclusive: 1, maximumInclusive: 3840);
+    }
+
+    public double MovieInputImageHeight
+    {
+        get => ReadSettingsDouble("height", 480);
+        set => UpdateSettingsInt("height", (int)Math.Round(value, MidpointRounding.AwayFromZero), minimumInclusive: 1, maximumInclusive: 3840);
+    }
+
     public string CsvOutputWriteMode
     {
         get => NormalizeCsvOutputWriteMode(ReadSettingsString("writeMode", "append"));
@@ -321,6 +414,94 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     {
         get => ReadSettingsDouble("spanMilliseconds", 100);
         set => UpdateSettingsDouble("spanMilliseconds", value, minimumExclusive: 0);
+    }
+
+    public IReadOnlyList<string> StreamChartVectorColorMaps { get; } = ["jet", "grayscale", "hot", "viridis"];
+
+    public string StreamChartVectorColorMap
+    {
+        get => NormalizeStreamChartVectorColorMap(ReadSettingsString("colorMap", "jet"));
+        set => UpdateSettingsString("colorMap", NormalizeStreamChartVectorColorMap(value));
+    }
+
+    public bool StreamChartVectorAutoScale
+    {
+        get => ReadSettingsBoolean("autoScale", true);
+        set
+        {
+            UpdateSettingsBoolean("autoScale", value);
+            OnPropertyChanged(nameof(StreamChartVectorIsManualScaleVisible));
+        }
+    }
+
+    public bool StreamChartVectorIsManualScaleVisible => !StreamChartVectorAutoScale;
+
+    public double StreamChartVectorMinimumValue
+    {
+        get => ReadSettingsDouble("minValue", 0);
+        set => UpdateSettingsDoubleInclusive("minValue", value, double.NegativeInfinity);
+    }
+
+    public double StreamChartVectorMaximumValue
+    {
+        get => ReadSettingsDouble("maxValue", 1);
+        set => UpdateSettingsDoubleInclusive("maxValue", value, double.NegativeInfinity);
+    }
+
+    public bool StreamChartVectorInterpolate
+    {
+        get => ReadSettingsBoolean("interpolate", true);
+        set => UpdateSettingsBoolean("interpolate", value);
+    }
+
+    public double StreamChartVectorTimeSpanMilliseconds
+    {
+        get => ReadSettingsDouble("timeSpanMillis", StreamChartVectorSettings.DefaultTimeSpanMilliseconds);
+        set => UpdateSettingsDoubleInclusive(
+            "timeSpanMillis",
+            Math.Clamp(value, StreamChartVectorSettings.MinimumTimeSpanMilliseconds, StreamChartVectorSettings.MaximumTimeSpanMilliseconds),
+            StreamChartVectorSettings.MinimumTimeSpanMilliseconds);
+    }
+
+    public IReadOnlyList<string> StreamChartStTimeAlignmentModes { get; } = ["independent", "alignToFirstStream"];
+
+    public string StreamChartStTimeAlignmentMode
+    {
+        get => NormalizeStreamChartStTimeAlignmentMode(ReadSettingsString("timeAlignmentMode", "independent"));
+        set => UpdateSettingsString("timeAlignmentMode", NormalizeStreamChartStTimeAlignmentMode(value));
+    }
+
+    public double StreamChartStTimeSpanMilliseconds
+    {
+        get => ReadSettingsDouble("timeSpanMillis", StreamChartStSettings.DefaultTimeSpanMilliseconds);
+        set => UpdateSettingsDouble(
+            "timeSpanMillis",
+            Math.Max(StreamChartStSettings.MinimumTimeSpanMilliseconds, value),
+            minimumExclusive: 0);
+    }
+
+    public string StreamChartStChannel1Name
+    {
+        get => ReadSettingsString("channel1Name", "CH1");
+        set => UpdateSettingsString("channel1Name", string.IsNullOrWhiteSpace(value) ? "CH1" : value.Trim());
+    }
+
+    public string StreamChartStChannel2Name
+    {
+        get => ReadSettingsString("channel2Name", "CH2");
+        set => UpdateSettingsString("channel2Name", string.IsNullOrWhiteSpace(value) ? "CH2" : value.Trim());
+    }
+
+    public string StreamChartStChannel3Name
+    {
+        get => ReadSettingsString("channel3Name", "CH3");
+        set => UpdateSettingsString("channel3Name", string.IsNullOrWhiteSpace(value) ? "CH3" : value.Trim());
+    }
+
+    public string StreamChartStChannel4Name
+    {
+        get => ReadSettingsString("channel4Name", "CH4");
+        set => UpdateSettingsString("channel4Name", string.IsNullOrWhiteSpace(value) ? "CH4" : value.Trim());
     }
 
     public string Category => Definition.Category;
@@ -437,6 +618,18 @@ public sealed class CanvasNodeViewModel : ViewModelBase
                 OnPropertyChanged(nameof(CsvInputIsComSourceVisible));
                 OnPropertyChanged(nameof(CsvInputIsFilePlaybackVisible));
                 OnPropertyChanged(nameof(CsvOutputFilePath));
+                OnPropertyChanged(nameof(MovieInputImagePath));
+                OnPropertyChanged(nameof(CameraInputImageDeviceIndex));
+                OnPropertyChanged(nameof(CameraInputImageWidth));
+                OnPropertyChanged(nameof(CameraInputImageHeight));
+                OnPropertyChanged(nameof(CameraInputImageContinuousCapture));
+                OnPropertyChanged(nameof(CameraInputImageFramesPerSecond));
+                OnPropertyChanged(nameof(CameraWhiteBalanceAuto));
+                OnPropertyChanged(nameof(IsCameraWhiteBalanceTemperatureVisible));
+                OnPropertyChanged(nameof(CameraWhiteBalanceTemperature));
+                OnPropertyChanged(nameof(MovieInputImageFramesPerSecond));
+                OnPropertyChanged(nameof(MovieInputImageWidth));
+                OnPropertyChanged(nameof(MovieInputImageHeight));
                 OnPropertyChanged(nameof(CsvOutputWriteMode));
                 OnPropertyChanged(nameof(CsvOutputSpanMilliseconds));
                 OnPropertyChanged(nameof(DashboardTextWrapEnabled));
@@ -468,16 +661,26 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public string BuildRuntimeSettingsJson(long triggerExecutionSessionId)
     {
-        if (!IsTriggerNode && !IsStartStopNode)
+        if (!IsManualTriggerNode && !IsStartStopNode && !IsMovieInputImageNode && !IsUVCameraInputImageNode)
         {
             return SettingsJson;
         }
 
         var settings = ReadSettingsObject();
-        if (IsTriggerNode)
+        if (IsManualTriggerNode)
         {
             settings["executionSessionId"] = triggerExecutionSessionId;
             settings["manualTriggerNonce"] = triggerManualTriggerNonce;
+        }
+
+        if (IsMovieInputImageNode)
+        {
+            settings["executionSessionId"] = triggerExecutionSessionId;
+        }
+
+        if (IsUVCameraInputImageNode)
+        {
+            settings["executionSessionId"] = triggerExecutionSessionId;
         }
 
         return settings.ToJsonString();
@@ -485,7 +688,7 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public void RequestTriggerNow()
     {
-        if (!IsTriggerNode)
+        if (!IsManualTriggerNode)
         {
             return;
         }
@@ -734,6 +937,26 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         }
 
         return "append";
+    }
+
+    private static string NormalizeStreamChartVectorColorMap(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "grayscale" or "gray" or "grey" => "grayscale",
+            "hot" => "hot",
+            "viridis" => "viridis",
+            _ => "jet",
+        };
+    }
+
+    private static string NormalizeStreamChartStTimeAlignmentMode(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "aligntofirst" or "aligntofirststream" or "align_to_first" => "alignToFirstStream",
+            _ => "independent",
+        };
     }
 
     private static string NormalizeTestSignalImageMode(string? value)

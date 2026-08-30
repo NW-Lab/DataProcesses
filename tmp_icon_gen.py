@@ -57,7 +57,31 @@ def make_icon(path: Path, kind: str):
     fill_rect(0, 0, w, h, (245, 247, 250, 255))
     fill_rect(8, 8, w - 8, h - 8, (255, 255, 255, 255))
 
-    if kind == 'vec':
+    if kind == 'camera':
+        navy = (30, 64, 108, 255)
+        blue = (54, 135, 212, 255)
+        fill_rect(12, 24, 52, 48, navy)
+        fill_rect(20, 19, 34, 25, navy)
+        fill_rect(16, 28, 48, 44, blue)
+        for y in range(29, 44):
+            for x in range(17, 48):
+                if (x - 32) ** 2 + (y - 36) ** 2 <= 49:
+                    img[y][x] = (245, 247, 250, 255)
+                if (x - 32) ** 2 + (y - 36) ** 2 <= 25:
+                    img[y][x] = navy
+    elif kind == 'movie':
+        navy = (30, 64, 108, 255)
+        blue = (54, 135, 212, 255)
+        fill_rect(12, 16, 52, 48, navy)
+        fill_rect(17, 20, 47, 44, blue)
+        for y in [20, 28, 36]:
+            fill_rect(12, y, 16, y + 4, (245, 247, 250, 255))
+            fill_rect(48, y, 52, y + 4, (245, 247, 250, 255))
+        for y in range(26, 39):
+            for x in range(25, 39):
+                if x - 25 <= (y - 26) * 0.9 and x - 25 <= (38 - y) * 0.9:
+                    img[y][x] = (245, 247, 250, 255)
+    elif kind == 'vec':
         fill_rect(12, 12, 52, 52, (240, 244, 250, 255))
         blue = (65, 126, 240, 255)
         for i, x in enumerate([16, 22, 28, 34, 40, 46, 52]):
@@ -87,5 +111,9 @@ def make_icon(path: Path, kind: str):
 
 make_icon(root / 'TestSignalVec' / 'icon.png', 'vec')
 make_icon(root / 'TestSignalImg' / 'icon.png', 'img')
+make_icon(root / 'CameraInputImage' / 'icon.png', 'camera')
+make_icon(root / 'MovieInputImage' / 'icon.png', 'movie')
 print('created', root / 'TestSignalVec' / 'icon.png')
 print('created', root / 'TestSignalImg' / 'icon.png')
+print('created', root / 'CameraInputImage' / 'icon.png')
+print('created', root / 'MovieInputImage' / 'icon.png')

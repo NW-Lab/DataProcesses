@@ -10,7 +10,11 @@ using CommunityToolkit.Mvvm.Input;
 using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Engine;
+using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.MovieInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
@@ -24,6 +28,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
 {
     private const string NodeDashboardWidgetType = "dataprocesses.dashboard.node-block";
     private const string TriggerNodeTypeId = "dataprocesses.trigger";
+    private const string CameraInputImageNodeTypeId = "dataprocesses.input.camera-image";
     private const string TriggerButtonContentKind = "button-trigger";
     private const string ImageContentKind = "image";
     private const string PayloadOutputNodeTypeId = "dataprocesses.output.payload";
@@ -54,6 +59,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private readonly Action markDashboardsClean;
     private readonly List<FlowDocument> additionalFlows = [];
     private readonly Dictionary<Guid, FlowWorkspaceState> flowWorkspaceById = [];
+    private readonly Dictionary<string, StreamChartVectorHistory> streamChartVectorHistoryByNodeId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, StreamChartStHistory> streamChartStHistoryByNodeId = new(StringComparer.Ordinal);
     private Guid flowId = Guid.NewGuid();
     private FlowListItemViewModel? selectedFlow;
     private bool isLoadingFlows;
@@ -64,6 +71,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private long triggerExecutionSessionId;
     private long runtimeExecutionStep;
     private long? runStartedUnixNanoseconds;
+    private DateTimeOffset? runStartedVectorTimestamp;
     private CanvasNodeViewModel? selectedNode;
     private PaletteNodeViewModel? selectedPaletteNode;
     private CanvasPortViewModel? pendingConnectionSource;
@@ -635,7 +643,62 @@ public sealed class FlowEditorViewModel : ViewModelBase
             });
         }
 
+        if (string.Equals(nodeTypeId, CameraInputImageBlock.TypeId, StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                deviceIndex = 0,
+                width = 1920,
+                height = 1080,
+                continuousCapture = false,
+                fps = 10.0,
+                isWhiteBalanceAuto = true,
+                whiteBalanceTemperature = 4500,
+            });
+        }
+
+        if (string.Equals(nodeTypeId, "dataprocesses.input.uv-camera-image", StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                deviceIndex = 0,
+                width = 1920,
+                height = 1080,
+                fps = 10.0,
+                isPlay = true,
+                isWhiteBalanceAuto = true,
+                whiteBalanceTemperature = 4500,
+            });
+        }
+
+        if (string.Equals(nodeTypeId, MovieInputImageBlock.TypeId, StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                moviePath = string.Empty,
+                fps = 10.0,
+                width = 640,
+                height = 480,
+                isPlay = true,
+            });
+        }
+
         return "{}";
+    }
+
+    private int GetRunLoopDelayMilliseconds()
+    {
+        var configuredFramesPerSecond = Nodes
+            .Where(static node => node.IsEnabled
+                && (node.IsMovieInputImageNode
+                    || node.IsUVCameraInputImageNode
+                    || (node.IsCameraInputImageNode && node.CameraInputImageContinuousCapture)))
+            .Select(static node => node.IsMovieInputImageNode
+                ? node.MovieInputImageFramesPerSecond
+                : node.CameraInputImageFramesPerSecond)
+            .DefaultIfEmpty(1000.0 / RunLoopDelayMilliseconds)
+            .Max();
+        return Math.Max(1, (int)Math.Floor(1000.0 / configuredFramesPerSecond));
     }
 
     private void SelectPaletteNode(PaletteNodeViewModel? paletteNode)
@@ -849,6 +912,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
         ExecutionState = FlowExecutionState.Starting;
         runtimeExecutionStep = 0;
         runStartedUnixNanoseconds = null;
+        runStartedVectorTimestamp = null;
+        streamChartVectorHistoryByNodeId.Clear();
+        streamChartStHistoryByNodeId.Clear();
 
         try
         {
@@ -866,7 +932,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
                 ExecutionState = FlowExecutionState.Running;
                 runtimeExecutionStep++;
-                await Task.Delay(RunLoopDelayMilliseconds, cancellationToken).ConfigureAwait(true);
+                await Task.Delay(GetRunLoopDelayMilliseconds(), cancellationToken).ConfigureAwait(true);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -880,6 +946,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 InteractionStatus = "Flow stopped.";
                 runtimeExecutionStep = 0;
                 runStartedUnixNanoseconds = null;
+                runStartedVectorTimestamp = null;
+                streamChartVectorHistoryByNodeId.Clear();
+                streamChartStHistoryByNodeId.Clear();
             }
         }
     }
@@ -1150,8 +1219,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
         var node = Nodes.FirstOrDefault(candidate =>
             string.Equals(candidate.Id, nodeId, StringComparison.Ordinal)
-            && (string.Equals(candidate.TypeId, TriggerNodeTypeId, StringComparison.Ordinal)
-                || candidate.IsDashboardToggleNode));
+            && candidate.IsDashboardActionNode);
 
         if (node is null)
         {
@@ -1359,7 +1427,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 Validate();
             }
 
-            if (node.IsDashboardToggleNode)
+            if (node.IsDashboardActionNode)
             {
                 SynchronizeDashboardWidgetForNode(node);
             }
@@ -1375,10 +1443,10 @@ public sealed class FlowEditorViewModel : ViewModelBase
             return;
         }
 
-        if (string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal))
+        if (node.IsManualTriggerNode)
         {
             node.RequestTriggerNow();
-            InteractionStatus = $"Triggered {node.DisplayName}.";
+            InteractionStatus = $"Capture requested for {node.DisplayName}.";
             return;
         }
 
@@ -1489,7 +1557,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
             var content = FormatFastStreamFrame(frame, GetRunStartedUnixNanoseconds(frame));
 
-            if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardToggleNode)
+            if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardActionNode)
             {
                 SynchronizeDashboardWidgetForNode(sourceNode, content);
             }
@@ -1507,8 +1575,18 @@ public sealed class FlowEditorViewModel : ViewModelBase
             foreach (var targetNodeId in targetStreamOutputNodeIds)
             {
                 if (!nodesById.TryGetValue(targetNodeId, out var targetNode)
-                    || !targetNode.ShowOnDashboard
-                    || !string.Equals(targetNode.TypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal))
+                    || !targetNode.ShowOnDashboard)
+                {
+                    continue;
+                }
+
+                if (string.Equals(targetNode.TypeId, StreamChartStBlock.TypeId, StringComparison.Ordinal))
+                {
+                    UpdateStreamChartStWidget(targetNode, output.OutputPortId, frame);
+                    continue;
+                }
+
+                if (!string.Equals(targetNode.TypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -1538,7 +1616,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 vector,
                 runtimeExecutionStep);
 
-            if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardToggleNode)
+            if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardActionNode)
             {
                 var currentContent = vectorLogByNodeId.TryGetValue(sourceNode.Id, out var stagedSourceContent)
                     ? stagedSourceContent
@@ -1559,8 +1637,18 @@ public sealed class FlowEditorViewModel : ViewModelBase
             foreach (var targetNodeId in targetVectorOutputNodeIds)
             {
                 if (!nodesById.TryGetValue(targetNodeId, out var targetNode)
-                    || !targetNode.ShowOnDashboard
-                    || !string.Equals(targetNode.TypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal))
+                    || !targetNode.ShowOnDashboard)
+                {
+                    continue;
+                }
+
+                if (string.Equals(targetNode.TypeId, StreamChartVectorBlock.TypeId, StringComparison.Ordinal))
+                {
+                    UpdateStreamChartVectorWidget(targetNode, vector);
+                    continue;
+                }
+
+                if (!string.Equals(targetNode.TypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -1597,7 +1685,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
             var content = FormatImageFrameSummary(image);
             var imageDisplayData = BuildImageDisplayData(image);
 
-            if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardToggleNode)
+            if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardActionNode)
             {
                 SynchronizeDashboardWidgetForNode(sourceNode, content, ImageContentKind, imageDisplayData);
             }
@@ -1688,6 +1776,129 @@ public sealed class FlowEditorViewModel : ViewModelBase
         return GetRunStartedUnixNanoseconds(frame.StartTimeUnixNanoseconds);
     }
 
+    private void UpdateStreamChartVectorWidget(CanvasNodeViewModel node, NumericVectorFrame vector)
+    {
+        var settings = ReadStreamChartVectorSettings(node.SettingsJson);
+
+        if (!streamChartVectorHistoryByNodeId.TryGetValue(node.Id, out var history))
+        {
+            history = new StreamChartVectorHistory();
+            streamChartVectorHistoryByNodeId[node.Id] = history;
+        }
+
+        history.Append(ResolveStreamChartVectorMilliseconds(vector), vector.Values.Span, settings.TimeSpanMilliseconds);
+
+        if (!IsDashboardWidgetAutoScrollEnabled(node.Id))
+        {
+            return;
+        }
+
+        var image = history.Render(settings);
+        var summary = FormattableString.Invariant(
+            $"{vector.Name} rows={image.Height} span={settings.TimeSpanMilliseconds:0}ms range=[{image.MinimumValue:0.0###}, {image.MaximumValue:0.0###}]");
+
+        SynchronizeDashboardWidgetForNode(node, summary, ImageContentKind, BuildStreamChartVectorDisplayData(image, summary));
+    }
+
+    private void UpdateStreamChartStWidget(CanvasNodeViewModel node, string sourcePortId, FastStreamFrame frame)
+    {
+        var settings = ReadStreamChartStSettings(node.SettingsJson);
+        if (!StreamChartStBlock.TryGetChannelIndex(sourcePortId, out var channelIndex))
+        {
+            channelIndex = 1;
+        }
+
+        if (!streamChartStHistoryByNodeId.TryGetValue(node.Id, out var history))
+        {
+            history = new StreamChartStHistory();
+            streamChartStHistoryByNodeId[node.Id] = history;
+        }
+
+        history.Append(channelIndex, frame.StartTimeUnixNanoseconds, frame.SamplePeriodNanoseconds, frame.Samples[0].Span, settings);
+        var image = history.Render(settings);
+        var summary = FormattableString.Invariant($"StreamChartSt channels={StreamChartStBlock.MaxStreamInputs} span={settings.TimeSpanMilliseconds:0}ms");
+        SynchronizeDashboardWidgetForNode(node, summary, ImageContentKind, BuildStreamChartStDisplayData(image, summary));
+    }
+
+    private static StreamChartStSettings ReadStreamChartStSettings(string? settingsJson)
+    {
+        if (string.IsNullOrWhiteSpace(settingsJson))
+        {
+            return StreamChartStSettings.Default;
+        }
+
+        try
+        {
+            return StreamChartStSettings.FromJson(settingsJson);
+        }
+        catch (ArgumentException)
+        {
+            return StreamChartStSettings.Default;
+        }
+    }
+
+    private static JsonElement BuildStreamChartStDisplayData(StreamChartStImage image, string summary)
+    {
+        return JsonSerializer.SerializeToElement(new
+        {
+            image = new
+            {
+                width = image.Width,
+                height = image.Height,
+                pixelFormat = nameof(ImagePixelFormat.Rgb24),
+                pixelsBase64 = Convert.ToBase64String(image.PixelsRgb24.Span),
+            },
+            summary,
+        });
+    }
+
+    private static StreamChartVectorSettings ReadStreamChartVectorSettings(string? settingsJson)
+    {
+        try
+        {
+            return StreamChartVectorSettings.FromJson(settingsJson);
+        }
+        catch (ArgumentException)
+        {
+            return StreamChartVectorSettings.Default;
+        }
+    }
+
+    private double ResolveStreamChartVectorMilliseconds(NumericVectorFrame vector)
+    {
+        if (vector.Timestamp is not { } timestamp)
+        {
+            return Math.Max(0, runtimeExecutionStep) * (double)RunLoopDelayMilliseconds;
+        }
+
+        runStartedVectorTimestamp ??= timestamp;
+        return Math.Max(0, (timestamp - runStartedVectorTimestamp.Value).TotalMilliseconds);
+    }
+
+    private bool IsDashboardWidgetAutoScrollEnabled(string nodeId)
+    {
+        var widget = getDashboardDocuments()
+            .SelectMany(static dashboard => dashboard.Widgets)
+            .FirstOrDefault(candidate => IsDashboardWidgetForNode(candidate, nodeId));
+
+        return widget is null || ReadDashboardWidgetAutoScrollEnabled(widget.SettingsJson);
+    }
+
+    private static JsonElement BuildStreamChartVectorDisplayData(StreamChartVectorImage image, string summary)
+    {
+        return JsonSerializer.SerializeToElement(new
+        {
+            image = new
+            {
+                width = image.Width,
+                height = image.Height,
+                pixelFormat = nameof(ImagePixelFormat.Rgb24),
+                pixelsBase64 = Convert.ToBase64String(image.PixelsRgb24.Span),
+            },
+            summary,
+        });
+    }
+
     private long GetRunStartedUnixNanoseconds(long frameStartUnixNanoseconds)
     {
         runStartedUnixNanoseconds ??= frameStartUnixNanoseconds;
@@ -1759,9 +1970,10 @@ public sealed class FlowEditorViewModel : ViewModelBase
         JsonElement? displayDataOverride)
     {
         var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal);
+        var isCameraInputImageNode = string.Equals(node.TypeId, CameraInputImageNodeTypeId, StringComparison.Ordinal);
         var isToggleNode = node.IsDashboardToggleNode;
         var supportsAutoScroll = IsAutoScrollCapableOutputNode(node.TypeId);
-        var contentKind = isTriggerNode || isToggleNode
+        var contentKind = isTriggerNode || isCameraInputImageNode || isToggleNode
             ? TriggerButtonContentKind
             : string.Equals(node.TypeId, StreamOutputImageBlock.TypeId, StringComparison.Ordinal)
                 ? ImageContentKind
@@ -1771,6 +1983,10 @@ public sealed class FlowEditorViewModel : ViewModelBase
         if (isTriggerNode)
         {
             textContent = "Trigger";
+        }
+        else if (isCameraInputImageNode)
+        {
+            textContent = "Capture";
         }
         else if (isToggleNode)
         {
@@ -1968,6 +2184,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     {
         return string.Equals(nodeTypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(nodeTypeId, StreamChartVectorBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputImageBlock.TypeId, StringComparison.Ordinal);
     }
 
