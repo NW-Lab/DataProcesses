@@ -1,14 +1,27 @@
 using System.Collections.ObjectModel;
+using System.IO.Ports;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using Avalonia;
 using Avalonia.Media.Imaging;
 
+using CommunityToolkit.Mvvm.Input;
+
 using DataProcesses.Core;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
+using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Plugin.Abstractions;
+
+using Windows.Devices.Bluetooth;
+using Windows.Devices.Enumeration;
 
 namespace DataProcesses.Desktop.ViewModels;
 
@@ -22,6 +35,9 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     private const string MovieInputImageTypeId = "dataprocesses.input.movie-image";
     private const string UVCameraInputImageTypeId = "dataprocesses.input.uv-camera-image";
     private const string CsvInputTypeId = "dataprocesses.input.csv";
+    private const string SerialInputStTypeId = "dataprocesses.input.serial-st";
+    private const string SerialInputVectorTypeId = "dataprocesses.input.serial-vector";
+    private const string BleInputStTypeId = "dataprocesses.input.ble-st";
     private const string CsvOutputTypeId = "dataprocesses.output.csv";
 
     private double x;
@@ -67,6 +83,10 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         {
             RefreshCsvInputOutputPorts();
         }
+
+        BleInputStResetNordicUuidsCommand = new RelayCommand(ResetBleInputStNordicUuids);
+        BleInputStRefreshDevicesCommand = new AsyncRelayCommand(RefreshBleInputStDevicesAsync);
+        AddBleInputStDeviceChoice(BleInputStDeviceId, BleInputStDeviceName);
     }
 
     public string Id { get; }
@@ -114,11 +134,23 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public bool IsCsvInputNode => string.Equals(TypeId, CsvInputTypeId, StringComparison.Ordinal);
 
+    public bool IsSerialInputStNode => string.Equals(TypeId, SerialInputStTypeId, StringComparison.Ordinal);
+
+    public bool IsSerialInputVectorNode => string.Equals(TypeId, SerialInputVectorTypeId, StringComparison.Ordinal);
+
+    public bool IsBleInputStNode => string.Equals(TypeId, BleInputStTypeId, StringComparison.Ordinal);
+
     public bool IsCsvOutputNode => string.Equals(TypeId, CsvOutputTypeId, StringComparison.Ordinal);
 
     public bool IsStreamChartVectorNode => string.Equals(TypeId, StreamChartVectorBlock.TypeId, StringComparison.Ordinal);
 
     public bool IsStreamChartStNode => string.Equals(TypeId, StreamChartStBlock.TypeId, StringComparison.Ordinal);
+
+    public bool IsBreathStNode => string.Equals(TypeId, BreathStBlock.TypeId, StringComparison.Ordinal);
+
+    public bool IsFilterStNode => string.Equals(TypeId, FilterStBlock.TypeId, StringComparison.Ordinal);
+
+    public bool IsMovingAverageNode => string.Equals(TypeId, MovingAverageBlock.TypeId, StringComparison.Ordinal);
 
     public IReadOnlyList<string> TestSignalWaveTypes => IsTestSignalVec
         ? ["oneShot", "sine"]
@@ -136,13 +168,141 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     public IReadOnlyList<string> CsvInputFilePlaybackModes { get; } = ["immediate", "millis"];
 
+    public IReadOnlyList<string> SerialInputStComPorts => GetSerialInputStComPorts();
+
+    public ObservableCollection<BleInputStDeviceChoice> BleInputStDeviceChoices { get; } = [];
+
     public IReadOnlyList<string> CsvOutputWriteModes { get; } = ["append", "new"];
+
+    public IReadOnlyList<string> BreathStDetectionMethods { get; } = ["breathBelt", "ledOxygen"];
+
+    public IReadOnlyList<string> FilterStTypes { get; } = ["lowPass", "highPass", "bandPass", "bandStop"];
+
+    public IReadOnlyList<int> FilterStOrders { get; } = Enumerable.Range(FilterStSettings.MinimumOrder, FilterStSettings.MaximumOrder - FilterStSettings.MinimumOrder + 1).ToArray();
+
+    public IReadOnlyList<string> MovingAverageWindowModes { get; } = ["samples", "duration"];
+
+    public IRelayCommand BleInputStResetNordicUuidsCommand { get; }
+
+    public IAsyncRelayCommand BleInputStRefreshDevicesCommand { get; }
 
     public string TestSignalWaveType
     {
         get => NormalizeTestSignalWaveType(ReadSettingsString("waveType", GetDefaultWaveType()));
         set => UpdateSettingsString("waveType", NormalizeTestSignalWaveType(value));
     }
+
+    public string BreathStDetectionMethod
+    {
+        get => NormalizeBreathStDetectionMethod(ReadSettingsString("method", "breathBelt"));
+        set => UpdateSettingsString("method", NormalizeBreathStDetectionMethod(value));
+    }
+
+    public bool BreathStEmitAnomalyEvents
+    {
+        get => ReadSettingsBoolean("emitAnomalyEvents", true);
+        set => UpdateSettingsBoolean("emitAnomalyEvents", value);
+    }
+
+    public string FilterStType
+    {
+        get => NormalizeFilterStType(ReadSettingsString("filterType", "lowPass"));
+        set
+        {
+            UpdateSettingsString("filterType", NormalizeFilterStType(value));
+            NotifyFilterStSettingsChanged();
+        }
+    }
+
+    public bool FilterStIsSingleCutoffVisible => FilterStType is "lowPass" or "highPass";
+
+    public bool FilterStIsBandCutoffVisible => !FilterStIsSingleCutoffVisible;
+
+    public double FilterStCutoffFrequencyHertz
+    {
+        get => ReadSettingsDouble("cutoffFrequencyHertz", FilterStSettings.Default.CutoffFrequencyHertz);
+        set
+        {
+            UpdateSettingsDouble("cutoffFrequencyHertz", value, minimumExclusive: 0);
+            NotifyFilterStSettingsChanged();
+        }
+    }
+
+    public double FilterStLowerCutoffFrequencyHertz
+    {
+        get => ReadSettingsDouble("lowerCutoffFrequencyHertz", FilterStSettings.Default.LowerCutoffFrequencyHertz);
+        set
+        {
+            if (!double.IsFinite(value) || value <= 0.0 || value >= FilterStUpperCutoffFrequencyHertz)
+            {
+                return;
+            }
+
+            UpdateSettingsDouble("lowerCutoffFrequencyHertz", value, minimumExclusive: 0);
+            NotifyFilterStSettingsChanged();
+        }
+    }
+
+    public double FilterStUpperCutoffFrequencyHertz
+    {
+        get => ReadSettingsDouble("upperCutoffFrequencyHertz", FilterStSettings.Default.UpperCutoffFrequencyHertz);
+        set
+        {
+            if (!double.IsFinite(value) || value <= FilterStLowerCutoffFrequencyHertz)
+            {
+                return;
+            }
+
+            UpdateSettingsDouble("upperCutoffFrequencyHertz", value, minimumExclusive: 0);
+            NotifyFilterStSettingsChanged();
+        }
+    }
+
+    public int FilterStOrder
+    {
+        get => Math.Clamp(
+            (int)Math.Round(ReadSettingsDouble("order", FilterStSettings.Default.Order), MidpointRounding.AwayFromZero),
+            FilterStSettings.MinimumOrder,
+            FilterStSettings.MaximumOrder);
+        set
+        {
+            UpdateSettingsInt("order", value, FilterStSettings.MinimumOrder, FilterStSettings.MaximumOrder);
+            NotifyFilterStSettingsChanged();
+        }
+    }
+
+    public IReadOnlyList<Point> FilterStResponsePoints => CreateFilterStResponsePoints();
+
+    public string FilterStResponseCaption => FilterStIsSingleCutoffVisible
+        ? $"0-{Math.Max(10.0, FilterStCutoffFrequencyHertz * 2.5):0.#} Hz"
+        : $"0-{Math.Max(10.0, FilterStUpperCutoffFrequencyHertz * 2.5):0.#} Hz";
+
+    public string MovingAverageWindowMode
+    {
+        get => NormalizeMovingAverageWindowMode(ReadSettingsString("windowMode", "samples"));
+        set
+        {
+            UpdateSettingsString("windowMode", NormalizeMovingAverageWindowMode(value));
+            OnPropertyChanged(nameof(IsMovingAverageSampleWindowVisible));
+            OnPropertyChanged(nameof(IsMovingAverageDurationWindowVisible));
+        }
+    }
+
+    public double MovingAverageWindowSize
+    {
+        get => ReadSettingsDouble("windowSize", MovingAverageSettings.Default.WindowSize);
+        set => UpdateSettingsInt("windowSize", (int)Math.Round(value, MidpointRounding.AwayFromZero), 1, int.MaxValue);
+    }
+
+    public double MovingAverageWindowDurationMilliseconds
+    {
+        get => ReadSettingsDouble("windowDurationMilliseconds", MovingAverageSettings.Default.WindowDurationMilliseconds);
+        set => UpdateSettingsDouble("windowDurationMilliseconds", value, minimumExclusive: 0);
+    }
+
+    public bool IsMovingAverageSampleWindowVisible => string.Equals(MovingAverageWindowMode, "samples", StringComparison.Ordinal);
+
+    public bool IsMovingAverageDurationWindowVisible => string.Equals(MovingAverageWindowMode, "duration", StringComparison.Ordinal);
 
     public double TestSignalFrequencyHertz
     {
@@ -325,6 +485,132 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     public bool CsvInputIsComSourceVisible => string.Equals(CsvInputSourceType, "com", StringComparison.Ordinal);
 
     public bool CsvInputIsFilePlaybackVisible => CsvInputIsFileSourceVisible;
+
+    public string SerialInputStComPortName
+    {
+        get => ReadSettingsString("comPortName", SerialInputStSettings.Default.ComPortName);
+        set => UpdateSettingsString(
+            "comPortName",
+            string.IsNullOrWhiteSpace(value) ? SerialInputStSettings.Default.ComPortName : value.Trim());
+    }
+
+    public double SerialInputStBaudRate
+    {
+        get => ReadSettingsDouble("baudRate", SerialInputStSettings.Default.BaudRate);
+        set => UpdateSettingsInt("baudRate", (int)Math.Round(value, MidpointRounding.AwayFromZero), 1, int.MaxValue);
+    }
+
+    public double SerialInputStChannelCount
+    {
+        get => ReadSettingsDouble("channelCount", SerialInputStSettings.Default.ChannelCount);
+        set => UpdateSettingsInt(
+            "channelCount",
+            (int)Math.Round(value, MidpointRounding.AwayFromZero),
+            SerialInputStSettings.MinimumChannelCount,
+            SerialInputStSettings.MaximumChannelCount);
+    }
+
+    public string SerialInputVectorComPortName
+    {
+        get => ReadSettingsString("comPortName", SerialInputVectorSettings.Default.ComPortName);
+        set => UpdateSettingsString(
+            "comPortName",
+            string.IsNullOrWhiteSpace(value) ? SerialInputVectorSettings.Default.ComPortName : value.Trim());
+    }
+
+    public double SerialInputVectorBaudRate
+    {
+        get => ReadSettingsDouble("baudRate", SerialInputVectorSettings.Default.BaudRate);
+        set => UpdateSettingsInt("baudRate", (int)Math.Round(value, MidpointRounding.AwayFromZero), 1, int.MaxValue);
+    }
+
+    public string BleInputStDeviceId
+    {
+        get => ReadSettingsString("deviceId", BleInputStSettings.Default.DeviceId);
+        set
+        {
+            UpdateSettingsString("deviceId", value?.Trim() ?? string.Empty);
+            AddBleInputStDeviceChoice(BleInputStDeviceId, BleInputStDeviceName);
+            OnPropertyChanged(nameof(BleInputStSelectedDevice));
+        }
+    }
+
+    public string BleInputStDeviceName
+    {
+        get => ReadSettingsString("deviceName", BleInputStSettings.Default.DeviceName);
+        set
+        {
+            UpdateSettingsString("deviceName", value?.Trim() ?? string.Empty);
+            AddBleInputStDeviceChoice(BleInputStDeviceId, BleInputStDeviceName);
+            OnPropertyChanged(nameof(BleInputStSelectedDevice));
+        }
+    }
+
+    public BleInputStDeviceChoice? BleInputStSelectedDevice
+    {
+        get
+        {
+            var deviceId = BleInputStDeviceId;
+            return string.IsNullOrWhiteSpace(deviceId)
+                ? null
+                : BleInputStDeviceChoices.FirstOrDefault(choice => string.Equals(choice.DeviceId, deviceId, StringComparison.Ordinal));
+        }
+
+        set
+        {
+            if (value is null)
+            {
+                return;
+            }
+
+            UpdateSettingsString("deviceId", value.DeviceId);
+            UpdateSettingsString("deviceName", value.Name);
+            AddBleInputStDeviceChoice(value.DeviceId, value.Name);
+            OnPropertyChanged();
+        }
+    }
+
+    public bool BleInputStAutoConnect
+    {
+        get => ReadSettingsBoolean("autoConnect", BleInputStSettings.Default.AutoConnect);
+        set => UpdateSettingsBoolean("autoConnect", value);
+    }
+
+    public string BleInputStServiceUuid
+    {
+        get => ReadSettingsString("serviceUuid", BleInputStSettings.Default.ServiceUuid);
+        set => UpdateSettingsString(
+            "serviceUuid",
+            string.IsNullOrWhiteSpace(value) ? BleInputStSettings.Default.ServiceUuid : value.Trim());
+    }
+
+    public string BleInputStNotifyCharacteristicUuid
+    {
+        get => ReadSettingsString("notifyCharacteristicUuid", BleInputStSettings.Default.NotifyCharacteristicUuid);
+        set => UpdateSettingsString(
+            "notifyCharacteristicUuid",
+            string.IsNullOrWhiteSpace(value) ? BleInputStSettings.Default.NotifyCharacteristicUuid : value.Trim());
+    }
+
+    public double BleInputStChannelCount
+    {
+        get => ReadSettingsDouble("channelCount", BleInputStSettings.Default.ChannelCount);
+        set => UpdateSettingsInt(
+            "channelCount",
+            (int)Math.Round(value, MidpointRounding.AwayFromZero),
+            BleInputStSettings.MinimumChannelCount,
+            BleInputStSettings.MaximumChannelCount);
+    }
+
+    public double BleInputStTimeoutMilliseconds
+    {
+        get => ReadSettingsDouble("timeoutMilliseconds", BleInputStSettings.Default.TimeoutMilliseconds);
+        set => UpdateSettingsInt(
+            "timeoutMilliseconds",
+            (int)Math.Round(value, MidpointRounding.AwayFromZero),
+            BleInputStSettings.MinimumTimeoutMilliseconds,
+            BleInputStSettings.MaximumTimeoutMilliseconds);
+    }
 
     public string CsvOutputFilePath
     {
@@ -583,6 +869,22 @@ public sealed class CanvasNodeViewModel : ViewModelBase
                 }
 
                 OnPropertyChanged(nameof(TestSignalWaveType));
+                OnPropertyChanged(nameof(BreathStDetectionMethod));
+                OnPropertyChanged(nameof(BreathStEmitAnomalyEvents));
+                OnPropertyChanged(nameof(MovingAverageWindowMode));
+                OnPropertyChanged(nameof(MovingAverageWindowSize));
+                OnPropertyChanged(nameof(MovingAverageWindowDurationMilliseconds));
+                OnPropertyChanged(nameof(IsMovingAverageSampleWindowVisible));
+                OnPropertyChanged(nameof(IsMovingAverageDurationWindowVisible));
+                OnPropertyChanged(nameof(FilterStType));
+                OnPropertyChanged(nameof(FilterStIsSingleCutoffVisible));
+                OnPropertyChanged(nameof(FilterStIsBandCutoffVisible));
+                OnPropertyChanged(nameof(FilterStCutoffFrequencyHertz));
+                OnPropertyChanged(nameof(FilterStLowerCutoffFrequencyHertz));
+                OnPropertyChanged(nameof(FilterStUpperCutoffFrequencyHertz));
+                OnPropertyChanged(nameof(FilterStOrder));
+                OnPropertyChanged(nameof(FilterStResponsePoints));
+                OnPropertyChanged(nameof(FilterStResponseCaption));
                 OnPropertyChanged(nameof(TestSignalFrequencyHertz));
                 OnPropertyChanged(nameof(TestSignalSamplePeriodMilliseconds));
                 OnPropertyChanged(nameof(TestSignalVectorLength));
@@ -617,6 +919,21 @@ public sealed class CanvasNodeViewModel : ViewModelBase
                 OnPropertyChanged(nameof(CsvInputIsFileSourceVisible));
                 OnPropertyChanged(nameof(CsvInputIsComSourceVisible));
                 OnPropertyChanged(nameof(CsvInputIsFilePlaybackVisible));
+                OnPropertyChanged(nameof(SerialInputStComPortName));
+                OnPropertyChanged(nameof(SerialInputStComPorts));
+                OnPropertyChanged(nameof(SerialInputStBaudRate));
+                OnPropertyChanged(nameof(SerialInputStChannelCount));
+                OnPropertyChanged(nameof(SerialInputVectorComPortName));
+                OnPropertyChanged(nameof(SerialInputVectorBaudRate));
+                OnPropertyChanged(nameof(BleInputStDeviceId));
+                OnPropertyChanged(nameof(BleInputStDeviceName));
+                OnPropertyChanged(nameof(BleInputStDeviceChoices));
+                OnPropertyChanged(nameof(BleInputStSelectedDevice));
+                OnPropertyChanged(nameof(BleInputStAutoConnect));
+                OnPropertyChanged(nameof(BleInputStServiceUuid));
+                OnPropertyChanged(nameof(BleInputStNotifyCharacteristicUuid));
+                OnPropertyChanged(nameof(BleInputStChannelCount));
+                OnPropertyChanged(nameof(BleInputStTimeoutMilliseconds));
                 OnPropertyChanged(nameof(CsvOutputFilePath));
                 OnPropertyChanged(nameof(MovieInputImagePath));
                 OnPropertyChanged(nameof(CameraInputImageDeviceIndex));
@@ -862,6 +1179,165 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         }
     }
 
+    private IReadOnlyList<string> GetSerialInputStComPorts()
+    {
+        try
+        {
+            var detectedPorts = SerialPort.GetPortNames()
+                .Append(SerialInputStComPortName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(static port => port, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            return detectedPorts;
+        }
+        catch (IOException)
+        {
+            return [SerialInputStComPortName];
+        }
+    }
+
+    private void ResetBleInputStNordicUuids()
+    {
+        if (!IsBleInputStNode)
+        {
+            return;
+        }
+
+        var settings = ReadSettingsObject();
+        settings["serviceUuid"] = BleInputStSettings.NordicUartServiceUuid;
+        settings["notifyCharacteristicUuid"] = BleInputStSettings.NordicUartTxCharacteristicUuid;
+        SettingsJson = settings.ToJsonString();
+    }
+
+    private async Task RefreshBleInputStDevicesAsync()
+    {
+        if (!IsBleInputStNode)
+        {
+            return;
+        }
+
+        var currentDeviceId = BleInputStDeviceId;
+        var currentDeviceName = BleInputStDeviceName;
+        BleInputStDeviceChoices.Clear();
+        AddBleInputStDeviceChoice(currentDeviceId, currentDeviceName);
+
+        var devices = await DeviceInformation.FindAllAsync(BluetoothLEDevice.GetDeviceSelector())
+            .AsTask()
+            .ConfigureAwait(true);
+        foreach (var device in devices
+                     .OrderBy(static device => device.Name, StringComparer.OrdinalIgnoreCase)
+                     .ThenBy(static device => device.Id, StringComparer.OrdinalIgnoreCase))
+        {
+            AddBleInputStDeviceChoice(device.Id, device.Name);
+        }
+
+        OnPropertyChanged(nameof(BleInputStSelectedDevice));
+    }
+
+    private void AddBleInputStDeviceChoice(string deviceId, string deviceName)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId))
+        {
+            return;
+        }
+
+        var trimmedDeviceId = deviceId.Trim();
+        var trimmedDeviceName = deviceName.Trim();
+        for (var index = 0; index < BleInputStDeviceChoices.Count; index++)
+        {
+            if (!string.Equals(BleInputStDeviceChoices[index].DeviceId, trimmedDeviceId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!string.Equals(BleInputStDeviceChoices[index].Name, trimmedDeviceName, StringComparison.Ordinal))
+            {
+                BleInputStDeviceChoices[index] = BleInputStDeviceChoices[index] with { Name = trimmedDeviceName };
+            }
+
+            return;
+        }
+
+        BleInputStDeviceChoices.Add(new BleInputStDeviceChoice(trimmedDeviceId, trimmedDeviceName));
+    }
+
+    public sealed record BleInputStDeviceChoice(string DeviceId, string Name)
+    {
+        public string DisplayName => string.IsNullOrWhiteSpace(Name) ? DeviceId : $"{Name} ({DeviceId})";
+    }
+
+    private void NotifyFilterStSettingsChanged()
+    {
+        OnPropertyChanged(nameof(FilterStType));
+        OnPropertyChanged(nameof(FilterStIsSingleCutoffVisible));
+        OnPropertyChanged(nameof(FilterStIsBandCutoffVisible));
+        OnPropertyChanged(nameof(FilterStCutoffFrequencyHertz));
+        OnPropertyChanged(nameof(FilterStLowerCutoffFrequencyHertz));
+        OnPropertyChanged(nameof(FilterStUpperCutoffFrequencyHertz));
+        OnPropertyChanged(nameof(FilterStOrder));
+        OnPropertyChanged(nameof(FilterStResponsePoints));
+        OnPropertyChanged(nameof(FilterStResponseCaption));
+    }
+
+    private IReadOnlyList<Point> CreateFilterStResponsePoints()
+    {
+        const double width = 248.0;
+        const double height = 72.0;
+        const int pointCount = 48;
+
+        var points = new Point[pointCount];
+        var maxFrequency = FilterStIsSingleCutoffVisible
+            ? Math.Max(10.0, FilterStCutoffFrequencyHertz * 2.5)
+            : Math.Max(10.0, FilterStUpperCutoffFrequencyHertz * 2.5);
+
+        for (var index = 0; index < points.Length; index++)
+        {
+            var ratio = index / (double)(points.Length - 1);
+            var frequency = maxFrequency * ratio;
+            var magnitude = GetFilterStPreviewMagnitude(frequency);
+            points[index] = new Point(width * ratio, height - Math.Clamp(magnitude, 0.0, 1.0) * height);
+        }
+
+        return points;
+    }
+
+    private double GetFilterStPreviewMagnitude(double frequencyHertz)
+    {
+        var order = FilterStOrder;
+        return FilterStType switch
+        {
+            "highPass" => GetHighPassPreviewMagnitude(frequencyHertz, FilterStCutoffFrequencyHertz, order),
+            "bandPass" => GetHighPassPreviewMagnitude(frequencyHertz, FilterStLowerCutoffFrequencyHertz, order)
+                * GetLowPassPreviewMagnitude(frequencyHertz, FilterStUpperCutoffFrequencyHertz, order),
+            "bandStop" => Math.Min(1.0,
+                GetLowPassPreviewMagnitude(frequencyHertz, FilterStLowerCutoffFrequencyHertz, order)
+                + GetHighPassPreviewMagnitude(frequencyHertz, FilterStUpperCutoffFrequencyHertz, order)),
+            _ => GetLowPassPreviewMagnitude(frequencyHertz, FilterStCutoffFrequencyHertz, order),
+        };
+    }
+
+    private static double GetLowPassPreviewMagnitude(double frequencyHertz, double cutoffFrequencyHertz, int order)
+    {
+        if (frequencyHertz <= 0.0)
+        {
+            return 1.0;
+        }
+
+        return Math.Pow(1.0 / Math.Sqrt(1.0 + Math.Pow(frequencyHertz / cutoffFrequencyHertz, 2.0)), order);
+    }
+
+    private static double GetHighPassPreviewMagnitude(double frequencyHertz, double cutoffFrequencyHertz, int order)
+    {
+        if (frequencyHertz <= 0.0)
+        {
+            return 0.0;
+        }
+
+        var ratio = frequencyHertz / cutoffFrequencyHertz;
+        return Math.Pow(ratio / Math.Sqrt(1.0 + ratio * ratio), order);
+    }
+
     private string GetDefaultWaveType()
     {
         return IsTestSignalVec ? "oneShot" : "sine";
@@ -886,6 +1362,35 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         }
 
         return string.Equals(value, "square", StringComparison.OrdinalIgnoreCase) ? "square" : "sine";
+    }
+
+    private static string NormalizeBreathStDetectionMethod(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "led" or "ledoxygen" or "led_oxygen" or "oxygen" or "spo2" or "bloodoxygen" or "blood_oxygen" => "ledOxygen",
+            _ => "breathBelt",
+        };
+    }
+
+    private static string NormalizeMovingAverageWindowMode(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "duration" or "time" => "duration",
+            _ => "samples",
+        };
+    }
+
+    private static string NormalizeFilterStType(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "highpass" or "high-pass" or "high_pass" => "highPass",
+            "bandpass" or "band-pass" or "band_pass" => "bandPass",
+            "bandstop" or "band-stop" or "band_stop" or "notch" => "bandStop",
+            _ => "lowPass",
+        };
     }
 
     private static string NormalizeTriggerPayloadValueType(string? value)

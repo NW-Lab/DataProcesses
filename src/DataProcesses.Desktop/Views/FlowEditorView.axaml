@@ -408,6 +408,22 @@
                                  PlaceholderText="1,2,3"
                                  IsVisible="{Binding SelectedNode.IsTriggerNumberArrayEditorVisible}" />
                     </StackPanel>
+                    <TextBlock Grid.Row="10" Text="Moving Average settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsMovingAverageNode}" />
+                    <StackPanel Grid.Row="11" Spacing="5" IsVisible="{Binding SelectedNode.IsMovingAverageNode}">
+                        <TextBlock Text="Window mode" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.MovingAverageWindowModes}"
+                                  SelectedItem="{Binding SelectedNode.MovingAverageWindowMode}" />
+                        <TextBlock Text="Sample count" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsMovingAverageSampleWindowVisible}" />
+                        <NumericUpDown Minimum="1"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.MovingAverageWindowSize}"
+                                       IsVisible="{Binding SelectedNode.IsMovingAverageSampleWindowVisible}" />
+                        <TextBlock Text="Window duration (ms)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsMovingAverageDurationWindowVisible}" />
+                        <NumericUpDown Minimum="0.001"
+                                       Increment="10"
+                                       Value="{Binding SelectedNode.MovingAverageWindowDurationMilliseconds}"
+                                       IsVisible="{Binding SelectedNode.IsMovingAverageDurationWindowVisible}" />
+                    </StackPanel>
                     <TextBlock Grid.Row="10" Text="TestSignal image settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalImg}" />
                     <StackPanel Grid.Row="11" Spacing="5" IsVisible="{Binding SelectedNode.IsTestSignalImg}">
                         <TextBlock Text="Type" FontWeight="SemiBold" />
@@ -515,6 +531,72 @@
                                            Value="{Binding SelectedNode.CsvInputBaudRate}" />
                         </StackPanel>
                     </StackPanel>
+                    <TextBlock Grid.Row="12" Text="Serial Input ST settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsSerialInputStNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsSerialInputStNode}">
+                        <TextBlock Text="COM port" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.SerialInputStComPorts}"
+                                  SelectedItem="{Binding SelectedNode.SerialInputStComPortName}" />
+                        <TextBlock Text="Baud rate" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Increment="9600"
+                                       Value="{Binding SelectedNode.SerialInputStBaudRate}" />
+                        <TextBlock Text="Channel count" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="16"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.SerialInputStChannelCount}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="12" Text="Serial Input Vector settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsSerialInputVectorNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsSerialInputVectorNode}">
+                        <TextBlock Text="COM port" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.SerialInputStComPorts}"
+                                  SelectedItem="{Binding SelectedNode.SerialInputVectorComPortName}" />
+                        <TextBlock Text="Baud rate" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Increment="9600"
+                                       Value="{Binding SelectedNode.SerialInputVectorBaudRate}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="12" Text="BLE Input ST settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsBleInputStNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsBleInputStNode}">
+                        <TextBlock Text="BLE device" FontWeight="SemiBold" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <ComboBox Grid.Column="0"
+                                      ItemsSource="{Binding SelectedNode.BleInputStDeviceChoices}"
+                                      SelectedItem="{Binding SelectedNode.BleInputStSelectedDevice}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="1"
+                                    Content="Scan"
+                                    Command="{Binding SelectedNode.BleInputStRefreshDevicesCommand}" />
+                        </Grid>
+                        <TextBlock Text="Device id" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.BleInputStDeviceId}"
+                                 PlaceholderText="Persisted BLE device id" />
+                        <TextBlock Text="Device name" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.BleInputStDeviceName}"
+                                 PlaceholderText="Arduino BLE" />
+                        <CheckBox Content="Auto connect next run" IsChecked="{Binding SelectedNode.BleInputStAutoConnect}" />
+                        <TextBlock Text="Service UUID" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.BleInputStServiceUuid}" />
+                        <TextBlock Text="Notify characteristic UUID" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.BleInputStNotifyCharacteristicUuid}" />
+                        <Button Content="Reset Nordic UUIDs"
+                                Command="{Binding SelectedNode.BleInputStResetNordicUuidsCommand}" />
+                        <TextBlock Text="Channel count" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="16"
+                                       Increment="1"
+                                       Value="{Binding SelectedNode.BleInputStChannelCount}" />
+                        <TextBlock Text="Timeout (ms)" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="600000"
+                                       Increment="500"
+                                       Value="{Binding SelectedNode.BleInputStTimeoutMilliseconds}" />
+                    </StackPanel>
                     <TextBlock Grid.Row="12" Text="CSV Output settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsCsvOutputNode}" />
                     <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsCsvOutputNode}">
                         <TextBlock Text="CSV file path" FontWeight="SemiBold" />
@@ -554,6 +636,61 @@
                                        Maximum="600000"
                                        Increment="500"
                                        Value="{Binding SelectedNode.StreamChartVectorTimeSpanMilliseconds}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="12" Text="BreathSt settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsBreathStNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsBreathStNode}">
+                        <TextBlock Text="Detection method" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.BreathStDetectionMethods}"
+                                  SelectedItem="{Binding SelectedNode.BreathStDetectionMethod}" />
+                        <CheckBox Content="Emit anomaly events"
+                                  IsChecked="{Binding SelectedNode.BreathStEmitAnomalyEvents}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="12" Text="FilterSt settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsFilterStNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsFilterStNode}">
+                        <TextBlock Text="Filter type" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.FilterStTypes}"
+                                  SelectedItem="{Binding SelectedNode.FilterStType}" />
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.FilterStIsSingleCutoffVisible}">
+                            <TextBlock Text="Cutoff frequency (Hz)" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="0.001"
+                                           Increment="0.5"
+                                           Value="{Binding SelectedNode.FilterStCutoffFrequencyHertz}" />
+                        </StackPanel>
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.FilterStIsBandCutoffVisible}">
+                            <TextBlock Text="Lower cutoff (Hz)" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="0.001"
+                                           Increment="0.5"
+                                           Value="{Binding SelectedNode.FilterStLowerCutoffFrequencyHertz}" />
+                            <TextBlock Text="Upper cutoff (Hz)" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="0.001"
+                                           Increment="0.5"
+                                           Value="{Binding SelectedNode.FilterStUpperCutoffFrequencyHertz}" />
+                        </StackPanel>
+                        <TextBlock Text="Order" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.FilterStOrders}"
+                                  SelectedItem="{Binding SelectedNode.FilterStOrder}" />
+                        <Border Height="92"
+                                Padding="8"
+                                Background="#F8FAFC"
+                                BorderBrush="#CBD5E1"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <Grid RowDefinitions="*,Auto">
+                                <Canvas Width="248" Height="72" HorizontalAlignment="Stretch">
+                                    <Line StartPoint="0,72" EndPoint="248,72" Stroke="#CBD5E1" StrokeThickness="1" />
+                                    <Line StartPoint="0,36" EndPoint="248,36" Stroke="#E2E8F0" StrokeThickness="1" />
+                                    <Line StartPoint="0,0" EndPoint="0,72" Stroke="#CBD5E1" StrokeThickness="1" />
+                                    <Polyline Points="{Binding SelectedNode.FilterStResponsePoints}"
+                                              Stroke="#1D70B8"
+                                              StrokeThickness="2" />
+                                </Canvas>
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding SelectedNode.FilterStResponseCaption}"
+                                           Foreground="#526071"
+                                           FontSize="10"
+                                           HorizontalAlignment="Right" />
+                            </Grid>
+                        </Border>
                     </StackPanel>
                     <TextBox Grid.Row="14"
                              AcceptsReturn="True"

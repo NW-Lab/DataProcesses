@@ -5,7 +5,14 @@ using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Desktop.ViewModels;
 using DataProcesses.Engine;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
+using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputVector;
+using DataProcesses.Nodes.BuiltIn.Blocks.FftSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
@@ -21,6 +28,74 @@ namespace DataProcesses.Desktop.Tests;
 
 public sealed class FlowEditorViewModelTests
 {
+    [Fact]
+    public void PlacePaletteNode_FilterStUsesInspectableDefaultSettings()
+    {
+        var factory = new FilterStNodeFactory();
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var node = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes), 0, 0);
+
+        Assert.True(node.IsFilterStNode);
+        Assert.Equal("lowPass", node.FilterStType);
+        Assert.True(node.FilterStIsSingleCutoffVisible);
+        Assert.False(node.FilterStIsBandCutoffVisible);
+        Assert.Equal(5.0, node.FilterStCutoffFrequencyHertz);
+        Assert.Equal(1.0, node.FilterStLowerCutoffFrequencyHertz);
+        Assert.Equal(10.0, node.FilterStUpperCutoffFrequencyHertz);
+        Assert.Equal(2, node.FilterStOrder);
+        Assert.Equal(48, node.FilterStResponsePoints.Count);
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_UpdatesFilterStSettingsJsonFromTypedInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", FilterStBlock.TypeId, 0, 0, "{}"),
+            FilterStBlock.Definition);
+
+        node.FilterStType = "bandPass";
+        node.FilterStLowerCutoffFrequencyHertz = 0.8;
+        node.FilterStUpperCutoffFrequencyHertz = 4.0;
+        node.FilterStOrder = 6;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("bandPass", document.RootElement.GetProperty("filterType").GetString());
+        Assert.Equal(0.8, document.RootElement.GetProperty("lowerCutoffFrequencyHertz").GetDouble());
+        Assert.Equal(4.0, document.RootElement.GetProperty("upperCutoffFrequencyHertz").GetDouble());
+        Assert.Equal(6, document.RootElement.GetProperty("order").GetInt32());
+        Assert.True(node.FilterStIsBandCutoffVisible);
+        Assert.Equal(["lowPass", "highPass", "bandPass", "bandStop"], node.FilterStTypes);
+        Assert.Equal([2, 3, 4, 5, 6, 7, 8, 9, 10], node.FilterStOrders);
+    }
+
+    [Fact]
+    public void PlacePaletteNode_MovingAverageUsesInspectableDefaultSettings()
+    {
+        var factory = new MovingAverageNodeFactory();
+        var viewModel = new FlowEditorViewModel(
+            [factory],
+            new FlowRunner([factory]),
+            new ProjectFileService());
+
+        var node = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes), 0, 0);
+
+        Assert.True(node.IsMovingAverageNode);
+        Assert.Equal("samples", node.MovingAverageWindowMode);
+        Assert.Equal(10, node.MovingAverageWindowSize);
+        Assert.Equal(100, node.MovingAverageWindowDurationMilliseconds);
+
+        node.MovingAverageWindowMode = "duration";
+        node.MovingAverageWindowDurationMilliseconds = 250;
+
+        Assert.True(node.IsMovingAverageDurationWindowVisible);
+        Assert.Contains("\"windowMode\":\"duration\"", node.SettingsJson, StringComparison.Ordinal);
+        Assert.Contains("\"windowDurationMilliseconds\":250", node.SettingsJson, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void RemoveFlow_KeepsAtLeastOneFlow()
     {
@@ -632,6 +707,21 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void PlacePaletteNode_BreathStInitializesInspectableDefaults()
+    {
+        var mainViewModel = new MainViewModel();
+        var breathSt = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == BreathStBlock.TypeId);
+
+        var node = mainViewModel.FlowEditor.PlacePaletteNode(breathSt, 260, 220);
+
+        using var settings = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("breathBelt", settings.RootElement.GetProperty("method").GetString());
+        Assert.True(settings.RootElement.GetProperty("emitAnomalyEvents").GetBoolean());
+        Assert.Equal(0.55, settings.RootElement.GetProperty("peakThresholdFraction").GetDouble());
+        Assert.Equal(0.75, settings.RootElement.GetProperty("coughSpikeThresholdFraction").GetDouble());
+    }
+
+    [Fact]
     public void PlacePaletteNode_StreamOutputTSNodeIsShownOnDashboardByDefault()
     {
         var mainViewModel = new MainViewModel();
@@ -772,6 +862,22 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void CanvasNodeViewModel_UpdatesBreathStSettingsJsonFromTypedInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", BreathStBlock.TypeId, 0, 0, "{}"),
+            BreathStBlock.Definition);
+
+        node.BreathStDetectionMethod = "ledOxygen";
+        node.BreathStEmitAnomalyEvents = false;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("ledOxygen", document.RootElement.GetProperty("method").GetString());
+        Assert.False(document.RootElement.GetProperty("emitAnomalyEvents").GetBoolean());
+        Assert.Equal(["breathBelt", "ledOxygen"], node.BreathStDetectionMethods);
+    }
+
+    [Fact]
     public void CanvasNodeViewModel_TestSignalVec_DefaultWaveTypeAndOptions()
     {
         var node = new CanvasNodeViewModel(
@@ -885,6 +991,102 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal(CsvInputBlock.GetStreamPortId(1), visibleOutput.Id);
         var remainingConnection = Assert.Single(viewModel.Connections);
         Assert.Equal(CsvInputBlock.GetStreamPortId(1), remainingConnection.Connection.SourcePortId);
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_UpdatesSerialInputStSettingsFromInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", SerialInputStBlock.TypeId, 0, 0, "{}"),
+            SerialInputStBlock.Definition);
+
+        node.SerialInputStComPortName = "COM77";
+        node.SerialInputStBaudRate = 230400;
+        node.SerialInputStChannelCount = 3;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("COM77", document.RootElement.GetProperty("comPortName").GetString());
+        Assert.Equal(230400, document.RootElement.GetProperty("baudRate").GetInt32());
+        Assert.Equal(3, document.RootElement.GetProperty("channelCount").GetInt32());
+        Assert.Contains("COM77", node.SerialInputStComPorts, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_UpdatesSerialInputVectorSettingsFromInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", SerialInputVectorBlock.TypeId, 0, 0, "{}"),
+            SerialInputVectorBlock.Definition);
+
+        node.SerialInputVectorComPortName = "COM88";
+        node.SerialInputVectorBaudRate = 230400;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("COM88", document.RootElement.GetProperty("comPortName").GetString());
+        Assert.Equal(230400, document.RootElement.GetProperty("baudRate").GetInt32());
+        Assert.Contains("COM88", node.SerialInputStComPorts, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_UpdatesBleInputStSettingsFromInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", BleInputStBlock.TypeId, 0, 0, "{}"),
+            BleInputStBlock.Definition);
+
+        node.BleInputStDeviceId = "ble-device-1";
+        node.BleInputStDeviceName = "Arduino Nano 33 BLE";
+        node.BleInputStAutoConnect = false;
+        node.BleInputStServiceUuid = "0000180d-0000-1000-8000-00805f9b34fb";
+        node.BleInputStNotifyCharacteristicUuid = "00002a37-0000-1000-8000-00805f9b34fb";
+        node.BleInputStChannelCount = 3;
+        node.BleInputStTimeoutMilliseconds = 2500;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("ble-device-1", document.RootElement.GetProperty("deviceId").GetString());
+        Assert.Equal("Arduino Nano 33 BLE", document.RootElement.GetProperty("deviceName").GetString());
+        Assert.False(document.RootElement.GetProperty("autoConnect").GetBoolean());
+        Assert.Equal("0000180d-0000-1000-8000-00805f9b34fb", document.RootElement.GetProperty("serviceUuid").GetString());
+        Assert.Equal("00002a37-0000-1000-8000-00805f9b34fb", document.RootElement.GetProperty("notifyCharacteristicUuid").GetString());
+        Assert.Equal(3, document.RootElement.GetProperty("channelCount").GetInt32());
+        Assert.Equal(2500, document.RootElement.GetProperty("timeoutMilliseconds").GetInt32());
+        Assert.Contains(node.BleInputStDeviceChoices, choice => string.Equals(choice.DeviceId, "ble-device-1", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_SelectsBleInputStDeviceChoiceIntoPersistedSettings()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", BleInputStBlock.TypeId, 0, 0, "{}"),
+            BleInputStBlock.Definition)
+        {
+            BleInputStDeviceId = "ble-device-1",
+            BleInputStDeviceName = "Arduino Nano 33 BLE",
+        };
+
+        node.BleInputStSelectedDevice = node.BleInputStDeviceChoices.Single();
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("ble-device-1", document.RootElement.GetProperty("deviceId").GetString());
+        Assert.Equal("Arduino Nano 33 BLE", document.RootElement.GetProperty("deviceName").GetString());
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_ResetBleInputStNordicUuids_RestoresDefaultUuids()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", BleInputStBlock.TypeId, 0, 0, "{}"),
+            BleInputStBlock.Definition)
+        {
+            BleInputStServiceUuid = "0000180d-0000-1000-8000-00805f9b34fb",
+            BleInputStNotifyCharacteristicUuid = "00002a37-0000-1000-8000-00805f9b34fb",
+        };
+
+        node.BleInputStResetNordicUuidsCommand.Execute(null);
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal(BleInputStSettings.NordicUartServiceUuid, document.RootElement.GetProperty("serviceUuid").GetString());
+        Assert.Equal(BleInputStSettings.NordicUartTxCharacteristicUuid, document.RootElement.GetProperty("notifyCharacteristicUuid").GetString());
     }
 
     [Fact]
@@ -1084,6 +1286,64 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal(100, imageData.GetProperty("width").GetInt32());
         Assert.Equal(100, imageData.GetProperty("height").GetInt32());
         Assert.Equal("Gray8", imageData.GetProperty("pixelFormat").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(imageData.GetProperty("pixelsBase64").GetString()));
+    }
+
+    [Fact]
+    public async Task RunAsync_RendersFftStDashboardWidgetAsEqualizerImage()
+    {
+        IReadOnlyList<DashboardDocument> dashboards = [];
+        INodeFactory[] factories =
+        [
+            new TestNodeFactory(
+                packetToEmit: new FastStreamFrame(
+                    StartTimeUnixNanoseconds: 0,
+                    SamplePeriodNanoseconds: 250_000_000,
+                    ChannelNames: ["signal"],
+                    Samples: [new double[] { 1.0, 0.0, -1.0, 0.0 }.AsMemory()],
+                    SequenceNumber: 5)),
+            new FftStNodeFactory(),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService(),
+            () => dashboards,
+            documents => dashboards = documents);
+
+        var sourcePaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == "test.block");
+        var fftPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == FftStBlock.TypeId);
+
+        var sourceNode = viewModel.PlacePaletteNode(sourcePaletteNode, 120, 120);
+        var fftNode = viewModel.PlacePaletteNode(fftPaletteNode, 440, 120);
+
+        var sourcePort = sourceNode.Outputs.Single(port => port.Id == "out");
+        var targetPort = fftNode.Inputs.Single(port => port.Id == FftStBlock.InputPortId);
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(() => dashboards, "fft-magnitude bins=3 seq=5");
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+
+        var dashboard = Assert.Single(dashboards);
+        var fftWidget = Assert.Single(dashboard.Widgets, widget => widget.SourcePortId == fftNode.Id);
+
+        using var settings = JsonDocument.Parse(fftWidget.SettingsJson);
+        Assert.Equal("image", settings.RootElement.GetProperty("contentKind").GetString());
+        Assert.Equal("fft-magnitude bins=3 seq=5", settings.RootElement.GetProperty("content").GetString());
+
+        var imageData = settings.RootElement.GetProperty("displayData").GetProperty("image");
+        Assert.Equal(160, imageData.GetProperty("width").GetInt32());
+        Assert.Equal(80, imageData.GetProperty("height").GetInt32());
+        Assert.Equal("Rgb24", imageData.GetProperty("pixelFormat").GetString());
         Assert.False(string.IsNullOrWhiteSpace(imageData.GetProperty("pixelsBase64").GetString()));
     }
 

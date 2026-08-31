@@ -10,7 +10,12 @@ using CommunityToolkit.Mvvm.Input;
 using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Engine;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.FftSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovieInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
@@ -36,6 +41,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private const string CsvOutputInputPortId = "input";
     private const int MaximumPayloadDashboardLogLines = 500;
     private const int MaximumStreamDashboardSamples = 500;
+    private const int FftEqualizerWidth = 160;
+    private const int FftEqualizerHeight = 80;
     private const int RunLoopDelayMilliseconds = 100;
     private const double CanvasNodeWidth = 180;
     private const double CanvasPortPanelMargin = 8;
@@ -680,6 +687,56 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 width = 640,
                 height = 480,
                 isPlay = true,
+            });
+        }
+
+        if (string.Equals(nodeTypeId, BleInputStBlock.TypeId, StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                deviceId = string.Empty,
+                deviceName = string.Empty,
+                autoConnect = true,
+                serviceUuid = BleInputStSettings.NordicUartServiceUuid,
+                notifyCharacteristicUuid = BleInputStSettings.NordicUartTxCharacteristicUuid,
+                channelCount = BleInputStSettings.Default.ChannelCount,
+                timeoutMilliseconds = BleInputStSettings.Default.TimeoutMilliseconds,
+            });
+        }
+
+        if (string.Equals(nodeTypeId, BreathStBlock.TypeId, StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                method = "breathBelt",
+                emitAnomalyEvents = true,
+                peakThresholdFraction = 0.55,
+                coughSpikeThresholdFraction = 0.75,
+                minimumBreathIntervalMilliseconds = 1500.0,
+                maximumBreathIntervalMilliseconds = 10000.0,
+                coughRefractoryMilliseconds = 1000.0,
+            });
+        }
+
+        if (string.Equals(nodeTypeId, MovingAverageBlock.TypeId, StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                windowMode = "samples",
+                windowSize = MovingAverageSettings.Default.WindowSize,
+                windowDurationMilliseconds = MovingAverageSettings.Default.WindowDurationMilliseconds,
+            });
+        }
+
+        if (string.Equals(nodeTypeId, FilterStBlock.TypeId, StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                filterType = "lowPass",
+                cutoffFrequencyHertz = FilterStSettings.Default.CutoffFrequencyHertz,
+                lowerCutoffFrequencyHertz = FilterStSettings.Default.LowerCutoffFrequencyHertz,
+                upperCutoffFrequencyHertz = FilterStSettings.Default.UpperCutoffFrequencyHertz,
+                order = FilterStSettings.Default.Order,
             });
         }
 
@@ -1618,10 +1675,18 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
             if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardActionNode)
             {
-                var currentContent = vectorLogByNodeId.TryGetValue(sourceNode.Id, out var stagedSourceContent)
-                    ? stagedSourceContent
-                    : dashboardContentByNodeId.GetValueOrDefault(sourceNode.Id, string.Empty);
-                vectorLogByNodeId[sourceNode.Id] = AppendVectorLogEntry(currentContent, contentLine, vector.Length);
+                if (string.Equals(sourceNode.TypeId, FftStBlock.TypeId, StringComparison.Ordinal))
+                {
+                    var summary = FormatFftEqualizerSummary(vector);
+                    SynchronizeDashboardWidgetForNode(sourceNode, summary, ImageContentKind, BuildFftEqualizerDisplayData(vector, summary));
+                }
+                else
+                {
+                    var currentContent = vectorLogByNodeId.TryGetValue(sourceNode.Id, out var stagedSourceContent)
+                        ? stagedSourceContent
+                        : dashboardContentByNodeId.GetValueOrDefault(sourceNode.Id, string.Empty);
+                    vectorLogByNodeId[sourceNode.Id] = AppendVectorLogEntry(currentContent, contentLine, vector.Length);
+                }
             }
 
             var targetVectorOutputNodeIds = Connections
@@ -2180,9 +2245,95 @@ public sealed class FlowEditorViewModel : ViewModelBase
         return string.Join(",", columns);
     }
 
+    private static string FormatFftEqualizerSummary(NumericVectorFrame frame)
+    {
+        return FormattableString.Invariant($"{frame.Name} bins={frame.Length} seq={frame.SequenceNumber}");
+    }
+
+    private static JsonElement BuildFftEqualizerDisplayData(NumericVectorFrame frame, string summary)
+    {
+        var pixels = RenderFftEqualizer(frame.Values.Span, FftEqualizerWidth, FftEqualizerHeight);
+
+        return JsonSerializer.SerializeToElement(new
+        {
+            image = new
+            {
+                width = FftEqualizerWidth,
+                height = FftEqualizerHeight,
+                pixelFormat = nameof(ImagePixelFormat.Rgb24),
+                pixelsBase64 = Convert.ToBase64String(pixels),
+            },
+            summary,
+        });
+    }
+
+    private static byte[] RenderFftEqualizer(ReadOnlySpan<double> values, int width, int height)
+    {
+        var pixels = new byte[width * height * 3];
+        Fill(pixels, 15, 23, 42);
+
+        if (values.IsEmpty)
+        {
+            return pixels;
+        }
+
+        var maximum = 0.0;
+        for (var index = 0; index < values.Length; index++)
+        {
+            var value = values[index];
+            if (double.IsFinite(value) && value > maximum)
+            {
+                maximum = value;
+            }
+        }
+
+        if (maximum <= 0)
+        {
+            return pixels;
+        }
+
+        for (var x = 0; x < width; x++)
+        {
+            var sourceStart = x * values.Length / width;
+            var sourceEnd = Math.Max(sourceStart + 1, (x + 1) * values.Length / width);
+            var value = 0.0;
+            for (var sourceIndex = sourceStart; sourceIndex < sourceEnd; sourceIndex++)
+            {
+                var sample = values[sourceIndex];
+                if (double.IsFinite(sample))
+                {
+                    value = Math.Max(value, sample);
+                }
+            }
+
+            var barHeight = (int)Math.Round(Math.Clamp(value / maximum, 0.0, 1.0) * (height - 1));
+            for (var y = height - 1; y >= height - barHeight; y--)
+            {
+                var intensity = 1.0 - (double)y / Math.Max(1, height - 1);
+                var offset = ((y * width) + x) * 3;
+                pixels[offset] = (byte)Math.Round(56 + (199 * intensity));
+                pixels[offset + 1] = (byte)Math.Round(189 + (36 * intensity));
+                pixels[offset + 2] = (byte)Math.Round(248 - (136 * intensity));
+            }
+        }
+
+        return pixels;
+    }
+
+    private static void Fill(byte[] pixels, byte red, byte green, byte blue)
+    {
+        for (var offset = 0; offset < pixels.Length; offset += 3)
+        {
+            pixels[offset] = red;
+            pixels[offset + 1] = green;
+            pixels[offset + 2] = blue;
+        }
+    }
+
     private static bool IsAutoScrollCapableOutputNode(string nodeTypeId)
     {
         return string.Equals(nodeTypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(nodeTypeId, FftStBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamChartVectorBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputImageBlock.TypeId, StringComparison.Ordinal);
