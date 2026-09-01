@@ -12,7 +12,7 @@ namespace DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
 internal static class BleInputStNotificationSource
 {
     public static IAsyncEnumerable<ReadOnlyMemory<byte>> ReadNotificationsAsync(
-        BleInputStSettings settings,
+        IBleInputGattSettings settings,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -28,7 +28,7 @@ internal static class BleInputStNotificationSource
 
 #if WINDOWS
     private static async IAsyncEnumerable<ReadOnlyMemory<byte>> ReadWindowsNotificationsAsync(
-        BleInputStSettings settings,
+        IBleInputGattSettings settings,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(settings.DeviceId))

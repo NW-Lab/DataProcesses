@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using DataProcesses.Core;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
@@ -38,6 +39,7 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     private const string SerialInputStTypeId = "dataprocesses.input.serial-st";
     private const string SerialInputVectorTypeId = "dataprocesses.input.serial-vector";
     private const string BleInputStTypeId = "dataprocesses.input.ble-st";
+    private const string BleInputVectorTypeId = "dataprocesses.input.ble-vector";
     private const string CsvOutputTypeId = "dataprocesses.output.csv";
 
     private double x;
@@ -139,6 +141,10 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     public bool IsSerialInputVectorNode => string.Equals(TypeId, SerialInputVectorTypeId, StringComparison.Ordinal);
 
     public bool IsBleInputStNode => string.Equals(TypeId, BleInputStTypeId, StringComparison.Ordinal);
+
+    public bool IsBleInputVectorNode => string.Equals(TypeId, BleInputVectorTypeId, StringComparison.Ordinal);
+
+    public bool IsBleInputNode => IsBleInputStNode || IsBleInputVectorNode;
 
     public bool IsCsvOutputNode => string.Equals(TypeId, CsvOutputTypeId, StringComparison.Ordinal);
 
@@ -1199,7 +1205,7 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     private void ResetBleInputStNordicUuids()
     {
-        if (!IsBleInputStNode)
+        if (!IsBleInputNode)
         {
             return;
         }
@@ -1212,7 +1218,7 @@ public sealed class CanvasNodeViewModel : ViewModelBase
 
     private async Task RefreshBleInputStDevicesAsync()
     {
-        if (!IsBleInputStNode)
+        if (!IsBleInputNode)
         {
             return;
         }

@@ -11,6 +11,7 @@ using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Engine;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.FftSt;
@@ -701,6 +702,19 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 notifyCharacteristicUuid = BleInputStSettings.NordicUartTxCharacteristicUuid,
                 channelCount = BleInputStSettings.Default.ChannelCount,
                 timeoutMilliseconds = BleInputStSettings.Default.TimeoutMilliseconds,
+            });
+        }
+
+        if (string.Equals(nodeTypeId, BleInputVectorBlock.TypeId, StringComparison.Ordinal))
+        {
+            return JsonSerializer.Serialize(new
+            {
+                deviceId = string.Empty,
+                deviceName = string.Empty,
+                autoConnect = true,
+                serviceUuid = BleInputVectorSettings.Default.ServiceUuid,
+                notifyCharacteristicUuid = BleInputVectorSettings.Default.NotifyCharacteristicUuid,
+                timeoutMilliseconds = BleInputVectorSettings.Default.TimeoutMilliseconds,
             });
         }
 

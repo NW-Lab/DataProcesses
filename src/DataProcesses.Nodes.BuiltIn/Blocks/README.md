@@ -74,6 +74,7 @@ Block-specific settings use this JSON shape:
 | `SerialInputSt/` | `dataprocesses.input.serial-st` | Arduino USB serial source that reads `millis,data1,data2,...` rows and emits one multi-channel Fast Stream output. |
 | `SerialInputVector/` | `dataprocesses.input.serial-vector` | Arduino USB serial source that reads contemporaneous IMU `millis,x,y,z` rows and emits one numeric vector per row. |
 | `BleInputSt/` | `dataprocesses.input.ble-st` | Arduino BLE GATT source that receives Nordic UART CSV notifications and emits one multi-channel Fast Stream output. |
+| `BleInputVector/` | `dataprocesses.input.ble-vector` | Arduino BLE GATT source that receives Nordic UART `millis,x,y,z` IMU notifications and emits one timestamped numeric vector per row. |
 | `CameraInputImage/` | `dataprocesses.input.camera-image` | Local camera source that captures one RGB24 `ImageFrame` for a JSON `Trigger: true` message or Dashboard Capture action. |
 | `MovieInputImage/` | `dataprocesses.input.movie-image` | Movie source that emits RGB24 `ImageFrame` values at a configured FPS while JSON `isPlay` is true. |
 | `UVCameraInputImage/` | `dataprocesses.input.uv-camera-image` | UV camera source that emits RGB24 `ImageFrame` values while JSON `isPlay` is true. |

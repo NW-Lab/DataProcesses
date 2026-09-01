@@ -1,5 +1,6 @@
 ﻿using DataProcesses.Nodes.BuiltIn.Blocks.BreathImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.CdTimeResolvedMethodSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
@@ -42,6 +43,7 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new SerialInputStNodeFactory(),
         new SerialInputVectorNodeFactory(),
         new BleInputStNodeFactory(),
+        new BleInputVectorNodeFactory(),
         new CameraInputImageNodeFactory(),
         new MovieInputImageNodeFactory(),
         new UVCameraInputImageNodeFactory(),

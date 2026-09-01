@@ -91,6 +91,58 @@ def make_icon(path: Path, kind: str):
         draw_line(16, 36, 52, 22, (30, 87, 198, 255), thickness=2)
         for x, y in [(20, 34), (28, 28), (36, 31), (44, 25), (50, 22)]:
             fill_rect(x, y, x + 2, y + 2, (30, 87, 198, 255))
+    elif kind == 'breath_st':
+        import math
+        teal = (13, 148, 136, 255)
+        points = []
+        for x in range(14, 51):
+            y = 32 + int(14 * math.sin((x - 14) / 36 * math.pi * 2))
+            points.append((x, y))
+        for (x0, y0), (x1, y1) in zip(points, points[1:]):
+            draw_line(x0, y0, x1, y1, teal, thickness=2)
+    elif kind == 'breath_image':
+        import math
+        navy = (30, 64, 108, 255)
+        blue = (54, 135, 212, 255)
+        for x0, y0, x1, y1 in [(12, 12, 20, 14), (12, 12, 14, 20), (44, 12, 52, 14), (50, 12, 52, 20),
+                               (12, 44, 14, 52), (12, 50, 20, 52), (44, 50, 52, 52), (50, 44, 52, 52)]:
+            fill_rect(x0, y0, x1, y1, navy)
+        points = []
+        for x in range(18, 47):
+            y = 32 + int(9 * math.sin((x - 18) / 29 * math.pi * 2))
+            points.append((x, y))
+        for (x0, y0), (x1, y1) in zip(points, points[1:]):
+            draw_line(x0, y0, x1, y1, blue, thickness=2)
+    elif kind == 'cd_time':
+        import math
+        gray = (150, 158, 168, 255)
+        orange = (249, 115, 22, 255)
+        navy = (30, 64, 108, 255)
+        points = []
+        for x in range(14, 51):
+            y = 34 + int(12 * math.sin((x - 14) / 37 * math.pi * 2))
+            points.append((x, y))
+        for (x0, y0), (x1, y1) in zip(points, points[1:]):
+            draw_line(x0, y0, x1, y1, gray, thickness=1)
+        mx, my = points[len(points) // 2]
+        slope = (points[len(points) // 2 + 1][1] - points[len(points) // 2 - 1][1]) / 2
+        draw_line(mx - 12, int(my - slope * 12), mx + 12, int(my + slope * 12), orange, thickness=2)
+        fill_rect(mx - 2, my - 2, mx + 2, my + 2, navy)
+    elif kind == 'moving_avg':
+        import math, random
+        rnd = random.Random(7)
+        gray = (170, 176, 184, 255)
+        blue = (54, 135, 212, 255)
+        noisy = []
+        smooth = []
+        for x in range(14, 51):
+            base = 32 + 10 * math.sin((x - 14) / 37 * math.pi * 2)
+            noisy.append((x, int(base + rnd.uniform(-6, 6))))
+            smooth.append((x, int(base)))
+        for (x0, y0), (x1, y1) in zip(noisy, noisy[1:]):
+            draw_line(x0, y0, x1, y1, gray, thickness=1)
+        for (x0, y0), (x1, y1) in zip(smooth, smooth[1:]):
+            draw_line(x0, y0, x1, y1, blue, thickness=2)
     else:
         fill_rect(14, 14, 50, 50, (240, 240, 240, 255))
         fill_rect(18, 18, 46, 46, (251, 251, 251, 255))
@@ -113,7 +165,15 @@ make_icon(root / 'TestSignalVec' / 'icon.png', 'vec')
 make_icon(root / 'TestSignalImg' / 'icon.png', 'img')
 make_icon(root / 'CameraInputImage' / 'icon.png', 'camera')
 make_icon(root / 'MovieInputImage' / 'icon.png', 'movie')
+make_icon(root / 'BreathSt' / 'icon.png', 'breath_st')
+make_icon(root / 'BreathImage' / 'icon.png', 'breath_image')
+make_icon(root / 'CdTimeResolvedMethodSt' / 'icon.png', 'cd_time')
+make_icon(root / 'MovingAverage' / 'icon.png', 'moving_avg')
 print('created', root / 'TestSignalVec' / 'icon.png')
 print('created', root / 'TestSignalImg' / 'icon.png')
 print('created', root / 'CameraInputImage' / 'icon.png')
 print('created', root / 'MovieInputImage' / 'icon.png')
+print('created', root / 'BreathSt' / 'icon.png')
+print('created', root / 'BreathImage' / 'icon.png')
+print('created', root / 'CdTimeResolvedMethodSt' / 'icon.png')
+print('created', root / 'MovingAverage' / 'icon.png')

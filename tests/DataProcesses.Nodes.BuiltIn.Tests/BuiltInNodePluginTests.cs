@@ -1,6 +1,7 @@
 ﻿using DataProcesses.Nodes.BuiltIn;
 using DataProcesses.Nodes.BuiltIn.Blocks.BreathImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.CdTimeResolvedMethodSt;
@@ -47,6 +48,7 @@ public sealed class BuiltInNodePluginTests
                 SerialInputStBlock.TypeId,
                 SerialInputVectorBlock.TypeId,
                 BleInputStBlock.TypeId,
+                BleInputVectorBlock.TypeId,
                 CameraInputImageBlock.TypeId,
                 MovieInputImageBlock.TypeId,
                 UVCameraInputImageBlock.TypeId,
@@ -104,6 +106,7 @@ public sealed class BuiltInNodePluginTests
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[SerialInputStBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[SerialInputVectorBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[BleInputStBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[BleInputVectorBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[CameraInputImageBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[MovieInputImageBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[UVCameraInputImageBlock.TypeId]);

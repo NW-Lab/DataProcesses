@@ -556,8 +556,8 @@
                                        Increment="9600"
                                        Value="{Binding SelectedNode.SerialInputVectorBaudRate}" />
                     </StackPanel>
-                    <TextBlock Grid.Row="12" Text="BLE Input ST settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsBleInputStNode}" />
-                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsBleInputStNode}">
+                    <TextBlock Grid.Row="12" Text="BLE Input settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsBleInputNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsBleInputNode}">
                         <TextBlock Text="BLE device" FontWeight="SemiBold" />
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                             <ComboBox Grid.Column="0"
@@ -586,11 +586,12 @@
                         <TextBox Text="{Binding SelectedNode.BleInputStNotifyCharacteristicUuid}" />
                         <Button Content="Reset Nordic UUIDs"
                                 Command="{Binding SelectedNode.BleInputStResetNordicUuidsCommand}" />
-                        <TextBlock Text="Channel count" FontWeight="SemiBold" />
+                        <TextBlock Text="Channel count" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsBleInputStNode}" />
                         <NumericUpDown Minimum="1"
                                        Maximum="16"
                                        Increment="1"
-                                       Value="{Binding SelectedNode.BleInputStChannelCount}" />
+                                   Value="{Binding SelectedNode.BleInputStChannelCount}"
+                                   IsVisible="{Binding SelectedNode.IsBleInputStNode}" />
                         <TextBlock Text="Timeout (ms)" FontWeight="SemiBold" />
                         <NumericUpDown Minimum="1"
                                        Maximum="600000"

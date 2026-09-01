@@ -6,6 +6,7 @@ using DataProcesses.Desktop.Services;
 using DataProcesses.Desktop.ViewModels;
 using DataProcesses.Engine;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputSt;
@@ -1087,6 +1088,31 @@ public sealed class FlowEditorViewModelTests
         using var document = JsonDocument.Parse(node.SettingsJson);
         Assert.Equal(BleInputStSettings.NordicUartServiceUuid, document.RootElement.GetProperty("serviceUuid").GetString());
         Assert.Equal(BleInputStSettings.NordicUartTxCharacteristicUuid, document.RootElement.GetProperty("notifyCharacteristicUuid").GetString());
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_UpdatesBleInputVectorSettingsFromInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", BleInputVectorBlock.TypeId, 0, 0, "{}"),
+            BleInputVectorBlock.Definition);
+
+        node.BleInputStDeviceId = "ble-vector-device-1";
+        node.BleInputStDeviceName = "Arduino IMU BLE";
+        node.BleInputStAutoConnect = false;
+        node.BleInputStServiceUuid = "0000180d-0000-1000-8000-00805f9b34fb";
+        node.BleInputStNotifyCharacteristicUuid = "00002a37-0000-1000-8000-00805f9b34fb";
+        node.BleInputStTimeoutMilliseconds = 2500;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("ble-vector-device-1", document.RootElement.GetProperty("deviceId").GetString());
+        Assert.Equal("Arduino IMU BLE", document.RootElement.GetProperty("deviceName").GetString());
+        Assert.False(document.RootElement.GetProperty("autoConnect").GetBoolean());
+        Assert.Equal("0000180d-0000-1000-8000-00805f9b34fb", document.RootElement.GetProperty("serviceUuid").GetString());
+        Assert.Equal("00002a37-0000-1000-8000-00805f9b34fb", document.RootElement.GetProperty("notifyCharacteristicUuid").GetString());
+        Assert.Equal(2500, document.RootElement.GetProperty("timeoutMilliseconds").GetInt32());
+        Assert.True(node.IsBleInputNode);
+        Assert.True(node.IsBleInputVectorNode);
     }
 
     [Fact]

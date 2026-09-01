@@ -1,48 +1,26 @@
 using System.Globalization;
 using System.Text.Json;
 
-namespace DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
 
-internal interface IBleInputGattSettings
-{
-    string DeviceId { get; }
+namespace DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
 
-    string DeviceName { get; }
-
-    bool AutoConnect { get; }
-
-    string ServiceUuid { get; }
-
-    string NotifyCharacteristicUuid { get; }
-
-    int TimeoutMilliseconds { get; }
-
-    string DeviceNameOrId { get; }
-
-    void Validate();
-}
-
-public sealed record BleInputStSettings(
+public sealed record BleInputVectorSettings(
     string DeviceId = "",
     string DeviceName = "",
     bool AutoConnect = true,
     string ServiceUuid = BleInputStSettings.NordicUartServiceUuid,
     string NotifyCharacteristicUuid = BleInputStSettings.NordicUartTxCharacteristicUuid,
-    int ChannelCount = 2,
     int TimeoutMilliseconds = 5000) : IBleInputGattSettings
 {
-    public const string NordicUartServiceUuid = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-    public const string NordicUartTxCharacteristicUuid = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-    public const int MinimumChannelCount = 1;
-    public const int MaximumChannelCount = 16;
-    public const int MinimumTimeoutMilliseconds = 1;
-    public const int MaximumTimeoutMilliseconds = 600_000;
+    public const int MinimumTimeoutMilliseconds = BleInputStSettings.MinimumTimeoutMilliseconds;
+    public const int MaximumTimeoutMilliseconds = BleInputStSettings.MaximumTimeoutMilliseconds;
 
-    public static BleInputStSettings Default { get; } = new();
+    public static BleInputVectorSettings Default { get; } = new();
 
     public string DeviceNameOrId => string.IsNullOrWhiteSpace(DeviceName) ? DeviceId : DeviceName;
 
-    public static BleInputStSettings FromJson(string settingsJson)
+    public static BleInputVectorSettings FromJson(string settingsJson)
     {
         if (string.IsNullOrWhiteSpace(settingsJson))
         {
@@ -52,7 +30,7 @@ public sealed record BleInputStSettings(
         using var document = JsonDocument.Parse(settingsJson);
         if (document.RootElement.ValueKind != JsonValueKind.Object)
         {
-            throw new ArgumentException("BLE Input ST settings must be a JSON object.", nameof(settingsJson));
+            throw new ArgumentException("BLE Input Vector settings must be a JSON object.", nameof(settingsJson));
         }
 
         var settings = Default;
@@ -81,11 +59,6 @@ public sealed record BleInputStSettings(
             settings = settings with { NotifyCharacteristicUuid = ReadString(notifyCharacteristicUuid, "notifyCharacteristicUuid") };
         }
 
-        if (document.RootElement.TryGetProperty("channelCount", out var channelCount))
-        {
-            settings = settings with { ChannelCount = ReadInt32(channelCount, "channelCount") };
-        }
-
         if (document.RootElement.TryGetProperty("timeoutMilliseconds", out var timeoutMilliseconds))
         {
             settings = settings with { TimeoutMilliseconds = ReadInt32(timeoutMilliseconds, "timeoutMilliseconds") };
@@ -107,13 +80,6 @@ public sealed record BleInputStSettings(
             throw new ArgumentException("NotifyCharacteristicUuid must be a valid UUID.", nameof(NotifyCharacteristicUuid));
         }
 
-        if (ChannelCount < MinimumChannelCount || ChannelCount > MaximumChannelCount)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(ChannelCount),
-                $"ChannelCount must be between {MinimumChannelCount} and {MaximumChannelCount}.");
-        }
-
         if (TimeoutMilliseconds < MinimumTimeoutMilliseconds || TimeoutMilliseconds > MaximumTimeoutMilliseconds)
         {
             throw new ArgumentOutOfRangeException(
@@ -126,7 +92,7 @@ public sealed record BleInputStSettings(
     {
         if (value.ValueKind != JsonValueKind.String)
         {
-            throw new ArgumentException($"BLE Input ST settings field '{propertyName}' must be a string.", nameof(value));
+            throw new ArgumentException($"BLE Input Vector settings field '{propertyName}' must be a string.", nameof(value));
         }
 
         return value.GetString() ?? string.Empty;
@@ -139,7 +105,7 @@ public sealed record BleInputStSettings(
             return value.GetBoolean();
         }
 
-        throw new ArgumentException($"BLE Input ST settings field '{propertyName}' must be a boolean.", nameof(value));
+        throw new ArgumentException($"BLE Input Vector settings field '{propertyName}' must be a boolean.", nameof(value));
     }
 
     private static int ReadInt32(JsonElement value, string propertyName)
@@ -155,6 +121,6 @@ public sealed record BleInputStSettings(
             return integer;
         }
 
-        throw new ArgumentException($"BLE Input ST settings field '{propertyName}' must be an integer.", nameof(value));
+        throw new ArgumentException($"BLE Input Vector settings field '{propertyName}' must be an integer.", nameof(value));
     }
 }
