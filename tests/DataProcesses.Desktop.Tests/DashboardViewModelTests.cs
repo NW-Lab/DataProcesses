@@ -6,6 +6,19 @@ namespace DataProcesses.Desktop.Tests;
 public sealed class DashboardViewModelTests
 {
     [Fact]
+    public void DashboardFramesPerSecond_DefaultsToTenAndAcceptsOnlyListedOptions()
+    {
+        var viewModel = new DashboardViewModel();
+
+        Assert.Equal(10, viewModel.DashboardFramesPerSecond);
+        Assert.Equal(new[] { 1, 5, 10, 15, 30, 60 }, viewModel.DashboardFpsOptions);
+
+        viewModel.DashboardFramesPerSecond = 30;
+        Assert.Equal(30, viewModel.DashboardFramesPerSecond);
+        Assert.Throws<ArgumentOutOfRangeException>(() => viewModel.DashboardFramesPerSecond = 12);
+    }
+
+    [Fact]
     public void RemoveDashboard_KeepsAtLeastOneDashboard()
     {
         var viewModel = new DashboardViewModel();

@@ -9,7 +9,7 @@ This document describes the user-facing contract for built-in Node Blocks. A Blo
 | Block | User-visible processing unit placed on the Flow Editor canvas. |
 | Node | Runtime implementation of a Block through `INode`. |
 | Port | Typed input or output endpoint on a Block. |
-| Fast Stream | High-rate numeric data path for time series and derived numeric frames. |
+| Fast Stream | Generic high-throughput numeric data path for regularly sampled channels and derived numeric frames; not audio-specific. |
 | Payload | User-facing name for the JSON Message data path. Internally this uses the existing `JsonMessage` contract. |
 
 In this document, use `Payload` for user-facing text, `JSON Message` for the data-family contract name,
@@ -77,8 +77,8 @@ When dashboard display is enabled, the Flow Editor creates or updates one widget
 
 Generated Block widgets display a title and typed content. The title follows the placed Block Name and falls back to the Block title. The content is Block-specific and is not limited to text. Widget settings must include a stable `contentKind` such as `text`, `time-series`, `xy`, or a future Block-defined kind, plus structured `displayData` for that kind. Keep the legacy `content` string only as a text-display compatibility field. If the placed Block is disabled, the dashboard widget title background is shown in gray.
 
+The Dashboard toolbar exposes an app-wide FPS limit with presets `1, 5, 10, 15, 30, 60` and a default of `10`. This caps widget updates independently of data acquisition and flow execution; the latest state is rendered at the next allowed update. Fast Stream diagnostic output should downsample values to this rate.
 ## Ports
-
 A Block may define multiple Fast Stream inputs, multiple Payload inputs, multiple Fast Stream outputs, and multiple Payload outputs. Each port has a stable ID, display name, direction, data family, required/optional flag, and a documented payload or frame schema.
 
 Port IDs are stable compatibility identifiers. Do not reuse the same ID for different meanings. Prefer distinct IDs for input and output ports, such as `payload-in` and `payload-out`, even when both are Payload ports.
@@ -87,7 +87,9 @@ Port IDs are stable compatibility identifiers. Do not reuse the same ID for diff
 
 ### Fast Stream
 
-Fast Stream is the internal high-throughput numeric path. The current public frame contract stores timing metadata once per frame and sample values as channel-major `double` buffers. This avoids per-sample JSON or CSV allocation in the processing graph.
+Fast Stream is the internal high-throughput numeric path for regular numeric streams, including sensors, audio, and other signals; it is not audio-specific or a file format. The public frame contract stores timing metadata once per frame and sample values as channel-major `double` buffers. This avoids per-sample JSON or CSV allocation in the processing graph.
+
+For a fixed integer sample rate, producers set `SampleRateHertz` (for example, `44100`). Timing-aware processors calculate each sample timestamp from the frame origin and sample index, avoiding accumulated rounding from an integer nanosecond period. `SamplePeriodNanoseconds` remains the legacy fallback for existing producers such as ST inputs. A rate change starts a new frame. The Flow Editor's `FS` palette filter matches all Fast Stream ports; `TS`, `VEC`, and `IMG` remain detailed-schema filters.
 
 The human and external interchange shape for simple time-series data may be described as:
 

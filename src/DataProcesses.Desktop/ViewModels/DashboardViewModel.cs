@@ -12,10 +12,13 @@ public sealed class DashboardViewModel : ViewModelBase
     public const int GridSizePixels = 100;
     public const int CanvasWidthPixels = 2400;
     public const int CanvasHeightPixels = 1600;
+    public const int DefaultDashboardFramesPerSecond = 10;
+    public IReadOnlyList<int> DashboardFpsOptions { get; } = [1, 5, 10, 15, 30, 60];
 
     private DashboardWidgetViewModel? selectedWidget;
     private Guid dashboardId = Guid.NewGuid();
     private string dashboardName = "Default dashboard";
+    private int dashboardFramesPerSecond = DefaultDashboardFramesPerSecond;
     private bool isEditMode = true;
     private bool isGridVisible = true;
     private int nextDefaultGridX;
@@ -92,6 +95,20 @@ public sealed class DashboardViewModel : ViewModelBase
                     MarkCurrentDashboardDirty();
                 }
             }
+        }
+    }
+
+    public int DashboardFramesPerSecond
+    {
+        get => dashboardFramesPerSecond;
+        set
+        {
+            if (!DashboardFpsOptions.Contains(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Dashboard FPS must be one of the available options.");
+            }
+
+            SetProperty(ref dashboardFramesPerSecond, value);
         }
     }
 

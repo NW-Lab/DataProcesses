@@ -33,7 +33,8 @@ public partial class MainViewModel : ViewModelBase
             new ProjectFileService(),
             Dashboard.GetDocuments,
             Dashboard.LoadDocuments,
-            Dashboard.MarkAllClean);
+            Dashboard.MarkAllClean,
+            getDashboardFramesPerSecond: () => Dashboard.DashboardFramesPerSecond);
         Dashboard.TriggerRequested += FlowEditor.TriggerNodeById;
 
         ShowFlowViewCommand = new RelayCommand(() => IsFlowViewSelected = true);

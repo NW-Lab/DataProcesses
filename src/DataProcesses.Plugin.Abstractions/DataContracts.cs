@@ -34,22 +34,79 @@ public interface IDataPacket
 /// CSV is intentionally not used for internal node-to-node transport.
 /// </summary>
 /// <param name="StartTimeUnixNanoseconds">Timestamp of the first sample.</param>
-/// <param name="SamplePeriodNanoseconds">Nominal interval between samples.</param>
+/// <param name="SamplePeriodNanoseconds">Legacy nominal interval between samples, used when no sample rate is specified.</param>
 /// <param name="ChannelNames">Channel names in sample storage order.</param>
 /// <param name="Samples">Channel-major sample arrays.</param>
 /// <param name="SequenceNumber">Monotonic sequence number within a stream.</param>
+/// <param name="SampleRateHertz">Optional exact positive integer sample rate. When present, this is authoritative for sample timing.</param>
 public sealed record FastStreamFrame(
     long StartTimeUnixNanoseconds,
     long SamplePeriodNanoseconds,
     IReadOnlyList<string> ChannelNames,
     IReadOnlyList<ReadOnlyMemory<double>> Samples,
-    long SequenceNumber) : IDataPacket
+    long SequenceNumber,
+    int? SampleRateHertz = null) : IDataPacket
 {
     public PortDataKind Kind => PortDataKind.FastStream;
 
     public int ChannelCount => Samples.Count;
 
     public int SampleCount => Samples.Count == 0 ? 0 : Samples[0].Length;
+
+    /// <summary>
+    /// Gets whether the frame provides a valid sample rate or legacy sample period.
+    /// </summary>
+    public bool HasValidTiming => SampleRateHertz is > 0
+        || (SampleRateHertz is null && SamplePeriodNanoseconds > 0);
+
+    /// <summary>
+    /// Gets the sample timestamp by index, using the exact sample rate when available
+    /// and the legacy integer period otherwise.
+    /// </summary>
+    public long GetSampleTimestampUnixNanoseconds(int sampleIndex)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(sampleIndex);
+
+        if (SampleRateHertz is int sampleRateHertz)
+        {
+            if (sampleRateHertz <= 0)
+            {
+                throw new InvalidOperationException("Fast Stream sample rate must be positive.");
+            }
+
+            return checked(StartTimeUnixNanoseconds + (sampleIndex * 1_000_000_000L / sampleRateHertz));
+        }
+
+        if (SamplePeriodNanoseconds <= 0)
+        {
+            throw new InvalidOperationException("Fast Stream sample period must be positive when no sample rate is specified.");
+        }
+
+        return checked(StartTimeUnixNanoseconds + (sampleIndex * SamplePeriodNanoseconds));
+    }
+
+    /// <summary>
+    /// Gets the exact sample rate or derives an approximate rate from the legacy period.
+    /// </summary>
+    public double GetSampleRateHertz()
+    {
+        if (SampleRateHertz is int sampleRateHertz)
+        {
+            if (sampleRateHertz <= 0)
+            {
+                throw new InvalidOperationException("Fast Stream sample rate must be positive.");
+            }
+
+            return sampleRateHertz;
+        }
+
+        if (SamplePeriodNanoseconds <= 0)
+        {
+            throw new InvalidOperationException("Fast Stream sample period must be positive when no sample rate is specified.");
+        }
+
+        return 1_000_000_000.0 / SamplePeriodNanoseconds;
+    }
 }
 
 /// <summary>
@@ -63,13 +120,15 @@ public sealed record FastStreamFrame(
 /// <param name="ChannelNames">Channel names in magnitude storage order.</param>
 /// <param name="Magnitudes">Channel-major one-sided magnitude spectra.</param>
 /// <param name="SequenceNumber">Monotonic sequence number inherited from the source stream.</param>
+/// <param name="SourceSampleRateHertz">Optional exact positive integer sample rate inherited from the source frame.</param>
 public sealed record SpectrumFrame(
     long SourceStartTimeUnixNanoseconds,
     long SourceSamplePeriodNanoseconds,
     double FrequencyResolutionHertz,
     IReadOnlyList<string> ChannelNames,
     IReadOnlyList<ReadOnlyMemory<double>> Magnitudes,
-    long SequenceNumber) : IDataPacket
+    long SequenceNumber,
+    int? SourceSampleRateHertz = null) : IDataPacket
 {
     public PortDataKind Kind => PortDataKind.FastStream;
 

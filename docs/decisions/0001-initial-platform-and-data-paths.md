@@ -26,12 +26,14 @@ Current public packet contracts include:
 
 | Contract | Family | Purpose |
 |---|---|---|
-| `FastStreamFrame` | Fast Stream | Regularly sampled channel-major time series. |
+| `FastStreamFrame` | Fast Stream | Generic regularly sampled numeric channels; may include an exact integer sample rate. |
 | `SpectrumFrame` | Fast Stream | One-sided frequency-domain magnitudes. |
 | `NumericVectorFrame` | Fast Stream | Dense one-dimensional numeric arrays (for example FFT vectors). |
 | `NumericMatrixFrame` | Fast Stream | Dense row-major two-dimensional numeric arrays. |
 | `ImageFrame` | Fast Stream | Interleaved image bytes in HxWxC layout. |
 | `JsonMessage` | JSON Message | Topic + payload + timestamp + optional correlation ID envelope. |
+
+`FastStreamFrame.SampleRateHertz` is additive and optional. Existing producers and saved Flows remain valid; when it is present, timing-aware processors use it instead of the rounded nominal `SamplePeriodNanoseconds` value. The compatibility decision is detailed in ADR 0004.
 
 CSV, including `millis,data`, is an import, export, storage, and explicit interoperability format. It is not the internal Fast Stream representation. Detailed schemas such as time series and spectrum remain distinguishable even when they share the Fast Stream visual family.
 

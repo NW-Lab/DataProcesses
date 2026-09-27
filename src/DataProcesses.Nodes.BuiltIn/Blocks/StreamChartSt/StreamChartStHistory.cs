@@ -71,7 +71,8 @@ public sealed class StreamChartStHistory
         long frameStartTimeNano,
         long samplePeriodNano,
         ReadOnlySpan<double> samples,
-        StreamChartStSettings settings)
+        StreamChartStSettings settings,
+        int? sampleRateHertz = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         if (channelIndex < 1 || channelIndex > StreamChartStBlock.MaxStreamInputs)
@@ -104,7 +105,9 @@ public sealed class StreamChartStHistory
 
         for (var i = 0; i < samples.Length; i += step)
         {
-            var sampleTimeNano = frameStartTimeNano + (i * samplePeriodNano);
+            var sampleTimeNano = sampleRateHertz is > 0
+                ? frameStartTimeNano + (i * 1_000_000_000L / sampleRateHertz.Value)
+                : frameStartTimeNano + (i * samplePeriodNano);
             var millis = (sampleTimeNano - baseTimeNano) / 1_000_000.0;
             points.Add(new SamplePoint(millis, samples[i]));
         }

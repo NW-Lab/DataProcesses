@@ -19,8 +19,10 @@ using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovieInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
@@ -69,6 +71,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private readonly Dictionary<Guid, FlowWorkspaceState> flowWorkspaceById = [];
     private readonly Dictionary<string, StreamChartVectorHistory> streamChartVectorHistoryByNodeId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, StreamChartStHistory> streamChartStHistoryByNodeId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, StreamChartStHistory> streamChartFSHistoryByNodeId = new(StringComparer.Ordinal);
     private Guid flowId = Guid.NewGuid();
     private FlowListItemViewModel? selectedFlow;
     private bool isLoadingFlows;
@@ -90,6 +93,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private bool showPreviewConnection;
     private string connectionHintText = "Click an output port to start connecting.";
     private CancellationTokenSource? runCancellationTokenSource;
+    private readonly Func<int> getDashboardFramesPerSecond;
+    private readonly TimeProvider dashboardTimeProvider;
+    private long? lastDashboardUpdateTimestamp;
     private string flowName = "Untitled flow";
     private string projectName = "Untitled project";
     private string projectDirectory = Path.Combine(
@@ -108,7 +114,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
         ProjectFileService projectFileService,
         Func<IReadOnlyList<DashboardDocument>>? getDashboardDocuments = null,
         Action<IReadOnlyList<DashboardDocument>>? loadDashboardDocuments = null,
-        Action? markDashboardsClean = null)
+        Action? markDashboardsClean = null,
+        Func<int>? getDashboardFramesPerSecond = null,
+        TimeProvider? dashboardTimeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(factories);
         ArgumentNullException.ThrowIfNull(runner);
@@ -121,6 +129,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
         this.getDashboardDocuments = getDashboardDocuments ?? (() => Array.Empty<DashboardDocument>());
         this.loadDashboardDocuments = loadDashboardDocuments ?? (_ => { });
         this.markDashboardsClean = markDashboardsClean ?? (() => { });
+        this.getDashboardFramesPerSecond = getDashboardFramesPerSecond
+            ?? (() => DashboardViewModel.DefaultDashboardFramesPerSecond);
+        this.dashboardTimeProvider = dashboardTimeProvider ?? TimeProvider.System;
         Palette = new NodePaletteViewModel(factoryList);
         Inspector = new InspectorViewModel();
 
@@ -772,6 +783,20 @@ public sealed class FlowEditorViewModel : ViewModelBase
         return Math.Max(1, (int)Math.Floor(1000.0 / configuredFramesPerSecond));
     }
 
+    private bool ShouldUpdateDashboard()
+    {
+        var framesPerSecond = Math.Clamp(getDashboardFramesPerSecond(), 1, 60);
+        var currentTimestamp = dashboardTimeProvider.GetTimestamp();
+        if (lastDashboardUpdateTimestamp is long lastTimestamp
+            && dashboardTimeProvider.GetElapsedTime(lastTimestamp, currentTimestamp) < TimeSpan.FromSeconds(1.0 / framesPerSecond))
+        {
+            return false;
+        }
+
+        lastDashboardUpdateTimestamp = currentTimestamp;
+        return true;
+    }
+
     private void SelectPaletteNode(PaletteNodeViewModel? paletteNode)
     {
         SelectedPaletteNode = paletteNode;
@@ -982,10 +1007,12 @@ public sealed class FlowEditorViewModel : ViewModelBase
             : "Running flow.";
         ExecutionState = FlowExecutionState.Starting;
         runtimeExecutionStep = 0;
+        lastDashboardUpdateTimestamp = null;
         runStartedUnixNanoseconds = null;
         runStartedVectorTimestamp = null;
         streamChartVectorHistoryByNodeId.Clear();
         streamChartStHistoryByNodeId.Clear();
+        streamChartFSHistoryByNodeId.Clear();
 
         try
         {
@@ -1020,6 +1047,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 runStartedVectorTimestamp = null;
                 streamChartVectorHistoryByNodeId.Clear();
                 streamChartStHistoryByNodeId.Clear();
+                streamChartFSHistoryByNodeId.Clear();
             }
         }
     }
@@ -1610,6 +1638,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private void UpdateDashboardWidgetsFromRunResult(FlowRunResult result)
     {
+        if (result.OutputPackets.Count == 0 || !ShouldUpdateDashboard())
+        {
+            return;
+        }
+
         var latestFastStreamByNode = result.OutputPackets
             .Where(static output => output.Packet is FastStreamFrame)
             .GroupBy(static output => output.NodeId, StringComparer.Ordinal)
@@ -1654,6 +1687,20 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 if (string.Equals(targetNode.TypeId, StreamChartStBlock.TypeId, StringComparison.Ordinal))
                 {
                     UpdateStreamChartStWidget(targetNode, output.OutputPortId, frame);
+                    continue;
+                }
+
+                if (string.Equals(targetNode.TypeId, StreamChartFSBlock.TypeId, StringComparison.Ordinal))
+                {
+                    UpdateStreamChartFSWidget(targetNode, frame);
+                    continue;
+                }
+
+                if (string.Equals(targetNode.TypeId, StreamOutputFSBlock.TypeId, StringComparison.Ordinal))
+                {
+                    SynchronizeDashboardWidgetForNode(
+                        targetNode,
+                        FormatFastStreamFSFrame(frame, getDashboardFramesPerSecond()));
                     continue;
                 }
 
@@ -1893,9 +1940,46 @@ public sealed class FlowEditorViewModel : ViewModelBase
             streamChartStHistoryByNodeId[node.Id] = history;
         }
 
-        history.Append(channelIndex, frame.StartTimeUnixNanoseconds, frame.SamplePeriodNanoseconds, frame.Samples[0].Span, settings);
+        history.Append(
+            channelIndex,
+            frame.StartTimeUnixNanoseconds,
+            frame.SamplePeriodNanoseconds,
+            frame.Samples[0].Span,
+            settings,
+            frame.SampleRateHertz);
         var image = history.Render(settings);
         var summary = FormattableString.Invariant($"StreamChartSt channels={StreamChartStBlock.MaxStreamInputs} span={settings.TimeSpanMilliseconds:0}ms");
+        SynchronizeDashboardWidgetForNode(node, summary, ImageContentKind, BuildStreamChartStDisplayData(image, summary));
+    }
+
+    private void UpdateStreamChartFSWidget(CanvasNodeViewModel node, FastStreamFrame frame)
+    {
+        if (!streamChartFSHistoryByNodeId.TryGetValue(node.Id, out var history))
+        {
+            history = new StreamChartStHistory();
+            streamChartFSHistoryByNodeId[node.Id] = history;
+        }
+
+        var settings = StreamChartStSettings.Default;
+        for (var channelIndex = 0; channelIndex < frame.ChannelCount; channelIndex++)
+        {
+            history.Append(
+                channelIndex + 1,
+                frame.StartTimeUnixNanoseconds,
+                frame.SamplePeriodNanoseconds,
+                frame.Samples[channelIndex].Span,
+                settings,
+                frame.SampleRateHertz);
+        }
+
+        if (!IsDashboardWidgetAutoScrollEnabled(node.Id))
+        {
+            return;
+        }
+
+        var image = history.Render(settings);
+        var summary = FormattableString.Invariant(
+            $"StreamChartFS channels={frame.ChannelCount} rate={frame.GetSampleRateHertz():0.###}Hz span={settings.TimeSpanMilliseconds:0}ms");
         SynchronizeDashboardWidgetForNode(node, summary, ImageContentKind, BuildStreamChartStDisplayData(image, summary));
     }
 
@@ -2177,15 +2261,61 @@ public sealed class FlowEditorViewModel : ViewModelBase
             "millis,value",
         };
 
-        var frameStartMillis = Math.Max(0, frame.StartTimeUnixNanoseconds - runStartedUnixNanoseconds) / 1_000_000.0;
         for (var index = 0; index < sampleCount; index++)
         {
             var sourceIndex = firstSourceIndex + index;
-            var millis = frameStartMillis + (sourceIndex * frame.SamplePeriodNanoseconds / 1_000_000.0);
+            var millis = Math.Max(0L, frame.GetSampleTimestampUnixNanoseconds(sourceIndex) - runStartedUnixNanoseconds) / 1_000_000.0;
             lines.Add(FormattableString.Invariant($"{millis:0.###},{samples[sourceIndex]:0.####}"));
         }
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string FormatFastStreamFSFrame(FastStreamFrame frame, double dashboardFramesPerSecond)
+    {
+        var content = new StringBuilder();
+        if (!frame.HasValidTiming)
+        {
+            return "Frequency: unavailable";
+        }
+
+        var sampleRateHertz = frame.GetSampleRateHertz();
+        content.Append("Frequency: ")
+            .Append(sampleRateHertz.ToString("0.###", CultureInfo.InvariantCulture))
+            .AppendLine(" Hz");
+
+        for (var channelIndex = 0; channelIndex < frame.ChannelCount; channelIndex++)
+        {
+            var samples = frame.Samples[channelIndex].Span;
+            var pointCount = samples.Length == 0
+                ? 0
+                : (int)Math.Clamp(
+                    Math.Ceiling(samples.Length * dashboardFramesPerSecond / sampleRateHertz),
+                    1.0,
+                    Math.Min(samples.Length, MaximumStreamDashboardSamples));
+            var channelName = channelIndex < frame.ChannelNames.Count
+                && !string.IsNullOrWhiteSpace(frame.ChannelNames[channelIndex])
+                    ? frame.ChannelNames[channelIndex]
+                    : $"Channel {channelIndex + 1}";
+            content.Append(channelName).Append(": ");
+
+            for (var pointIndex = 0; pointIndex < pointCount; pointIndex++)
+            {
+                if (pointIndex > 0)
+                {
+                    content.Append(", ");
+                }
+
+                var sampleIndex = pointCount == 1
+                    ? samples.Length - 1
+                    : pointIndex * (samples.Length - 1) / (pointCount - 1);
+                content.Append(samples[sampleIndex].ToString("0.####", CultureInfo.InvariantCulture));
+            }
+
+            content.AppendLine();
+        }
+
+        return content.ToString().TrimEnd();
     }
 
     private static string FormatNumericVectorFrameRow(NumericVectorFrame frame, long executionStep)
@@ -2346,7 +2476,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private static bool IsAutoScrollCapableOutputNode(string nodeTypeId)
     {
-        return string.Equals(nodeTypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal)
+        return string.Equals(nodeTypeId, StreamChartFSBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(nodeTypeId, StreamOutputFSBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(nodeTypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, FftStBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamChartVectorBlock.TypeId, StringComparison.Ordinal)

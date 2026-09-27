@@ -71,7 +71,7 @@ public sealed class BreathStNode : INode
         {
             cancellationToken.ThrowIfCancellationRequested();
             var rawSample = sourceSamples[sampleIndex];
-            var sampleTimestamp = inputFrame.StartTimeUnixNanoseconds + (sampleIndex * inputFrame.SamplePeriodNanoseconds);
+            var sampleTimestamp = inputFrame.GetSampleTimestampUnixNanoseconds(sampleIndex);
 
             if (double.IsFinite(rawSample))
             {
@@ -103,7 +103,8 @@ public sealed class BreathStNode : INode
             inputFrame.SamplePeriodNanoseconds,
             ["breath-rate-brpm"],
             [breathRateSamples.AsMemory()],
-            inputFrame.SequenceNumber);
+            inputFrame.SequenceNumber,
+            inputFrame.SampleRateHertz);
 
         await context.EmitAsync(BreathStBlock.RateOutputPortId, outputFrame, cancellationToken);
 
@@ -233,9 +234,9 @@ public sealed class BreathStNode : INode
 
     private static void ValidateFrame(FastStreamFrame inputFrame, IDataPacket packet)
     {
-        if (inputFrame.SamplePeriodNanoseconds <= 0)
+        if (!inputFrame.HasValidTiming)
         {
-            throw new ArgumentException("BreathSt requires a positive sample period.", nameof(packet));
+            throw new ArgumentException("BreathSt requires a positive sample period or sample rate.", nameof(packet));
         }
 
         if (inputFrame.ChannelCount == 0)

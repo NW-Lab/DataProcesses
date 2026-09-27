@@ -56,4 +56,25 @@ public sealed class PythonOutputBlockTests
         Assert.Equal("dataprocesses.python-output.received", status.Topic);
         Assert.Equal("deferred", status.Payload.GetProperty("delivery").GetString());
     }
+
+    [Fact]
+    public async Task OnPacketAsync_IncludesFastStreamSampleRateInDeferredStatus()
+    {
+        var context = new RecordingNodeContext();
+        var node = new PythonOutputNode();
+        await node.InitializeAsync(context, CancellationToken.None);
+        var input = new FastStreamFrame(
+            StartTimeUnixNanoseconds: 0,
+            SamplePeriodNanoseconds: 22_676,
+            ChannelNames: ["signal"],
+            Samples: [new double[] { 0.0, 1.0 }.AsMemory()],
+            SequenceNumber: 1,
+            SampleRateHertz: 44_100);
+
+        await node.OnPacketAsync(PythonOutputBlock.FastStreamInputPortId, input, CancellationToken.None);
+
+        var status = Assert.IsType<JsonMessage>(Assert.Single(context.EmittedPackets).Packet);
+        var packet = status.Payload.GetProperty("packet");
+        Assert.Equal(44_100, packet.GetProperty("SampleRateHertz").GetInt32());
+    }
 }

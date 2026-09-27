@@ -87,6 +87,9 @@ Node-REDは、パレットへノードを追加することを主要な拡張方
 | ノード | NodeType | 入力 | 出力 | 現在のpre-alpha実装 | 今後のMVP拡張 |
 |---|---|---|---|---|---|
 | Test Signal | `INPUT` | Payload（内部契約名: JSON Message）（任意） | `FastStreamFrame`、Payload（内部契約名: JSON Message） | 開始時に、設定された有効状態をPayloadで出力し、有効な場合は1 kHz・256サンプルの正弦波または矩形波フレームを1件出力する。Payload入力で`isEnabled`、`waveType`、`frequency`、`amplitude`を更新でき、既定では入力PayloadをそのままPayload出力へ通過させる。 | ホワイトノイズ、チャンネル数・ブロック長の設定、連続生成。 |
+| Test Signal (FS) | `INPUT` | なし | `FastStreamFrame` | 設定された正弦波または矩形波を256サンプル生成し、`SampleRateHertz`に整数サンプルレート（既定44.1 kHz）を設定する。Peak強度と周波数もInspectorで設定できる。 | 複数波形、複数チャンネル、連続生成。 |
+| StreamChartFS | `OUTPUT` | `FastStreamFrame` | なし | 1フレーム内の最大4チャンネルを、正確なサンプルレートに基づく時間軸でDashboardへ描画する。 | 表示時間幅、Y軸、チャンネル表示名の設定。 |
+| StreamChartFS | `OUTPUT` | `FastStreamFrame` | なし | 1フレーム内の最大4チャンネルを、正確なサンプルレートに基づく時間軸でDashboardへ描画する。 | 表示時間幅・Y軸・チャンネル表示名の設定。 |
 | Low-pass Filter | `Basic Process` | `FastStreamFrame` | `FastStreamFrame` | チャンネルごとに状態を保持する一次平滑化（固定係数0.25）を適用する。 | カットオフ・次数設定、High-passを含む追加フィルター。 |
 | FFT | `Basic Process` | `FastStreamFrame` | `SpectrumFrame` | 実数入力の片側振幅スペクトルを計算し、周波数分解能と入力の時刻・シーケンス情報を保持する。 | FFTサイズ、窓関数、オーバーラップ、振幅表現、最適化済みアルゴリズム。 |
 | Stream Output | `OUTPUT` | `FastStreamFrame` | なし | 最新フレームからチャンネルごとに最大512点へ間引いたデバッグ用スナップショットを保持する。 | Payload Outputとの役割分離、ダッシュボード描画、表示時間幅、Y軸、色、更新頻度。 |
@@ -118,12 +121,13 @@ Node-REDは、パレットへノードを追加することを主要な拡張方
 FastStreamFrame
   StartTimeUnixNanoseconds: long
   SamplePeriodNanoseconds: long
+  SampleRateHertz: int?  // optional exact positive integer rate
   ChannelNames: IReadOnlyList<string>
   Samples: IReadOnlyList<ReadOnlyMemory<double>>  // channel-major
   SequenceNumber: long
 ```
 
-現在公開している`FastStreamFrame`は、規則的にサンプリングされたチャンネル主順の数値配列を受け渡す最小契約です。`StartTimeUnixNanoseconds`は先頭サンプルの基準時刻、`SamplePeriodNanoseconds`は公称サンプル間隔です。ナノ秒単位の整数を採用するのは、1 ms未満の間隔を表現できるようにするためであり、計測精度が必ずナノ秒になることを意味しません。実際の時刻精度は入力デバイスとOSタイマーに依存します。
+現在公開している`FastStreamFrame`は、音声に限らず、規則的にサンプリングされたセンサー値や波形などの数値データを扱う汎用契約です。`StartTimeUnixNanoseconds`は先頭サンプルの基準時刻、`SamplePeriodNanoseconds`は既存データとの互換用の公称間隔です。固定の整数サンプルレートが分かる入力は、任意項目`SampleRateHertz`にもその値を設定します。設定時はこれを正確なレートとして優先し、サンプル番号`n`の時刻は`StartTimeUnixNanoseconds + floor(n * 1,000,000,000 / SampleRateHertz)`で求めます。たとえば44.1 kHzは`SampleRateHertz: 44100`で表せます。従来のST入力は`millis,data`由来の時刻周期を使い続けられ、`SampleRateHertz`を省略できます。サンプルレートが変わる場合はフレームを区切り、それぞれのレートを設定します。実際の時刻精度は入力デバイスとOSタイマーに依存します。
 
 加えて、1D/2D拡張として以下の契約を導入しています。
 
@@ -221,6 +225,7 @@ FFTの結果は高速数値データですが、時間波形とは軸の意味�
 SpectrumFrame
   SourceStartTimeUnixNanoseconds: long
   SourceSamplePeriodNanoseconds: long
+  SourceSampleRateHertz: int?  // optional exact source rate
   FrequencyResolutionHertz: double
   ChannelNames: IReadOnlyList<string>
   Magnitudes: IReadOnlyList<ReadOnlyMemory<double>>  // channel-major, one-sided
@@ -234,6 +239,8 @@ SpectrumFrame
 MVPのフローは **有向非巡回グラフ（DAG）** とし、循環接続は禁止します。実行前に、未接続の必須ポート、型不一致、循環、無効な設定、存在しないプラグインを検証します。
 
 各ノードは入力フレームを非同期に受け取り、出力フレームを発行します。処理が表示より速い場合にメモリが増え続けないよう、接続キューには上限を設けます。キュー超過時の既定動作は、解析系ではエラー、表示系では古いフレームの破棄とし、方針を接続単位で将来設定可能にします。
+
+Dashboard表示は入力サンプリングやフロー実行とは独立した上限FPSで更新します。Dashboardビューのツールバーで`1, 5, 10, 15, 30, 60 FPS`から選び、既定値は`10 FPS`です。Dashboardへのウィジェット反映はこの周期より頻繁には行わず、周期内に届いたデータは最新状態を表示します。Fast Streamの診断表示は設定FPSに合わせて値を間引きます。この設定は取得レートやノード処理レートを変更しません。
 
 | 実行状態 | 意味 |
 |---|---|

@@ -42,18 +42,18 @@ public sealed class FilterStNode : INode
             throw new ArgumentException("FilterSt accepts Fast Stream input only.", nameof(packet));
         }
 
-        if (inputFrame.SamplePeriodNanoseconds <= 0)
+        if (!inputFrame.HasValidTiming)
         {
-            throw new ArgumentException("FilterSt requires a positive sample period.", nameof(packet));
+            throw new ArgumentException("FilterSt requires a positive sample period or sample rate.", nameof(packet));
         }
 
-        var sampleRateHertz = 1_000_000_000.0 / inputFrame.SamplePeriodNanoseconds;
+        var sampleRateHertz = inputFrame.GetSampleRateHertz();
         ValidateFrequenciesForSampleRate(sampleRateHertz);
 
         var nodeContext = context ?? throw new InvalidOperationException("The node must be initialized before it receives packets.");
         var states = EnsureChannelStates(inputFrame.ChannelCount);
         var filteredChannels = new ReadOnlyMemory<double>[inputFrame.ChannelCount];
-        var samplePeriodSeconds = inputFrame.SamplePeriodNanoseconds / 1_000_000_000.0;
+        var samplePeriodSeconds = 1.0 / sampleRateHertz;
 
         for (var channelIndex = 0; channelIndex < inputFrame.ChannelCount; channelIndex++)
         {
@@ -74,7 +74,8 @@ public sealed class FilterStNode : INode
             inputFrame.SamplePeriodNanoseconds,
             inputFrame.ChannelNames,
             filteredChannels,
-            inputFrame.SequenceNumber);
+            inputFrame.SequenceNumber,
+            inputFrame.SampleRateHertz);
 
         await nodeContext.EmitAsync(FilterStBlock.OutputPortId, filteredFrame, cancellationToken);
     }

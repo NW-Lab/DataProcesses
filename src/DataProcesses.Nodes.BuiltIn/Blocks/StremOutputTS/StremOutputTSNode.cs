@@ -65,7 +65,8 @@ public sealed class StremOutputTSNode : INode
             inputFrame.ChannelNames.ToArray(),
             displayChannels,
             inputFrame.SampleCount,
-            inputFrame.SequenceNumber);
+            inputFrame.SequenceNumber,
+            inputFrame.SampleRateHertz);
 
         return ValueTask.CompletedTask;
     }

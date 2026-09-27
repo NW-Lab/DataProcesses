@@ -79,6 +79,7 @@ Block-specific settings use this JSON shape:
 | `MovieInputImage/` | `dataprocesses.input.movie-image` | Movie source that emits RGB24 `ImageFrame` values at a configured FPS while JSON `isPlay` is true. |
 | `UVCameraInputImage/` | `dataprocesses.input.uv-camera-image` | UV camera source that emits RGB24 `ImageFrame` values while JSON `isPlay` is true. |
 | `TestSignalTS/` | `dataprocesses.test-signal` | Configurable Test Signal source with Payload settings input, Fast Stream output, and Payload status output. |
+| `TestSignalFS/` | `dataprocesses.test-signal-fs` | Sine or square Fast Stream source with configurable peak intensity and exact sample rate. |
 | `Trigger/` | `dataprocesses.trigger` | Payload source that emits configured values on manual action, execution start, and periodic timing. |
 | `FilterSt/` | `dataprocesses.filter.filter-st` | Configurable stateful Fast Stream low-pass, high-pass, band-pass, and band-stop processor. |
 | `MovingAverage/` | `dataprocesses.filter.moving-average` | Stateful Fast Stream moving average with a sample-count or elapsed-time window. |
@@ -91,9 +92,11 @@ Block-specific settings use this JSON shape:
 | `BreathImage/` | `dataprocesses.analysis.breath-image` | Image-frame respiration estimator that predicts breaths per minute from central ROI Cg changes. |
 | `BreathSt/` | `dataprocesses.analysis.breath-st` | Fast Stream respiration detector that emits breaths per minute and optional JSON anomaly events. |
 | `StremOutputTS/` | `dataprocesses.output.stream` | Debug-oriented Fast Stream output adapter with bounded downsampling. |
+| `StreamOutputFS/` | `dataprocesses.output.stream-fs` | Fast Stream diagnostic sink that shows sample frequency and Dashboard-rate values. |
 | `StreamOutputVector/` | `dataprocesses.output.numeric-vector` | Debug-oriented Fast Stream vector sink for `NumericVectorFrame` snapshots. |
 | `StreamChartVector/` | `dataprocesses.output.vector-chart` | Debug-oriented Fast Stream vector sink that renders a color-mapped intensity chart over a millisecond time axis. |
 | `StreamChartSt/` | `dataprocesses.output.stream-chart-st` | Interactive multi-channel Fast Stream time-series chart sink (up to 4 channels) with configurable time alignment and channel names. |
+| `StreamChartFS/` | `dataprocesses.output.stream-chart-fs` | Dashboard chart for up to four channels in one Fast Stream frame, using exact sample-rate timing when available. |
 | `StreamOutputImage/` | `dataprocesses.output.image` | Debug-oriented Fast Stream image sink for `ImageFrame` previews. |
 | `PythonOutput/` | `dataprocesses.output.python` | Typed Fast Stream/JSON boundary that emits deferred-delivery status; it does not launch Python yet. |
 | `PayloadOutput/` | `dataprocesses.output.payload` | Debug-oriented Payload sink that appends timestamped entries for dashboard inspection. |

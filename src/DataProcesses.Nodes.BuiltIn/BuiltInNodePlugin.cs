@@ -20,11 +20,14 @@ using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
@@ -48,6 +51,7 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new MovieInputImageNodeFactory(),
         new UVCameraInputImageNodeFactory(),
         new TestSignalNodeFactory(),
+        new TestSignalFSNodeFactory(),
         new TestSignalVecNodeFactory(),
         new TestSignalImgNodeFactory(),
         new TriggerNodeFactory(),
@@ -62,9 +66,11 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new BreathImageNodeFactory(),
         new BreathStNodeFactory(),
         new StremOutputTSNodeFactory(),
+        new StreamOutputFSNodeFactory(),
         new StreamOutputVectorNodeFactory(),
         new StreamChartVectorNodeFactory(),
         new StreamChartStNodeFactory(),
+        new StreamChartFSNodeFactory(),
         new StreamOutputImageNodeFactory(),
         new PythonOutputNodeFactory(),
         new PayloadOutputNodeFactory(),

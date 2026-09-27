@@ -108,6 +108,7 @@ public sealed class PythonOutputNode : INode
             frame.SequenceNumber,
             frame.ChannelCount,
             frame.SampleCount,
+            frame.SampleRateHertz,
         },
         SpectrumFrame spectrum => new
         {
@@ -116,6 +117,7 @@ public sealed class PythonOutputNode : INode
             spectrum.ChannelCount,
             spectrum.BinCount,
             spectrum.FrequencyResolutionHertz,
+            spectrum.SourceSampleRateHertz,
         },
         JsonMessage message => new
         {

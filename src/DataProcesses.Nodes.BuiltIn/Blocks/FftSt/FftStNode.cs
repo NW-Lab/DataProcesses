@@ -1,5 +1,4 @@
 using DataProcesses.Plugin.Abstractions;
-
 namespace DataProcesses.Nodes.BuiltIn.Blocks.FftSt;
 
 /// <summary>
@@ -39,9 +38,9 @@ public sealed class FftStNode : INode
             throw new ArgumentException("FFTst accepts Fast Stream input only.", nameof(packet));
         }
 
-        if (inputFrame.SamplePeriodNanoseconds <= 0)
+        if (!inputFrame.HasValidTiming)
         {
-            throw new ArgumentException("FFTst requires a positive sample period.", nameof(packet));
+            throw new ArgumentException("FFTst requires a positive sample period or sample rate.", nameof(packet));
         }
 
         if (inputFrame.ChannelCount == 0)

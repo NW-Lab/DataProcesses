@@ -70,7 +70,8 @@ public sealed class LowPassFilterNode : INode
             inputFrame.SamplePeriodNanoseconds,
             inputFrame.ChannelNames,
             filteredChannels,
-            inputFrame.SequenceNumber);
+            inputFrame.SequenceNumber,
+            inputFrame.SampleRateHertz);
 
         await context.EmitAsync(LowPassFilterBlock.OutputPortId, filteredFrame, cancellationToken);
     }

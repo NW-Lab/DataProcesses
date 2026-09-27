@@ -17,8 +17,10 @@ using DataProcesses.Nodes.BuiltIn.Blocks.HartRateImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.HartRateSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.HumansImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
@@ -26,6 +28,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Nodes.BuiltIn.Blocks.UVCameraInputImage;
@@ -53,6 +56,7 @@ public sealed class BuiltInNodePluginTests
                 MovieInputImageBlock.TypeId,
                 UVCameraInputImageBlock.TypeId,
                 TestSignalBlock.TypeId,
+                TestSignalFSBlock.TypeId,
                 TestSignalVecBlock.TypeId,
                 TestSignalImgBlock.TypeId,
                 TriggerBlock.TypeId,
@@ -67,9 +71,11 @@ public sealed class BuiltInNodePluginTests
                 BreathImageBlock.TypeId,
                 BreathStBlock.TypeId,
                 StremOutputTSBlock.TypeId,
+                StreamOutputFSBlock.TypeId,
                 StreamOutputVectorBlock.TypeId,
                 StreamChartVectorBlock.TypeId,
                 StreamChartStBlock.TypeId,
+                StreamChartFSBlock.TypeId,
                 StreamOutputImageBlock.TypeId,
                 PythonOutputBlock.TypeId,
                 PayloadOutputBlock.TypeId,
@@ -102,6 +108,7 @@ public sealed class BuiltInNodePluginTests
             static factory => factory.Definition.NodeType);
 
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalFSBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[CsvInputBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[SerialInputStBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[SerialInputVectorBlock.TypeId]);
@@ -123,8 +130,10 @@ public sealed class BuiltInNodePluginTests
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[BreathImageBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[BreathStBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StremOutputTSBlock.TypeId]);
+        Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputFSBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputVectorBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[StreamChartStBlock.TypeId]);
+            Assert.Equal(NodeType.Output, nodeTypesByTypeId[StreamChartFSBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputImageBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[PythonOutputBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[PayloadOutputBlock.TypeId]);

@@ -19,6 +19,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalFS;
 using DataProcesses.Plugin.Abstractions;
 
 using Windows.Devices.Bluetooth;
@@ -29,6 +30,7 @@ namespace DataProcesses.Desktop.ViewModels;
 public sealed class CanvasNodeViewModel : ViewModelBase
 {
     private const string TestSignalTypeId = "dataprocesses.test-signal";
+    private const string TestSignalFSTypeId = "dataprocesses.test-signal-fs";
     private const string TestSignalVecTypeId = "dataprocesses.test-signal-vec";
     private const string TestSignalImgTypeId = "dataprocesses.test-signal-img";
     private const string TriggerTypeId = "dataprocesses.trigger";
@@ -108,12 +110,15 @@ public sealed class CanvasNodeViewModel : ViewModelBase
     public bool HasIcon => IconImage is not null;
 
     public bool IsTestSignal => string.Equals(TypeId, TestSignalTypeId, StringComparison.Ordinal);
+    public bool IsTestSignalFSNode => string.Equals(TypeId, TestSignalFSTypeId, StringComparison.Ordinal);
 
     public bool IsTestSignalVec => string.Equals(TypeId, TestSignalVecTypeId, StringComparison.Ordinal);
 
     public bool IsTestSignalImg => string.Equals(TypeId, TestSignalImgTypeId, StringComparison.Ordinal);
 
     public bool IsTestSignalOrVector => IsTestSignal || IsTestSignalVec;
+
+    public bool IsTestSignalInspectorNode => IsTestSignalOrVector || IsTestSignalFSNode;
 
     public bool IsTriggerNode => string.Equals(TypeId, TriggerTypeId, StringComparison.Ordinal);
 
@@ -321,6 +326,58 @@ public sealed class CanvasNodeViewModel : ViewModelBase
         get => ReadSettingsDouble("samplePeriodMillis", 1.0);
         set => UpdateSettingsDouble("samplePeriodMillis", value, minimumExclusive: 0);
     }
+
+    public double TestSignalFSFrequencyHertz
+    {
+        get => ReadSettingsDouble("frequency", TestSignalFSSettings.Default.FrequencyHertz);
+        set
+        {
+            if (!double.IsFinite(value) || value <= 0.0 || value > TestSignalFSSampleRateHertz / 2.0)
+            {
+                OnPropertyChanged(nameof(TestSignalFSFrequencyHertz));
+                return;
+            }
+
+            UpdateSettingsDouble("frequency", value, minimumExclusive: 0);
+        }
+    }
+
+    public double TestSignalFSPeakIntensity
+    {
+        get => ReadSettingsDouble("peakIntensity", TestSignalFSSettings.Default.PeakIntensity);
+        set => UpdateSettingsDoubleInclusive("peakIntensity", value, minimumInclusive: 0);
+    }
+
+    public double TestSignalFSSampleRateHertz
+    {
+        get => ReadSettingsDouble("sampleRateHertz", TestSignalFSSettings.Default.SampleRateHertz);
+        set
+        {
+            if (!double.IsFinite(value))
+            {
+                OnPropertyChanged(nameof(TestSignalFSSampleRateHertz));
+                return;
+            }
+
+            var sampleRateHertz = (int)Math.Round(value, MidpointRounding.AwayFromZero);
+            if (sampleRateHertz < 1 || sampleRateHertz > TestSignalFSSettings.MaximumSampleRateHertz)
+            {
+                OnPropertyChanged(nameof(TestSignalFSSampleRateHertz));
+                return;
+            }
+
+            var settings = ReadSettingsObject();
+            settings["sampleRateHertz"] = sampleRateHertz;
+            if (TestSignalFSFrequencyHertz > sampleRateHertz / 2.0)
+            {
+                settings["frequency"] = sampleRateHertz / 2.0;
+            }
+
+            SettingsJson = settings.ToJsonString();
+        }
+    }
+
+    public double TestSignalFSNyquistFrequencyHertz => TestSignalFSSampleRateHertz / 2.0;
 
     public double TestSignalVectorLength
     {
@@ -893,6 +950,10 @@ public sealed class CanvasNodeViewModel : ViewModelBase
                 OnPropertyChanged(nameof(FilterStResponseCaption));
                 OnPropertyChanged(nameof(TestSignalFrequencyHertz));
                 OnPropertyChanged(nameof(TestSignalSamplePeriodMilliseconds));
+                OnPropertyChanged(nameof(TestSignalFSFrequencyHertz));
+                OnPropertyChanged(nameof(TestSignalFSPeakIntensity));
+                OnPropertyChanged(nameof(TestSignalFSSampleRateHertz));
+                OnPropertyChanged(nameof(TestSignalFSNyquistFrequencyHertz));
                 OnPropertyChanged(nameof(TestSignalVectorLength));
                 OnPropertyChanged(nameof(TestSignalImageType));
                 OnPropertyChanged(nameof(TestSignalImageMode));

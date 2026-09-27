@@ -39,9 +39,9 @@ public sealed class CdTimeResolvedMethodStNode : INode
             throw new ArgumentException("CdTimeResolvedMethodSt accepts Fast Stream input only.", nameof(packet));
         }
 
-        if (inputFrame.SamplePeriodNanoseconds <= 0)
+        if (!inputFrame.HasValidTiming)
         {
-            throw new ArgumentException("CdTimeResolvedMethodSt requires a positive sample period.", nameof(packet));
+            throw new ArgumentException("CdTimeResolvedMethodSt requires a positive sample period or sample rate.", nameof(packet));
         }
 
         if (inputFrame.ChannelCount == 0)
@@ -53,7 +53,7 @@ public sealed class CdTimeResolvedMethodStNode : INode
             ?? throw new InvalidOperationException("The node must be initialized before it receives packets.");
         var values = CalculateCentralDifferences(
             inputFrame.Samples[0].Span,
-            inputFrame.SamplePeriodNanoseconds,
+            1.0 / inputFrame.GetSampleRateHertz(),
             cancellationToken);
         var timestamp = DateTimeOffset.FromUnixTimeMilliseconds(inputFrame.StartTimeUnixNanoseconds / 1_000_000);
         var output = new NumericVectorFrame(
@@ -79,7 +79,7 @@ public sealed class CdTimeResolvedMethodStNode : INode
 
     private static double[] CalculateCentralDifferences(
         ReadOnlySpan<double> samples,
-        long samplePeriodNanoseconds,
+        double secondsPerSample,
         CancellationToken cancellationToken)
     {
         var values = new double[samples.Length];
@@ -88,7 +88,6 @@ public sealed class CdTimeResolvedMethodStNode : INode
             return values;
         }
 
-        var secondsPerSample = samplePeriodNanoseconds / 1_000_000_000.0;
         if (samples.Length == 1)
         {
             values[0] = 0.0;

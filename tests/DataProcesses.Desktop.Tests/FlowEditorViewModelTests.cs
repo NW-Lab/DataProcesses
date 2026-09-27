@@ -16,11 +16,14 @@ using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalVec;
 using DataProcesses.Nodes.BuiltIn.Blocks.Trigger;
 using DataProcesses.Plugin.Abstractions;
@@ -848,6 +851,34 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void CanvasNodeViewModel_UpdatesTestSignalFSSettingsJsonFromTypedInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("node-1", TestSignalFSBlock.TypeId, 0, 0, "{}"),
+            TestSignalFSBlock.Definition);
+
+        Assert.True(node.IsTestSignalFSNode);
+        Assert.True(node.IsTestSignalInspectorNode);
+        Assert.Contains("square", node.TestSignalWaveTypes);
+        node.TestSignalWaveType = "square";
+        node.TestSignalFSFrequencyHertz = 1_000;
+        node.TestSignalFSPeakIntensity = 2.5;
+        node.TestSignalFSSampleRateHertz = 48_000;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("square", document.RootElement.GetProperty("waveType").GetString());
+        Assert.Equal(1_000, document.RootElement.GetProperty("frequency").GetDouble());
+        Assert.Equal(2.5, document.RootElement.GetProperty("peakIntensity").GetDouble());
+        Assert.Equal(48_000, document.RootElement.GetProperty("sampleRateHertz").GetInt32());
+
+        node.TestSignalFSSampleRateHertz = 1_000;
+        Assert.Equal(500.0, node.TestSignalFSNyquistFrequencyHertz);
+        Assert.Equal(500.0, node.TestSignalFSFrequencyHertz);
+        using var adjustedSettings = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal(500.0, adjustedSettings.RootElement.GetProperty("frequency").GetDouble());
+    }
+
+    [Fact]
     public void CanvasNodeViewModel_UpdatesTestSignalVecSettingsJsonFromTypedInspectorProperties()
     {
         var node = new CanvasNodeViewModel(
@@ -1213,6 +1244,121 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public async Task RunAsync_StreamOutputFSDashboardShowsFrequencyAndDashboardRateSamples()
+    {
+        var mainViewModel = new MainViewModel();
+        mainViewModel.Dashboard.DashboardFramesPerSecond = 30;
+        var viewModel = mainViewModel.FlowEditor;
+
+        var testSignalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputFSBlock.TypeId);
+        var testSignalNode = viewModel.PlacePaletteNode(testSignalPaletteNode, 120, 120);
+        var streamOutputNode = viewModel.PlacePaletteNode(streamOutputPaletteNode, 440, 120);
+        streamOutputNode.ShowOnDashboard = true;
+
+        var sourcePort = testSignalNode.Outputs.Single(port => port.Id == TestSignalBlock.StreamOutputPortId);
+        var targetPort = streamOutputNode.Inputs.Single(port => port.Id == StreamOutputFSBlock.InputPortId);
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(mainViewModel.Dashboard.GetDocuments, "Frequency: 1000 Hz");
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+
+        var widget = Assert.Single(
+            Assert.Single(mainViewModel.Dashboard.GetDocuments()).Widgets,
+            widget => widget.SourcePortId == streamOutputNode.Id);
+        using var settings = JsonDocument.Parse(widget.SettingsJson);
+        var content = settings.RootElement.GetProperty("content").GetString();
+        Assert.Contains("Frequency: 1000 Hz", content, StringComparison.Ordinal);
+        Assert.True(settings.RootElement.GetProperty("supportsAutoScroll").GetBoolean());
+        Assert.Equal(content, settings.RootElement.GetProperty("displayData").GetProperty("text").GetString());
+        var signalLine = Assert.Single(
+            content!.Split(Environment.NewLine),
+            static line => line.StartsWith("signal:", StringComparison.Ordinal));
+        Assert.Equal(8, signalLine.Split(',').Length);
+    }
+
+    [Fact]
+    public async Task RunAsync_DashboardUpdatesRespectConfiguredFrameRate()
+    {
+        IReadOnlyList<DashboardDocument> dashboards = [];
+        var dashboardUpdateCount = 0;
+        var clock = new ManualTimeProvider();
+        INodeFactory[] factories =
+        [
+            new TestSignalNodeFactory(),
+            new StreamOutputFSNodeFactory(),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService(),
+            () => dashboards,
+            documents =>
+            {
+                dashboards = documents;
+                Interlocked.Increment(ref dashboardUpdateCount);
+            },
+            getDashboardFramesPerSecond: () => 10,
+            dashboardTimeProvider: clock);
+
+        var sourcePaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+        var sinkPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputFSBlock.TypeId);
+        var sourceNode = viewModel.PlacePaletteNode(sourcePaletteNode, 120, 120);
+        var sinkNode = viewModel.PlacePaletteNode(sinkPaletteNode, 440, 120);
+        sourceNode.ShowOnDashboard = false;
+        sinkNode.ShowOnDashboard = true;
+
+        var sourcePort = sourceNode.Outputs.Single(port => port.Id == TestSignalBlock.StreamOutputPortId);
+        var targetPort = sinkNode.Inputs.Single(port => port.Id == StreamOutputFSBlock.InputPortId);
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(() => dashboards, "Frequency: 1000 Hz");
+            var initialUpdateCount = Volatile.Read(ref dashboardUpdateCount);
+
+            await Task.Delay(250);
+            Assert.Equal(initialUpdateCount, Volatile.Read(ref dashboardUpdateCount));
+
+            clock.Advance(TimeSpan.FromMilliseconds(100));
+            var deadline = DateTimeOffset.UtcNow.AddSeconds(2);
+            while (Volatile.Read(ref dashboardUpdateCount) == initialUpdateCount && DateTimeOffset.UtcNow < deadline)
+            {
+                await Task.Delay(10);
+            }
+
+            Assert.True(Volatile.Read(ref dashboardUpdateCount) > initialUpdateCount);
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+    }
+
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        private long timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => timestamp;
+
+        public void Advance(TimeSpan elapsed) => timestamp += elapsed.Ticks;
+    }
+
+    [Fact]
     public async Task RunAsync_UpdatesDashboardWidgetContentForStreamOutputVector()
     {
         IReadOnlyList<DashboardDocument> dashboards = [];
@@ -1419,6 +1565,57 @@ public sealed class FlowEditorViewModelTests
         Assert.Contains("StreamChartSt", streamChartSettings.RootElement.GetProperty("content").GetString(), StringComparison.Ordinal);
 
         var imageData = streamChartSettings.RootElement.GetProperty("displayData").GetProperty("image");
+        Assert.Equal(StreamChartStHistory.DefaultPixelWidth, imageData.GetProperty("width").GetInt32());
+        Assert.Equal(StreamChartStHistory.DefaultPixelHeight, imageData.GetProperty("height").GetInt32());
+        Assert.Equal("Rgb24", imageData.GetProperty("pixelFormat").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(imageData.GetProperty("pixelsBase64").GetString()));
+    }
+
+    [Fact]
+    public async Task RunAsync_UpdatesDashboardWidgetImageForStreamChartFS()
+    {
+        IReadOnlyList<DashboardDocument> dashboards = [];
+        INodeFactory[] factories =
+        [
+            new TestSignalFSNodeFactory(),
+            new StreamChartFSNodeFactory(),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService(),
+            () => dashboards,
+            documents => dashboards = documents);
+
+        var signalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalFSBlock.TypeId);
+        var chartPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamChartFSBlock.TypeId);
+        var signalNode = viewModel.PlacePaletteNode(signalPaletteNode, 120, 120);
+        var chartNode = viewModel.PlacePaletteNode(chartPaletteNode, 440, 120);
+        signalNode.ShowOnDashboard = false;
+
+        var sourcePort = signalNode.Outputs.Single(port => port.Id == TestSignalFSBlock.StreamOutputPortId);
+        var targetPort = Assert.Single(chartNode.Inputs);
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await WaitForDashboardContentAsync(() => dashboards, "StreamChartFS channels=1 rate=44100Hz");
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+
+        var dashboard = Assert.Single(dashboards);
+        var chartWidget = Assert.Single(dashboard.Widgets, widget => widget.SourcePortId == chartNode.Id);
+        using var chartSettings = JsonDocument.Parse(chartWidget.SettingsJson);
+        Assert.Equal("image", chartSettings.RootElement.GetProperty("contentKind").GetString());
+        Assert.Contains("rate=44100Hz", chartSettings.RootElement.GetProperty("content").GetString(), StringComparison.Ordinal);
+
+        var imageData = chartSettings.RootElement.GetProperty("displayData").GetProperty("image");
         Assert.Equal(StreamChartStHistory.DefaultPixelWidth, imageData.GetProperty("width").GetInt32());
         Assert.Equal(StreamChartStHistory.DefaultPixelHeight, imageData.GetProperty("height").GetInt32());
         Assert.Equal("Rgb24", imageData.GetProperty("pixelFormat").GetString());
@@ -1778,6 +1975,43 @@ public sealed class FlowEditorViewModelTests
         viewModel.Palette.SelectedInputDataType = "JSON";
 
         Assert.Equal("payload.input", Assert.Single(viewModel.Palette.FilteredNodes).TypeId);
+    }
+
+    [Fact]
+    public void Palette_FastStreamFilter_MatchesAllFastStreamInputSchemas()
+    {
+        var factories = new INodeFactory[]
+        {
+            new StaticDefinitionNodeFactory(new NodeDefinition(
+                "signal.input",
+                "Signal Input",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.TimeSeries1D)])),
+            new StaticDefinitionNodeFactory(new NodeDefinition(
+                "image.input",
+                "Image Input",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.Image2D)])),
+            new StaticDefinitionNodeFactory(new NodeDefinition(
+                "payload.input",
+                "Payload Input",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.JsonMessage, DataSchema: PortDataSchema.JsonEnvelope)])),
+        };
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService());
+
+        viewModel.Palette.SelectedInputDataType = "FS";
+
+        Assert.Equal(2, viewModel.Palette.FilteredNodes.Count);
+        Assert.Contains(viewModel.Palette.FilteredNodes, node => node.TypeId == "signal.input");
+        Assert.Contains(viewModel.Palette.FilteredNodes, node => node.TypeId == "image.input");
+        Assert.Contains("FS", viewModel.Palette.DataTypeOptions);
     }
 
     [Fact]

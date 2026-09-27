@@ -9,5 +9,6 @@ public sealed record StremOutputTSSnapshot(
     IReadOnlyList<string> ChannelNames,
     IReadOnlyList<ReadOnlyMemory<double>> Samples,
     int SourceSampleCount,
-    long SequenceNumber);
+    long SequenceNumber,
+    int? SampleRateHertz = null);
 

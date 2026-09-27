@@ -50,9 +50,9 @@ public sealed class HartRateStNode : INode
             throw new ArgumentException("HartRateSt accepts Fast Stream input only.", nameof(packet));
         }
 
-        if (inputFrame.SamplePeriodNanoseconds <= 0)
+        if (!inputFrame.HasValidTiming)
         {
-            throw new ArgumentException("HartRateSt requires a positive sample period.", nameof(packet));
+            throw new ArgumentException("HartRateSt requires a positive sample period or sample rate.", nameof(packet));
         }
 
         if (inputFrame.ChannelCount == 0)
@@ -93,7 +93,7 @@ public sealed class HartRateStNode : INode
                     _lastHeartRateBpm = heartRateBpm;
                 }
 
-                PushSample(sample, inputFrame.StartTimeUnixNanoseconds + (sampleIndex * inputFrame.SamplePeriodNanoseconds));
+                PushSample(sample, inputFrame.GetSampleTimestampUnixNanoseconds(sampleIndex));
             }
             else
             {
@@ -108,7 +108,8 @@ public sealed class HartRateStNode : INode
             inputFrame.SamplePeriodNanoseconds,
             ["heart-rate-bpm"],
             [heartRateSamples.AsMemory()],
-            inputFrame.SequenceNumber);
+            inputFrame.SequenceNumber,
+            inputFrame.SampleRateHertz);
 
         await context.EmitAsync(HartRateStBlock.OutputPortId, outputFrame, cancellationToken);
     }

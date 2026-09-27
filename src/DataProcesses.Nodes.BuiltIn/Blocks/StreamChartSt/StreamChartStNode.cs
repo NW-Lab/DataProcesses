@@ -109,7 +109,7 @@ public sealed class StreamChartStNode : INode
                 ? 0
                 : i * (sampleCount - 1) / (downsampledCount - 1);
 
-            var sampleTimeNano = frame.StartTimeUnixNanoseconds + (sourceIndex * frame.SamplePeriodNanoseconds);
+            var sampleTimeNano = frame.GetSampleTimestampUnixNanoseconds(sourceIndex);
             var elapsedMillis = (sampleTimeNano - baseTimeNanoseconds) / 1_000_000.0;
 
             millis[i] = elapsedMillis;
@@ -129,7 +129,8 @@ public sealed class StreamChartStNode : INode
             frame.StartTimeUnixNanoseconds,
             frame.SamplePeriodNanoseconds,
             sampleSpan,
-            settings);
+            settings,
+            frame.SampleRateHertz);
 
         LatestSnapshot = new StreamChartStSnapshot(
             TimeAlignmentMode: settings.TimeAlignmentMode,

@@ -51,6 +51,43 @@ public sealed class FastFourierTransformBlockTests
         Assert.Equal(7, spectrum.SequenceNumber);
     }
 
+    [Fact]
+    public void FastStreamFrame_UsesExactSampleRateForTimestamps()
+    {
+        var frame = new FastStreamFrame(
+            StartTimeUnixNanoseconds: 0,
+            SamplePeriodNanoseconds: 22_676,
+            ChannelNames: ["audio"],
+            Samples: [new double[44_101].AsMemory()],
+            SequenceNumber: 0,
+            SampleRateHertz: 44_100);
+
+        Assert.Equal(44_100.0, frame.GetSampleRateHertz());
+        Assert.Equal(22_675, frame.GetSampleTimestampUnixNanoseconds(1));
+        Assert.Equal(1_000_000_000, frame.GetSampleTimestampUnixNanoseconds(44_100));
+    }
+
+    [Fact]
+    public async Task OnPacketAsync_UsesExactSampleRateForFrequencyResolution()
+    {
+        var context = new RecordingNodeContext();
+        var node = new FastFourierTransformNode();
+        await node.InitializeAsync(context, CancellationToken.None);
+        var input = new FastStreamFrame(
+            StartTimeUnixNanoseconds: 0,
+            SamplePeriodNanoseconds: 22_676,
+            ChannelNames: ["signal"],
+            Samples: [new double[] { 1.0, 0.0, -1.0, 0.0 }.AsMemory()],
+            SequenceNumber: 8,
+            SampleRateHertz: 44_100);
+
+        await node.OnPacketAsync(FastFourierTransformBlock.InputPortId, input, CancellationToken.None);
+
+        var spectrum = Assert.IsType<SpectrumFrame>(Assert.Single(context.EmittedPackets).Packet);
+        Assert.Equal(11_025.0, spectrum.FrequencyResolutionHertz);
+        Assert.Equal(44_100, spectrum.SourceSampleRateHertz);
+    }
+
     private sealed class DoubleComparer(int precision) : IEqualityComparer<double>
     {
         public bool Equals(double x, double y) => Math.Round(x, precision) == Math.Round(y, precision);

@@ -6,7 +6,7 @@
              Focusable="True">
     <Grid RowDefinitions="Auto,*" RowSpacing="8">
         <Border Background="#172033" Padding="12,8">
-            <Grid ColumnDefinitions="220,180,Auto,Auto,Auto,*" ColumnSpacing="8">
+            <Grid ColumnDefinitions="220,180,Auto,Auto,Auto,Auto,Auto,*" ColumnSpacing="8">
                 <ComboBox Grid.Column="0"
                           ItemsSource="{Binding Dashboards}"
                           SelectedItem="{Binding SelectedDashboard}"
@@ -18,6 +18,17 @@
                         Content="Widget Settings"
                         IsEnabled="{Binding IsEditMode}"
                         Click="ShowWidgetSettingsPlaceholderDialog" />
+                <TextBlock Grid.Column="5"
+                       Text="FPS"
+                       VerticalAlignment="Center"
+                       Foreground="White" />
+                <ComboBox Grid.Column="6"
+                      ItemsSource="{Binding DashboardFpsOptions}"
+                      SelectedItem="{Binding DashboardFramesPerSecond}"
+                      MinWidth="76"
+                      VerticalAlignment="Center"
+                      ToolTip.Tip="Dashboard frames per second"
+                      AutomationProperties.Name="Dashboard FPS" />
             </Grid>
         </Border>
 

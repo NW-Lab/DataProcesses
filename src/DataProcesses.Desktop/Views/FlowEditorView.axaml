@@ -353,14 +353,33 @@
                                   IsVisible="{Binding SelectedNode.ShowOnDashboard}" />
                     </StackPanel>
                     <TextBlock Grid.Row="8" Text="TestSignal settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalOrVector}" />
-                    <StackPanel Grid.Row="9" Spacing="5" IsVisible="{Binding SelectedNode.IsTestSignalOrVector}">
+                    <TextBlock Grid.Row="8" Text="TestSignal settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalInspectorNode}" />
+                    <StackPanel Grid.Row="9" Spacing="5" IsVisible="{Binding SelectedNode.IsTestSignalInspectorNode}">
                         <TextBlock Text="Wave type" FontWeight="SemiBold" />
                         <ComboBox ItemsSource="{Binding SelectedNode.TestSignalWaveTypes}"
                                   SelectedItem="{Binding SelectedNode.TestSignalWaveType}" />
-                        <TextBlock Text="Frequency (Hz)" FontWeight="SemiBold" />
+                        <TextBlock Text="Frequency (Hz)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalOrVector}" />
                         <NumericUpDown Minimum="0.001"
                                        Increment="1"
-                                       Value="{Binding SelectedNode.TestSignalFrequencyHertz}" />
+                                       Value="{Binding SelectedNode.TestSignalFrequencyHertz}"
+                                       IsVisible="{Binding SelectedNode.IsTestSignalOrVector}" />
+                        <TextBlock Text="Frequency (Hz)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalFSNode}" />
+                        <NumericUpDown Minimum="0.001"
+                                       Increment="1"
+                                       Maximum="{Binding SelectedNode.TestSignalFSNyquistFrequencyHertz}"
+                                       Value="{Binding SelectedNode.TestSignalFSFrequencyHertz}"
+                                       IsVisible="{Binding SelectedNode.IsTestSignalFSNode}" />
+                        <TextBlock Text="Peak intensity" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalFSNode}" />
+                        <NumericUpDown Minimum="0"
+                                       Increment="0.1"
+                                       Value="{Binding SelectedNode.TestSignalFSPeakIntensity}"
+                                       IsVisible="{Binding SelectedNode.IsTestSignalFSNode}" />
+                        <TextBlock Text="Sampling frequency (Hz)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalFSNode}" />
+                        <NumericUpDown Minimum="1"
+                                       Maximum="1000000"
+                                       Increment="1000"
+                                       Value="{Binding SelectedNode.TestSignalFSSampleRateHertz}"
+                                       IsVisible="{Binding SelectedNode.IsTestSignalFSNode}" />
                         <TextBlock Text="Sampling time (ms)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignal}" />
                         <NumericUpDown Minimum="0.001"
                                        Increment="0.1"
@@ -421,6 +440,7 @@
                         <TextBlock Text="Window duration (ms)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsMovingAverageDurationWindowVisible}" />
                         <NumericUpDown Minimum="0.001"
                                        Increment="10"
+                                       Maximum="{Binding SelectedNode.TestSignalFSNyquistFrequencyHertz}"
                                        Value="{Binding SelectedNode.MovingAverageWindowDurationMilliseconds}"
                                        IsVisible="{Binding SelectedNode.IsMovingAverageDurationWindowVisible}" />
                     </StackPanel>

@@ -29,10 +29,11 @@ public sealed class StremOutputTSBlockTests
         var sourceSamples = Enumerable.Range(0, 1_024).Select(static value => (double)value).ToArray();
         var input = new FastStreamFrame(
             StartTimeUnixNanoseconds: 0,
-            SamplePeriodNanoseconds: 1_000_000,
+            SamplePeriodNanoseconds: 22_676,
             ChannelNames: ["signal"],
             Samples: [sourceSamples.AsMemory()],
-            SequenceNumber: 3);
+            SequenceNumber: 3,
+            SampleRateHertz: 44_100);
 
         await node.OnPacketAsync(StremOutputTSBlock.InputPortId, input, CancellationToken.None);
 
@@ -42,6 +43,7 @@ public sealed class StremOutputTSBlockTests
         Assert.Equal(0.0, snapshot.Samples[0].Span[0]);
         Assert.Equal(1_023.0, snapshot.Samples[0].Span[^1]);
         Assert.Equal(3, snapshot.SequenceNumber);
+        Assert.Equal(44_100, snapshot.SampleRateHertz);
     }
 }
 

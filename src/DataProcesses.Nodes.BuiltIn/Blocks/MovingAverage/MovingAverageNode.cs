@@ -42,9 +42,9 @@ public sealed class MovingAverageNode : INode
             throw new ArgumentException("Moving Average accepts Fast Stream input only.", nameof(packet));
         }
 
-        if (settings.WindowMode == MovingAverageWindowMode.Duration && inputFrame.SamplePeriodNanoseconds <= 0)
+        if (settings.WindowMode == MovingAverageWindowMode.Duration && !inputFrame.HasValidTiming)
         {
-            throw new ArgumentException("Time-window moving averages require a positive sample period.", nameof(packet));
+            throw new ArgumentException("Time-window moving averages require a positive sample period or sample rate.", nameof(packet));
         }
 
         var nodeContext = context ?? throw new InvalidOperationException("The node must be initialized before it receives packets.");
@@ -62,14 +62,20 @@ public sealed class MovingAverageNode : INode
 
             for (var sampleIndex = 0; sampleIndex < inputSamples.Length; sampleIndex++)
             {
-                var timestampNanoseconds = checked(inputFrame.StartTimeUnixNanoseconds + (sampleIndex * inputFrame.SamplePeriodNanoseconds));
+                var timestampNanoseconds = inputFrame.GetSampleTimestampUnixNanoseconds(sampleIndex);
                 averagedSamples[sampleIndex] = window.Add(inputSamples[sampleIndex], timestampNanoseconds, settings.WindowMode, settings.WindowSize, durationNanoseconds);
             }
 
             averagedChannels[channelIndex] = averagedSamples;
         }
 
-        var averagedFrame = new FastStreamFrame(inputFrame.StartTimeUnixNanoseconds, inputFrame.SamplePeriodNanoseconds, inputFrame.ChannelNames, averagedChannels, inputFrame.SequenceNumber);
+        var averagedFrame = new FastStreamFrame(
+            inputFrame.StartTimeUnixNanoseconds,
+            inputFrame.SamplePeriodNanoseconds,
+            inputFrame.ChannelNames,
+            averagedChannels,
+            inputFrame.SequenceNumber,
+            inputFrame.SampleRateHertz);
         await nodeContext.EmitAsync(MovingAverageBlock.OutputPortId, averagedFrame, cancellationToken);
     }
 

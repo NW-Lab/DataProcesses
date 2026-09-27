@@ -7,6 +7,7 @@ namespace DataProcesses.Desktop.ViewModels;
 public sealed class NodePaletteViewModel : ViewModelBase
 {
     private const string FilterAll = "ALL";
+    private const string FilterFastStream = "FS";
     private const string FilterJson = "JSON";
     private const string FilterTimeSeries = "TS";
     private const string FilterVector = "VEC";
@@ -23,6 +24,7 @@ public sealed class NodePaletteViewModel : ViewModelBase
     private static readonly IReadOnlyList<string> DataTypeFilterOptions =
     [
         FilterAll,
+        FilterFastStream,
         FilterJson,
         FilterTimeSeries,
         FilterVector,
@@ -143,7 +145,10 @@ public sealed class NodePaletteViewModel : ViewModelBase
 
         foreach (var port in ports)
         {
-            if (port.Direction == direction && MatchesSchemaFilter(port.DataSchema, filter))
+            if (port.Direction == direction
+                && (filter == FilterFastStream
+                    ? port.DataKind == PortDataKind.FastStream
+                    : MatchesSchemaFilter(port.DataSchema, filter)))
             {
                 return true;
             }

@@ -42,9 +42,9 @@ public sealed class FastFourierTransformNode : INode
             throw new ArgumentException("FFT accepts Fast Stream input only.", nameof(packet));
         }
 
-        if (inputFrame.SamplePeriodNanoseconds <= 0)
+        if (!inputFrame.HasValidTiming)
         {
-            throw new ArgumentException("FFT requires a positive sample period.", nameof(packet));
+            throw new ArgumentException("FFT requires a positive sample period or sample rate.", nameof(packet));
         }
 
         var context = _context
@@ -65,14 +65,15 @@ public sealed class FastFourierTransformNode : INode
 
         var frequencyResolutionHertz = sampleCount == 0
             ? 0.0
-            : 1_000_000_000.0 / inputFrame.SamplePeriodNanoseconds / sampleCount;
+            : inputFrame.GetSampleRateHertz() / sampleCount;
         var spectrum = new SpectrumFrame(
             inputFrame.StartTimeUnixNanoseconds,
             inputFrame.SamplePeriodNanoseconds,
             frequencyResolutionHertz,
             inputFrame.ChannelNames,
             magnitudes,
-            inputFrame.SequenceNumber);
+            inputFrame.SequenceNumber,
+            inputFrame.SampleRateHertz);
 
         await context.EmitAsync(FastFourierTransformBlock.OutputPortId, spectrum, cancellationToken);
     }
