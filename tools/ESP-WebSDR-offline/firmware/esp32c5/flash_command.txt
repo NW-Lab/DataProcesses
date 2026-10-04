@@ -1,1 +1,0 @@
-python -m esptool --chip esp32c5 --port PORT write-flash @esp32c5/flash_args
