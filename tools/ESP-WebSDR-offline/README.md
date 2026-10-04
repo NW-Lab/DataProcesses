@@ -1,0 +1,84 @@
+# ESP-WebSDR
+
+<img src="docs/espargos-logo.png" width="40%" align="right" alt="ESPARGOS logo">
+
+Browser spectrum viewer and firmware installer for ESP32 chips, with live
+FFT spectra, waterfalls, tuning, gain and bandwidth controls.
+
+With the help of LLMs, we discovered an undocumented feature in Espressif's
+ESP32 chips that bypasses the fixed-function modems to capture raw IQ baseband
+samples. ESP-WebSDR pairs with the [ESP-SDR firmware](https://github.com/ESPARGOS/esp-sdr)
+to display these samples as a live spectrum and waterfall in your browser,
+turning supported ESP32 boards into low-cost software-defined radio receivers.
+
+![ESP-WebSDR spectrum and waterfall](docs/spectrum-demo.jpg)
+
+**Parts of this code are AI-generated.**
+While we put a lot of manual effort into [pyespargos](https://github.com/ESPARGOS/pyespargos) and the firmware for our ESPARGOS One arrays, we don't have the time to manually review all of the source code for ESP-WebSDR.
+
+## Get started
+
+1. Use a browser with Web Serial support and connect your board over USB.
+2. Install the matching firmware with the [firmware installer](https://espargos.net/espsdr/app/flash.html).
+3. Open the [viewer](https://espargos.net/espsdr/app/), connect to the board, and select a frequency.
+
+The installer also includes the **ESP32-S31 Ethernet / USB profile for
+[SoapyESPSDR](https://github.com/ESPARGOS/SoapyESPSDR)**. Select that profile to
+stream continuously to desktop SDR applications. It has its own receiver
+control page at the board's DHCP address and does not use this serial viewer.
+
+ESP32-C2 / ESP8684 boards are supported over UART, with up to 8,190 I/Q samples
+and 256–2048-bin snapshot FFTs at 80/40/16 MS/s. The packaged C2 firmware requires
+a 26 MHz crystal; the installer checks the crystal before writing. For CH340
+bridges, use **Switch to 1 Mbaud** when the viewer reports transfer errors.
+C2 analog bandwidth covers approximately 12–20 MHz; zero selects the open
+capacitor setting. Controls are negotiated, so older C2 images retain their
+80 MS/s-only capability and disabled bandwidth control.
+
+Close other programs using the serial port. If automatic bootloader entry fails,
+hold BOOT, tap RESET, then release BOOT and reconnect in the installer.
+
+See the [ESP-SDR guide](https://espargos.net/espsdr/) for supported chips and setup.
+
+## Contributors
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/Jeija">
+        <img src="https://github.com/Jeija.png?size=160" width="80" height="80" alt="Florian Euchner"><br>
+        <b>Florian Euchner</b>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/zodoczi">
+        <img src="https://github.com/zodoczi.png?size=160" width="80" height="80" alt="Zoltan Doczi"><br>
+        <b>Zoltan Doczi</b>
+      </a>
+    </td>
+  </tr>
+</table>
+
+## License
+
+Except where otherwise noted, ESP-WebSDR is free software: you may redistribute
+it and/or modify it under the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your option)
+any later version (`GPL-3.0-or-later`). See [LICENSE](LICENSE) for the full terms.
+It is provided without any warranty, including implied warranties of
+merchantability or fitness for a particular purpose.
+
+Third-party components retain their own licenses and copyright notices.
+Bundled dependency licenses are in `flasher/vendor/`; the font license is in
+`fonts.css`. The accompanying [ESP-SDR firmware](https://github.com/ESPARGOS/esp-sdr)
+is licensed separately; see its license and third-party notices.
+
+ESP32-H2 uses its Bluetooth PHY capture engine at 32, 16, approximately
+10.667, and 6.4 MS/s (rate codes 7, 6, 8, and 9),
+with up to 16,380 complex samples and 256–2048-bin snapshot spectra. Both
+native USB Serial/JTAG and UART0 (TX GPIO24, RX GPIO23) are supported.
+The installer includes an H2 image for 2 MB or larger flash. The analog bandwidth control covers approximately 4–11 MHz; zero selects
+the widest filter setting. Lower rates are hardware subsampling without
+automatic anti-alias filtering. Continuous capture is not advertised. On a TX/RX-only adapter,
+enter download mode with BOOT/RESET before installation and reset afterward;
+the adapter cannot control the board's reset pins.

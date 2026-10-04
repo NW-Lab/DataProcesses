@@ -1,0 +1,11 @@
+ESP-WebSDR オフライン版
+
+1. このフォルダーを展開します。
+2. Windows: start-windows.bat を起動します。
+   macOS/Linux: ./start-linux-macos.sh を起動します。
+3. Chrome / Edge / Brave で http://localhost:8765/ を開きます。
+
+重要: index.html を直接ダブルクリックして file:// で開かないでください。
+Web Serial を使うには localhost 経由で起動する必要があります。
+
+詳しい手順: README_OFFLINE_JA.md
