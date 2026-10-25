@@ -36,6 +36,8 @@ public partial class MainViewModel : ViewModelBase
             Dashboard.MarkAllClean,
             getDashboardFramesPerSecond: () => Dashboard.DashboardFramesPerSecond);
         Dashboard.TriggerRequested += FlowEditor.TriggerNodeById;
+        Dashboard.AudioOutputMuteToggleRequested += FlowEditor.ToggleAudioOutputMuteByNodeId;
+        Dashboard.AudioOutputRecordingToggleRequested += FlowEditor.ToggleAudioOutputRecordingByNodeId;
 
         ShowFlowViewCommand = new RelayCommand(() => IsFlowViewSelected = true);
         ShowDashboardViewCommand = new RelayCommand(() => IsFlowViewSelected = false);

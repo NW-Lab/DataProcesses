@@ -26,7 +26,7 @@ public sealed class CanvasPortViewModel(CanvasNodeViewModel node, PortDefinition
 
     public bool IsJsonMessage => DataKind == PortDataKind.JsonMessage;
 
-    public string KindLabel => DataKind == PortDataKind.FastStream ? "S" : "P";
+    public string KindLabel => DataKind == PortDataKind.FastStream ? "S" : "J";
 
     public string DataFamilyLabel => DataKind == PortDataKind.FastStream ? "Fast Stream" : "Payload";
 
@@ -36,6 +36,7 @@ public sealed class CanvasPortViewModel(CanvasNodeViewModel node, PortDefinition
     {
         PortDataSchema.Unspecified => "Unspecified",
         PortDataSchema.TimeSeries1D => "Time Series (1D)",
+        PortDataSchema.FixedRateTimeSeries1D => "Fixed-Rate Time Series (1D)",
         PortDataSchema.Spectrum1D => "Spectrum (1D)",
         PortDataSchema.NumericVector1D => "Numeric Vector (1D)",
         PortDataSchema.NumericMatrix2D => "Numeric Matrix (2D)",
@@ -48,6 +49,7 @@ public sealed class CanvasPortViewModel(CanvasNodeViewModel node, PortDefinition
     {
         PortDataSchema.Unspecified => string.Empty,
         PortDataSchema.TimeSeries1D => "TS",
+        PortDataSchema.FixedRateTimeSeries1D => "FS",
         PortDataSchema.Spectrum1D => "VEC",
         PortDataSchema.NumericVector1D => "VEC",
         PortDataSchema.NumericMatrix2D => "VEC",
@@ -56,13 +58,13 @@ public sealed class CanvasPortViewModel(CanvasNodeViewModel node, PortDefinition
         _ => "?",
     };
 
-    public string KindBadgeBackground => IsFastStream ? "#1D70B8" : "#D92D20";
+    public string KindBadgeBackground => IsFastStream ? PortKindColors.FastStream : PortKindColors.JsonMessage;
 
-    public string SchemaBadgeBackground => IsFastStream ? "#DBEAFE" : "#FEE2E2";
+    public string SchemaBadgeBackground => IsFastStream ? PortKindColors.FastStreamSchemaBackground : PortKindColors.JsonMessageSchemaBackground;
 
-    public string SchemaBadgeBorderBrush => IsFastStream ? "#60A5FA" : "#F87171";
+    public string SchemaBadgeBorderBrush => IsFastStream ? PortKindColors.FastStreamSchemaBorder : PortKindColors.JsonMessageSchemaBorder;
 
-    public string SchemaBadgeForeground => IsFastStream ? "#1E3A8A" : "#7F1D1D";
+    public string SchemaBadgeForeground => IsFastStream ? PortKindColors.FastStreamSchemaForeground : PortKindColors.JsonMessageSchemaForeground;
 
     public string ShapeClass => DataKind == PortDataKind.FastStream ? "fastStream" : "payload";
 

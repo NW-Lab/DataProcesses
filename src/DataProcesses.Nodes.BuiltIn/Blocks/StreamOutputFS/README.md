@@ -11,13 +11,13 @@ Receives a generic Fast Stream time series and keeps a bounded latest snapshot w
 | Icon | Reuses the Stream Output icon. |
 
 ## Dashboard
-The Dashboard shows the sample frequency in hertz and a line of values for each channel. Values are evenly sampled to match the app-wide Dashboard FPS configured in the Dashboard toolbar, with a maximum of 500 values per channel. Dashboard FPS defaults to 10 and does not change acquisition or flow processing rates. The frequency comes from `SampleRateHertz` when provided, or is derived from the legacy `SamplePeriodNanoseconds` value.
+The Dashboard shows the sample frequency in hertz and a line of values for each channel. Values are evenly sampled to match the app-wide Dashboard FPS configured in the Dashboard toolbar, with a maximum of 500 values per channel. Dashboard FPS defaults to 10 and does not change acquisition or flow processing rates. The frequency comes from the required `SampleRateHertz`; frames without it are rejected (ADR 0005).
 
 ## Ports
 
 | ID | Direction | Family | Required | Schema |
 |---|---|---|---:|---|
-| `input` | Input | Fast Stream | Yes | `TimeSeries1D` (`FastStreamFrame`) |
+| `input` | Input | Fast Stream | Yes | `FixedRateTimeSeries1D` (FS) (`FastStreamFrame`) |
 
 ## Settings
 

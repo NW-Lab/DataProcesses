@@ -88,15 +88,23 @@ Node-REDは、パレットへノードを追加することを主要な拡張方
 |---|---|---|---|---|---|
 | Test Signal | `INPUT` | Payload（内部契約名: JSON Message）（任意） | `FastStreamFrame`、Payload（内部契約名: JSON Message） | 開始時に、設定された有効状態をPayloadで出力し、有効な場合は1 kHz・256サンプルの正弦波または矩形波フレームを1件出力する。Payload入力で`isEnabled`、`waveType`、`frequency`、`amplitude`を更新でき、既定では入力PayloadをそのままPayload出力へ通過させる。 | ホワイトノイズ、チャンネル数・ブロック長の設定、連続生成。 |
 | Test Signal (FS) | `INPUT` | なし | `FastStreamFrame` | 設定された正弦波または矩形波を256サンプル生成し、`SampleRateHertz`に整数サンプルレート（既定44.1 kHz）を設定する。Peak強度と周波数もInspectorで設定できる。 | 複数波形、複数チャンネル、連続生成。 |
+| Mic Input (FS) | `INPUT` | なし | `FastStreamFrame` | Windows既定録音デバイスから4096サンプルを収録し、設定HzとStereoまたはLeft/Right選択に応じたチャンネルで出力する。Monoデバイスは1チャンネルで出力する。 | デバイス選択、ホットスワップ、複数デバイス同期。 |
+| Audio Output (FS) | `OUTPUT` | `FastStreamFrame` | なし | Windows既定再生デバイスへFast Stream音声を出力する。DashboardのMuteは再生のみを一時停止し、録音は継続する。DashboardのRecordボタンでWAV録音を開始/停止し、保存フォルダとprefixはInspectorで設定する。 | 出力デバイス選択、複数出力、録音形式設定。 |
+| MQTT_In | `INPUT` | なし | JSON Message (`JsonMessage`) | MQTT brokerを購読し、UTF-8 JSON payloadを`JsonMessage`として出力する。受信topicを`topic`に、JSON本文を`payload`に設定し、実行中は切断後に再接続する。 | WebSocket transport、client証明書、secret store連携。 |
+| MQTT_Out | `OUTPUT` | JSON Message (`JsonMessage`) | なし | `payload`のみをUTF-8 JSONでMQTT publishする。Inspector topicが空なら入力messageのtopicを使用し、QoSとretainを選択できる。 | WebSocket transport、client証明書、secret store連携。 |
 | StreamChartFS | `OUTPUT` | `FastStreamFrame` | なし | 1フレーム内の最大4チャンネルを、正確なサンプルレートに基づく時間軸でDashboardへ描画する。 | 表示時間幅、Y軸、チャンネル表示名の設定。 |
 | StreamChartFS | `OUTPUT` | `FastStreamFrame` | なし | 1フレーム内の最大4チャンネルを、正確なサンプルレートに基づく時間軸でDashboardへ描画する。 | 表示時間幅・Y軸・チャンネル表示名の設定。 |
 | Low-pass Filter | `Basic Process` | `FastStreamFrame` | `FastStreamFrame` | チャンネルごとに状態を保持する一次平滑化（固定係数0.25）を適用する。 | カットオフ・次数設定、High-passを含む追加フィルター。 |
+| FilterFS | `Basic Process` | `FastStreamFrame` | `FastStreamFrame` | InspectorでLPF、HPF、バンドパス、バンド阻止、ノッチを選択し、カットオフ周波数と次数を設定できる。Notchは中心周波数と帯域幅を指定する。 | フィルター応答の可視化、係数設計方式の選択。 |
 | FFT | `Basic Process` | `FastStreamFrame` | `SpectrumFrame` | 実数入力の片側振幅スペクトルを計算し、周波数分解能と入力の時刻・シーケンス情報を保持する。 | FFTサイズ、窓関数、オーバーラップ、振幅表現、最適化済みアルゴリズム。 |
+| FFT_FS | `Basic Process` | `FastStreamFrame` | `SpectrumFrame` | Fast StreamのSampleRateHertzを使い、チャンネルごとの片側振幅スペクトルと正確な周波数分解能を出力する。 | FFTサイズ、窓関数、オーバーラップの設定。 |
 | Stream Output | `OUTPUT` | `FastStreamFrame` | なし | 最新フレームからチャンネルごとに最大512点へ間引いたデバッグ用スナップショットを保持する。 | Payload Outputとの役割分離、ダッシュボード描画、表示時間幅、Y軸、色、更新頻度。 |
 | Numeric Vector Output | `Debug` | `NumericVectorFrame` | なし | 1次元ベクトルを受信し、表示用に保持する。上限内はゼロコピーで保持する。 | ベクトル可視化、統計表示、ピーク注釈。 |
 | Image Output | `Debug` | `ImageFrame` | なし | 2次元画像を受信し、表示用プレビューを保持する。上限超過時のみ切り詰める。 | 画像プレビュー、ヒートマップ、ROI表示。 |
 | Python Output | `OUTPUT` | `FastStreamFrame`またはPayload（内部契約名: JSON Message） | Payload（内部契約名: JSON Message）による状態 | 入力系統を検証し、受信記録と`deferred`状態メッセージを出力する。Pythonプロセスは起動しない。 | 実行環境、スクリプト、タイムアウト、送信方式、Pythonワーカーとの実通信。 |
 | CSV Output | `Output` | `FastStreamFrame` | なし | Fast Stream入力をCSVファイルへ追記/新規保存する。 | ローテーション、時刻形式、複数バインディング制御。 |
+
+BleInputFSはBLE GATT通知をFast Streamへ変換する入力Blockです。InspectorでCSV（`millis,data1,...`）／ヘッダーなしバイナリ、サンプリング周波数、チャンネル数、数値型（Int16／Int32／Float32／Float64）、バイト順序と接続先を設定できます。CSVはデバイス相対時刻を保持し、時刻の不連続でフレームを分割します。バイナリはサンプルごとのチャンネル順で受信し、設定周波数から時刻を算出します。詳細は[BleInputFS](../src/DataProcesses.Nodes.BuiltIn/Blocks/BleInputFS/README.md)を参照してください。既存BlockおよびAdd-in公開契約の変更はありません。
 
 ## 6. ブロック間データモデル
 
@@ -109,7 +117,16 @@ Node-REDは、パレットへノードを追加することを主要な拡張方
 
 一つのBlockは、複数のFast Stream入力、複数のPayload入力、複数のFast Stream出力、複数のPayload出力を持てます。接続は出力ポートから入力ポートへ向かい、一つの出力ポートから複数の下流Blockへ分岐できます。
 
-2026-08-08時点の実装では、`PortDataKind`（`FastStream` / `JsonMessage`）に加えて、詳細互換性として`PortDataSchema`を導入しています。`TimeSeries1D`、`Spectrum1D`、`NumericVector1D`、`NumericMatrix2D`、`Image2D`、`JsonEnvelope`を用いて接続互換性を判定します。`Unspecified`は後方互換・移行用途として許可します。
+2026-08-08時点の実装では、`PortDataKind`（`FastStream` / `JsonMessage`）に加えて、詳細互換性として`PortDataSchema`を導入しています。`TimeSeries1D`、`FixedRateTimeSeries1D`、`Spectrum1D`、`NumericVector1D`、`NumericMatrix2D`、`Image2D`、`JsonEnvelope`を用いて接続互換性を判定します。`Unspecified`は後方互換・移行用途として許可します。
+
+時系列は次の2種類を区別します（ADR 0005）。両者は相互に接続できず、変換には明示的なBlockが必要です。
+
+| 略称 | スキーマ | 意味 | 代表例 |
+|---|---|---|---|
+| TS | `TimeSeries1D` | Time Series。送信元タイムスタンプまたは公称サンプル周期で時刻付けされる時系列。`SampleRateHertz`は任意。 | Arduino等の`millis,data`シリアル/BLE入力、Serial Input TS、FilterTS |
+| FS | `FixedRateTimeSeries1D` | Fast Speed Time Series。整数Hzの固定サンプルレートを持つ高速時系列。全フレームで`SampleRateHertz`必須。 | 44.1 kHz音声、Mic Input (FS)、FilterFS |
+
+Block名の接尾辞`TS`/`FS`は、主に扱う時系列スキーマを表します。
 
 ### 6.1 Fast Stream
 
@@ -208,10 +225,10 @@ JSON系統は、Node-REDに近い `payload` 中心のメッセージモデルと
 | ポート種別 | 推奨色 | 推奨形状 | 短縮表示 |
 |---|---|---|---|
 | Fast Stream | 青系 | 円 | `S` |
-| Payload（内部契約名: JSON Message） | 赤系 | 円 | `P` |
+| Payload（内部契約名: JSON Message） | オレンジ系 | ひし形 | `J` |
 | 将来の制御専用ポート | 紫系 | 三角形 | `C` |
 
-入力ポートはブロック左側、出力ポートは右側に配置します。マウスオーバー時には、ポート名、データ系統、詳細スキーマ、単位をツールチップ表示します。接続線もポート種別と同じ色・線種を使用し、Fast Streamは青い実線、Payloadは赤い破線とします。色だけに依存しないよう、ラベルと線種も必ず併用します。
+入力ポートはブロック左側、出力ポートは右側に配置します。マウスオーバー時には、ポート名、データ系統、詳細スキーマ、単位をツールチップ表示します。接続線もポート種別と同じ色・線種を使用し、Fast Streamは青い実線、Payloadはオレンジの破線とします。色だけに依存しないよう、ラベルと線種も必ず併用します。
 
 接続時には系統と詳細スキーマを検査し、Fast StreamとPayloadの直接接続は拒否します。詳細スキーマは、双方が`Unspecified`以外を宣言している場合に完全一致が必要です。両者を変換する場合は、`Stream to Payload`や`Payload to Stream`など、変換内容が明示された専用ブロックを使用します。
 

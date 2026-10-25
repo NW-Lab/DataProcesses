@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputTS;
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
@@ -21,7 +21,7 @@ public sealed class BleInputVectorNode : INode
         this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
         this.settings.Validate();
         this.getTimestamp = getTimestamp ?? (() => DateTimeOffset.UtcNow);
-        this.notificationSourceFactory = notificationSourceFactory ?? ((inputSettings, cancellationToken) => BleInputStNotificationSource.ReadNotificationsAsync(inputSettings, cancellationToken));
+        this.notificationSourceFactory = notificationSourceFactory ?? ((inputSettings, cancellationToken) => BleInputTSNotificationSource.ReadNotificationsAsync(inputSettings, cancellationToken));
     }
 
     public NodeDefinition Definition => BleInputVectorBlock.Definition;

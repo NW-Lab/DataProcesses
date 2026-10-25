@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 
+using CommunityToolkit.Mvvm.Input;
+
 using DataProcesses.Plugin.Abstractions;
 
 namespace DataProcesses.Desktop.ViewModels;
@@ -7,7 +9,7 @@ namespace DataProcesses.Desktop.ViewModels;
 public sealed class NodePaletteViewModel : ViewModelBase
 {
     private const string FilterAll = "ALL";
-    private const string FilterFastStream = "FS";
+    private const string FilterFixedRateTimeSeries = "FS";
     private const string FilterJson = "JSON";
     private const string FilterTimeSeries = "TS";
     private const string FilterVector = "VEC";
@@ -24,17 +26,19 @@ public sealed class NodePaletteViewModel : ViewModelBase
     private static readonly IReadOnlyList<string> DataTypeFilterOptions =
     [
         FilterAll,
-        FilterFastStream,
         FilterJson,
         FilterTimeSeries,
+        FilterFixedRateTimeSeries,
         FilterVector,
         FilterImage,
     ];
 
     private readonly IReadOnlyList<PaletteNodeViewModel> allNodes;
+    private readonly Dictionary<NodeType, bool> expandedStates = [];
     private string searchText = string.Empty;
     private string selectedInputDataType = FilterAll;
     private string selectedOutputDataType = FilterAll;
+    private bool isCompact = true;
 
     public NodePaletteViewModel(IEnumerable<INodeFactory> factories)
     {
@@ -46,6 +50,9 @@ public sealed class NodePaletteViewModel : ViewModelBase
             .Select(static factory => new PaletteNodeViewModel(factory))
             .ToArray();
 
+        ExpandAllCommand = new RelayCommand(() => SetAllExpanded(true));
+        CollapseAllCommand = new RelayCommand(() => SetAllExpanded(false));
+
         RefreshFilteredNodes();
     }
 
@@ -54,6 +61,23 @@ public sealed class NodePaletteViewModel : ViewModelBase
     public ObservableCollection<PaletteNodeGroupViewModel> Groups { get; } = [];
 
     public IReadOnlyList<string> DataTypeOptions => DataTypeFilterOptions;
+
+    public IRelayCommand ExpandAllCommand { get; }
+
+    public IRelayCommand CollapseAllCommand { get; }
+
+    /// <summary>
+    /// Gets or sets whether Blocks are shown as single-line rows instead of detailed cards.
+    /// </summary>
+    public bool IsCompact
+    {
+        get => isCompact;
+        set => SetProperty(ref isCompact, value);
+    }
+
+    public bool IsFilterActive => !string.IsNullOrWhiteSpace(SearchText)
+        || SelectedInputDataType != FilterAll
+        || SelectedOutputDataType != FilterAll;
 
     public string SearchText
     {
@@ -104,13 +128,31 @@ public sealed class NodePaletteViewModel : ViewModelBase
             }
         }
 
+        var isFilterActive = IsFilterActive;
         foreach (var group in FilteredNodes
             .GroupBy(static node => node.NodeType)
             .OrderBy(static group => GetNodeTypeSortIndex(group.Key)))
         {
+            // Filtering always reveals matches; user expansion choices apply only to the unfiltered library.
+            var isExpanded = isFilterActive || expandedStates.GetValueOrDefault(group.Key, true);
             Groups.Add(new PaletteNodeGroupViewModel(
                 group.Key,
-                group.OrderBy(static node => node.DisplayName, StringComparer.OrdinalIgnoreCase)));
+                group.OrderBy(static node => node.DisplayName, StringComparer.OrdinalIgnoreCase),
+                isExpanded,
+                isFilterActive ? null : OnGroupExpandedChanged));
+        }
+    }
+
+    private void OnGroupExpandedChanged(NodeType nodeType, bool isExpanded)
+    {
+        expandedStates[nodeType] = isExpanded;
+    }
+
+    private void SetAllExpanded(bool isExpanded)
+    {
+        foreach (var group in Groups)
+        {
+            group.IsExpanded = isExpanded;
         }
     }
 
@@ -124,6 +166,7 @@ public sealed class NodePaletteViewModel : ViewModelBase
         return node.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
             || node.Subtitle.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
             || node.NodeTypeDisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+            || node.Category.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
             || node.TypeId.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -145,10 +188,7 @@ public sealed class NodePaletteViewModel : ViewModelBase
 
         foreach (var port in ports)
         {
-            if (port.Direction == direction
-                && (filter == FilterFastStream
-                    ? port.DataKind == PortDataKind.FastStream
-                    : MatchesSchemaFilter(port.DataSchema, filter)))
+            if (port.Direction == direction && MatchesSchemaFilter(port.DataSchema, filter))
             {
                 return true;
             }
@@ -163,6 +203,7 @@ public sealed class NodePaletteViewModel : ViewModelBase
         {
             FilterJson => schema == PortDataSchema.JsonEnvelope,
             FilterTimeSeries => schema == PortDataSchema.TimeSeries1D,
+            FilterFixedRateTimeSeries => schema == PortDataSchema.FixedRateTimeSeries1D,
             FilterVector => schema == PortDataSchema.Spectrum1D
                 || schema == PortDataSchema.NumericVector1D
                 || schema == PortDataSchema.NumericMatrix2D,

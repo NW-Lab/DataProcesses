@@ -193,6 +193,12 @@ public static class FlowValidator
             return true;
         }
 
+        if (connectionSchema == PortDataSchema.TimeSeries1D && sourceSchema == PortDataSchema.FixedRateTimeSeries1D)
+        {
+            // Flows saved before ADR 0005 recorded FS source ports as TimeSeries1D.
+            return true;
+        }
+
         return connectionSchema == sourceSchema;
     }
 

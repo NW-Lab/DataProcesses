@@ -12,7 +12,7 @@ BreathImage predicts respiratory rate from sequential image frames using a light
 
 ## Dashboard
 
-BreathImage is not shown on the dashboard by default. Connect `breath-rate` to StreamChartSt or another compatible Fast Stream output Block to inspect the breaths-per-minute estimate.
+BreathImage is not shown on the dashboard by default. Connect `breath-rate` to StreamChartTS or another compatible Fast Stream output Block to inspect the breaths-per-minute estimate.
 
 ## Ports
 

@@ -48,6 +48,7 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
     {
         PortDataSchema.Unspecified => "Unspecified",
         PortDataSchema.TimeSeries1D => "Time Series (1D)",
+        PortDataSchema.FixedRateTimeSeries1D => "Fixed-Rate Time Series (1D)",
         PortDataSchema.Spectrum1D => "Spectrum (1D)",
         PortDataSchema.NumericVector1D => "Numeric Vector (1D)",
         PortDataSchema.NumericMatrix2D => "Numeric Matrix (2D)",
@@ -74,7 +75,7 @@ public sealed class CanvasConnectionViewModel : ViewModelBase
 
     public double Y2 => TargetNode.Y + HeaderHeight + GetPortIndex(TargetNode.Inputs, TargetPort.Id) * PortRowHeight + PortCenterOffset;
 
-    public string StrokeColor => DataKind == PortDataKind.FastStream ? "#1D70B8" : "#D92D20";
+    public string StrokeColor => DataKind == PortDataKind.FastStream ? PortKindColors.FastStream : PortKindColors.JsonMessage;
 
     public string? StrokeDashArray => DataKind == PortDataKind.FastStream ? null : "6,4";
 

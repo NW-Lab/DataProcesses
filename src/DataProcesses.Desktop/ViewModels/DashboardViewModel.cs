@@ -32,6 +32,10 @@ public sealed class DashboardViewModel : ViewModelBase
 
     public event Action<string>? TriggerRequested;
 
+    public event Action<string>? AudioOutputMuteToggleRequested;
+
+    public event Action<string>? AudioOutputRecordingToggleRequested;
+
     public DashboardViewModel()
     {
         AddWidgetCommand = new RelayCommand(AddWidget);
@@ -361,6 +365,22 @@ public sealed class DashboardViewModel : ViewModelBase
         }
 
         TriggerRequested?.Invoke(nodeId);
+    }
+
+    public void RequestAudioOutputMuteToggle(string? nodeId)
+    {
+        if (!string.IsNullOrWhiteSpace(nodeId))
+        {
+            AudioOutputMuteToggleRequested?.Invoke(nodeId);
+        }
+    }
+
+    public void RequestAudioOutputRecordingToggle(string? nodeId)
+    {
+        if (!string.IsNullOrWhiteSpace(nodeId))
+        {
+            AudioOutputRecordingToggleRequested?.Invoke(nodeId);
+        }
     }
 
     private void PersistCurrentDashboard()

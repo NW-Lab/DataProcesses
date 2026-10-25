@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="Format" xml:space="preserve"><value>入力形式</value></data>
+  <data name="SampleRate" xml:space="preserve"><value>サンプリング周波数 (Hz)</value></data>
+  <data name="NumericType" xml:space="preserve"><value>バイナリ数値型</value></data>
+  <data name="ByteOrder" xml:space="preserve"><value>バイナリバイト順序</value></data>
+</root>

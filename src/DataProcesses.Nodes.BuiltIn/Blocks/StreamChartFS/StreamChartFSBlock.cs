@@ -10,7 +10,7 @@ public static class StreamChartFSBlock
     public const string TypeId = "dataprocesses.output.stream-chart-fs";
     public const string InputPortId = "input";
     public const int MaximumChannels = 4;
-    public const string IconPath = "Blocks/StreamChartSt/icon.png";
+    public const string IconPath = "Blocks/StreamChartTS/icon.png";
 
     public static readonly NodeDefinition Definition = new(
         TypeId: TypeId,
@@ -25,7 +25,7 @@ public static class StreamChartFSBlock
                 PortDirection.Input,
                 PortDataKind.FastStream,
                 IsRequired: false,
-                DataSchema: PortDataSchema.TimeSeries1D),
+                DataSchema: PortDataSchema.FixedRateTimeSeries1D),
         ],
         NodeType: NodeType.Output,
         Title: "StreamChartFS",

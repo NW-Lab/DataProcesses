@@ -9,7 +9,7 @@ public static class SerialInputVectorBlock
 {
     public const string TypeId = "dataprocesses.input.serial-vector";
     public const string VectorPortId = "vector";
-    public const string IconPath = "Blocks/SerialInputSt/icon.png";
+    public const string IconPath = "Blocks/SerialInputTS/icon.png";
 
     public static NodeDefinition Definition { get; } = new(
         TypeId: TypeId,

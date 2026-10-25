@@ -13,7 +13,7 @@ public sealed class StreamChartFSBlockTests
         Assert.Equal(StreamChartFSBlock.InputPortId, port.Id);
         Assert.Equal(PortDirection.Input, port.Direction);
         Assert.Equal(PortDataKind.FastStream, port.DataKind);
-        Assert.Equal(PortDataSchema.TimeSeries1D, port.DataSchema);
+        Assert.Equal(PortDataSchema.FixedRateTimeSeries1D, port.DataSchema);
         Assert.False(port.IsRequired);
         Assert.Equal(NodeType.Output, StreamChartFSBlock.Definition.NodeType);
     }
@@ -87,6 +87,18 @@ public sealed class StreamChartFSBlockTests
 
         await Assert.ThrowsAsync<ArgumentException>(async () =>
             await node.OnPacketAsync(StreamChartFSBlock.InputPortId, message, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task OnPacketAsync_RejectsFrameWithoutSampleRate()
+    {
+        var node = new StreamChartFSNode();
+        await node.InitializeAsync(new RecordingNodeContext(), CancellationToken.None);
+        var periodOnlyFrame = new FastStreamFrame(0, 1_000_000, ["signal"], [new double[] { 0.0, 1.0 }.AsMemory()], 0);
+
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+            await node.OnPacketAsync(StreamChartFSBlock.InputPortId, periodOnlyFrame, CancellationToken.None));
+        Assert.Null(node.LatestSnapshot);
     }
 
     [Fact]

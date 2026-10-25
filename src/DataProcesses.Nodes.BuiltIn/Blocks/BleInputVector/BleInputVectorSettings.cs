@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 
-using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputTS;
 
 namespace DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
 
@@ -9,12 +9,12 @@ public sealed record BleInputVectorSettings(
     string DeviceId = "",
     string DeviceName = "",
     bool AutoConnect = true,
-    string ServiceUuid = BleInputStSettings.NordicUartServiceUuid,
-    string NotifyCharacteristicUuid = BleInputStSettings.NordicUartTxCharacteristicUuid,
+    string ServiceUuid = BleInputTSSettings.NordicUartServiceUuid,
+    string NotifyCharacteristicUuid = BleInputTSSettings.NordicUartTxCharacteristicUuid,
     int TimeoutMilliseconds = 5000) : IBleInputGattSettings
 {
-    public const int MinimumTimeoutMilliseconds = BleInputStSettings.MinimumTimeoutMilliseconds;
-    public const int MaximumTimeoutMilliseconds = BleInputStSettings.MaximumTimeoutMilliseconds;
+    public const int MinimumTimeoutMilliseconds = BleInputTSSettings.MinimumTimeoutMilliseconds;
+    public const int MaximumTimeoutMilliseconds = BleInputTSSettings.MaximumTimeoutMilliseconds;
 
     public static BleInputVectorSettings Default { get; } = new();
 

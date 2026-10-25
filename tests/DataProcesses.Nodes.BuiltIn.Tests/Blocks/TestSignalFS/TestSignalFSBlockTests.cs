@@ -14,7 +14,7 @@ public sealed class TestSignalFSBlockTests
         Assert.Equal(TestSignalFSBlock.StreamOutputPortId, port.Id);
         Assert.Equal(PortDirection.Output, port.Direction);
         Assert.Equal(PortDataKind.FastStream, port.DataKind);
-        Assert.Equal(PortDataSchema.TimeSeries1D, port.DataSchema);
+        Assert.Equal(PortDataSchema.FixedRateTimeSeries1D, port.DataSchema);
     }
 
     [Fact]

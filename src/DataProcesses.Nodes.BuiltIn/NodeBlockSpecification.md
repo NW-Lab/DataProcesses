@@ -22,7 +22,8 @@ Detailed schema compatibility is declared with `PortDataSchema`. Current schema 
 | Schema | Intended use |
 |---|---|
 | `Unspecified` | Family-level compatibility only; used for backward compatibility and broad adapters. |
-| `TimeSeries1D` | Regularly sampled time-series frames (`FastStreamFrame`). |
+| `TimeSeries1D` | **TS**: time series timed by source timestamps or a nominal `SamplePeriodNanoseconds`, such as Arduino-style `millis,data` serial/BLE input (`FastStreamFrame`). `SampleRateHertz` is optional. |
+| `FixedRateTimeSeries1D` | **FS**: fixed-rate time series such as 44.1 kHz audio (`FastStreamFrame`). Every frame must set `SampleRateHertz`. Not interchangeable with `TimeSeries1D` (ADR 0005). |
 | `Spectrum1D` | Frequency-domain one-sided magnitudes (`SpectrumFrame`). |
 | `NumericVector1D` | Dense one-dimensional numeric vectors (`NumericVectorFrame`). |
 | `NumericMatrix2D` | Dense row-major two-dimensional numeric matrices (`NumericMatrixFrame`). |
@@ -89,7 +90,7 @@ Port IDs are stable compatibility identifiers. Do not reuse the same ID for diff
 
 Fast Stream is the internal high-throughput numeric path for regular numeric streams, including sensors, audio, and other signals; it is not audio-specific or a file format. The public frame contract stores timing metadata once per frame and sample values as channel-major `double` buffers. This avoids per-sample JSON or CSV allocation in the processing graph.
 
-For a fixed integer sample rate, producers set `SampleRateHertz` (for example, `44100`). Timing-aware processors calculate each sample timestamp from the frame origin and sample index, avoiding accumulated rounding from an integer nanosecond period. `SamplePeriodNanoseconds` remains the legacy fallback for existing producers such as ST inputs. A rate change starts a new frame. The Flow Editor's `FS` palette filter matches all Fast Stream ports; `TS`, `VEC`, and `IMG` remain detailed-schema filters.
+For a fixed integer sample rate, producers set `SampleRateHertz` (for example, `44100`). Timing-aware processors calculate each sample timestamp from the frame origin and sample index, avoiding accumulated rounding from an integer nanosecond period. `SamplePeriodNanoseconds` remains the legacy fallback for TS producers such as Serial Input TS. A rate change starts a new frame. FS producers must set `SampleRateHertz` on every frame, and FS consumers reject frames without it. The Flow Editor's `TS` and `FS` palette filters match `TimeSeries1D` and `FixedRateTimeSeries1D` ports respectively; `VEC` and `IMG` remain detailed-schema filters.
 
 The human and external interchange shape for simple time-series data may be described as:
 

@@ -531,4 +531,28 @@ public partial class DashboardView : UserControl
         viewModel.RequestTriggerByNodeId(widget.SourcePortId);
         e.Handled = true;
     }
+
+    private void AudioOutputMuteButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not StyledElement { DataContext: DashboardWidgetViewModel widget }
+            || DataContext is not DashboardViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.RequestAudioOutputMuteToggle(widget.SourcePortId);
+        e.Handled = true;
+    }
+
+    private void AudioOutputRecordButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not StyledElement { DataContext: DashboardWidgetViewModel widget }
+            || DataContext is not DashboardViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.RequestAudioOutputRecordingToggle(widget.SourcePortId);
+        e.Handled = true;
+    }
 }

@@ -16,6 +16,8 @@ Each built-in Block has one self-contained directory under `Blocks/<BlockName>/`
 
 Mirror the same structure under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`. Keep tests deterministic and use synthetic data only.
 
+For time-series Blocks, use the `TS` suffix for `TimeSeries1D` (timestamp or nominal-period timing, such as Arduino `millis,data` input) and the `FS` suffix for `FixedRateTimeSeries1D` (exact `SampleRateHertz`, such as 44.1 kHz audio). TS and FS ports do not connect to each other; see ADR 0005. Keep existing type IDs such as `dataprocesses.filter.filter-st` unchanged when renaming.
+
 ## README Template
 
 Create a Block-local `README.md` for every Block. For simple Blocks, keep sections concise; for complex Blocks, include full details for ports, schema, settings, timing, numerical behavior, and interoperability. Use [TestSignalTS/README.md](TestSignalTS/README.md) as the reference template.
@@ -71,31 +73,38 @@ Block-specific settings use this JSON shape:
 | Directory | Type ID | Current role |
 |---|---|---|
 | `CsvInput/` | `dataprocesses.input.csv` | CSV source that reads `millis,CH1...` records from file or COM input and emits per-channel Fast Stream outputs as `millis,value`. |
-| `SerialInputSt/` | `dataprocesses.input.serial-st` | Arduino USB serial source that reads `millis,data1,data2,...` rows and emits one multi-channel Fast Stream output. |
+| `SerialInputTS/` | `dataprocesses.input.serial-st` | Arduino USB serial source that reads `millis,data1,data2,...` rows and emits one multi-channel Fast Stream output. |
 | `SerialInputVector/` | `dataprocesses.input.serial-vector` | Arduino USB serial source that reads contemporaneous IMU `millis,x,y,z` rows and emits one numeric vector per row. |
-| `BleInputSt/` | `dataprocesses.input.ble-st` | Arduino BLE GATT source that receives Nordic UART CSV notifications and emits one multi-channel Fast Stream output. |
+| `BleInputTS/` | `dataprocesses.input.ble-st` | Arduino BLE GATT source that receives Nordic UART CSV notifications and emits one multi-channel Fast Stream output. |
+| `BleInputFS/` | `dataprocesses.input.ble-fs` | BLE GATT source with Inspector-selectable CSV or binary input, numeric type, byte order and exact sample rate. |
 | `BleInputVector/` | `dataprocesses.input.ble-vector` | Arduino BLE GATT source that receives Nordic UART `millis,x,y,z` IMU notifications and emits one timestamped numeric vector per row. |
 | `CameraInputImage/` | `dataprocesses.input.camera-image` | Local camera source that captures one RGB24 `ImageFrame` for a JSON `Trigger: true` message or Dashboard Capture action. |
 | `MovieInputImage/` | `dataprocesses.input.movie-image` | Movie source that emits RGB24 `ImageFrame` values at a configured FPS while JSON `isPlay` is true. |
 | `UVCameraInputImage/` | `dataprocesses.input.uv-camera-image` | UV camera source that emits RGB24 `ImageFrame` values while JSON `isPlay` is true. |
+| `MicInputFS/` | `dataprocesses.input.mic-fs` | Windows default microphone source with configurable sample rate and Stereo/Left/Right Fast Stream output. |
+| `AudioOutFS/` | `dataprocesses.output.audio-fs` | WASAPI Fast Stream audio playback with Dashboard mute/record controls and Inspector-selected WAV folder/prefix. |
+| `MqttIn/` | `dataprocesses.input.mqtt-in` | MQTT subscription source that parses broker payloads as JSON and emits `JsonMessage` packets. |
+| `MqttOut/` | `dataprocesses.output.mqtt-out` | Publishes JSON Message payloads to an MQTT broker with configurable topic, QoS, and retain behavior. |
 | `TestSignalTS/` | `dataprocesses.test-signal` | Configurable Test Signal source with Payload settings input, Fast Stream output, and Payload status output. |
 | `TestSignalFS/` | `dataprocesses.test-signal-fs` | Sine or square Fast Stream source with configurable peak intensity and exact sample rate. |
 | `Trigger/` | `dataprocesses.trigger` | Payload source that emits configured values on manual action, execution start, and periodic timing. |
-| `FilterSt/` | `dataprocesses.filter.filter-st` | Configurable stateful Fast Stream low-pass, high-pass, band-pass, and band-stop processor. |
+| `FilterTS/` | `dataprocesses.filter.filter-st` | `FilterTS`: configurable stateful Fast Stream low-pass, high-pass, band-pass, and band-stop processor. |
+| `FilterFS/` | `dataprocesses.filter.filter-fs` | Fast Stream low-pass, high-pass, band-pass, band-stop, or notch processor with Inspector-configurable frequency and order. |
 | `MovingAverage/` | `dataprocesses.filter.moving-average` | Stateful Fast Stream moving average with a sample-count or elapsed-time window. |
 | `FastFourierTransform/` | `dataprocesses.analysis.fft` | Fast Stream to one-sided `SpectrumFrame` analysis processor. |
-| `FftSt/` | `dataprocesses.analysis.fft-st` | Fast Stream to one-sided `NumericVectorFrame` spectrum processor for dashboard vector-chart display. |
-| `CdTimeResolvedMethodSt/` | `dataprocesses.analysis.cd-time-resolved-method-st` | Fast Stream central-difference processor that emits a time-resolved numeric vector. |
-| `HartRateSt/` | `dataprocesses.analysis.hart-rate-st` | Fast Stream heart-beat peak detector that emits BPM as a one-channel time-series frame. |
+| `FftFS/` | `dataprocesses.analysis.fft-fs` | Fast Stream FFT entry point preserving exact integer sample-rate metadata in the spectrum. |
+| `FftTS/` | `dataprocesses.analysis.fft-st` | `FFT_TS`: Fast Stream to one-sided `NumericVectorFrame` spectrum processor for dashboard vector-chart display. |
+| `CdTimeResolvedMethodTS/` | `dataprocesses.analysis.cd-time-resolved-method-st` | Fast Stream central-difference processor that emits a time-resolved numeric vector. |
+| `HartRateTS/` | `dataprocesses.analysis.hart-rate-st` | Fast Stream heart-beat peak detector that emits BPM as a one-channel time-series frame. |
 | `HartRateImage/` | `dataprocesses.analysis.hart-rate-image` | Image-frame rPPG processor that predicts BPM from central ROI color changes and emits a one-channel time-series frame. |
 | `HumansImage/` | `dataprocesses.analysis.humans-image` | Image-frame face-region detector that emits a one-channel person-count time-series frame. |
 | `BreathImage/` | `dataprocesses.analysis.breath-image` | Image-frame respiration estimator that predicts breaths per minute from central ROI Cg changes. |
-| `BreathSt/` | `dataprocesses.analysis.breath-st` | Fast Stream respiration detector that emits breaths per minute and optional JSON anomaly events. |
+| `BreathTS/` | `dataprocesses.analysis.breath-st` | Fast Stream respiration detector that emits breaths per minute and optional JSON anomaly events. |
 | `StremOutputTS/` | `dataprocesses.output.stream` | Debug-oriented Fast Stream output adapter with bounded downsampling. |
 | `StreamOutputFS/` | `dataprocesses.output.stream-fs` | Fast Stream diagnostic sink that shows sample frequency and Dashboard-rate values. |
 | `StreamOutputVector/` | `dataprocesses.output.numeric-vector` | Debug-oriented Fast Stream vector sink for `NumericVectorFrame` snapshots. |
 | `StreamChartVector/` | `dataprocesses.output.vector-chart` | Debug-oriented Fast Stream vector sink that renders a color-mapped intensity chart over a millisecond time axis. |
-| `StreamChartSt/` | `dataprocesses.output.stream-chart-st` | Interactive multi-channel Fast Stream time-series chart sink (up to 4 channels) with configurable time alignment and channel names. |
+| `StreamChartTS/` | `dataprocesses.output.stream-chart-st` | `StreamChartTS`: interactive multi-channel Fast Stream time-series chart sink (up to 4 channels) with configurable time alignment and channel names. |
 | `StreamChartFS/` | `dataprocesses.output.stream-chart-fs` | Dashboard chart for up to four channels in one Fast Stream frame, using exact sample-rate timing when available. |
 | `StreamOutputImage/` | `dataprocesses.output.image` | Debug-oriented Fast Stream image sink for `ImageFrame` previews. |
 | `PythonOutput/` | `dataprocesses.output.python` | Typed Fast Stream/JSON boundary that emits deferred-delivery status; it does not launch Python yet. |
@@ -112,4 +121,3 @@ Block-specific settings use this JSON shape:
 6. Run the Release build and complete test suite.
 
 Do not place implementation files directly under `DataProcesses.Nodes.BuiltIn`. That project root is reserved for the built-in plugin catalog and project-level composition.
-

@@ -354,4 +354,52 @@ public sealed class FlowModelTests
         Assert.False(result.IsValid);
         Assert.Contains(result.Issues, issue => issue.Code == FlowValidationIssueCode.IncompatiblePorts);
     }
+
+    [Theory]
+    [InlineData(PortDataSchema.TimeSeries1D, PortDataSchema.FixedRateTimeSeries1D)]
+    [InlineData(PortDataSchema.FixedRateTimeSeries1D, PortDataSchema.TimeSeries1D)]
+    public void CanConnect_ReturnsFalse_BetweenTsAndFs(PortDataSchema sourceSchema, PortDataSchema targetSchema)
+    {
+        var source = new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream, DataSchema: sourceSchema);
+        var target = new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: targetSchema);
+
+        Assert.False(ConnectionValidator.CanConnect(source, target));
+    }
+
+    [Fact]
+    public void CanConnect_ReturnsTrue_BetweenFsPorts()
+    {
+        var source = new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.FixedRateTimeSeries1D);
+        var target = new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.FixedRateTimeSeries1D);
+
+        Assert.True(ConnectionValidator.CanConnect(source, target));
+    }
+
+    [Theory]
+    [InlineData(PortDataSchema.TimeSeries1D, true)]
+    [InlineData(PortDataSchema.FixedRateTimeSeries1D, true)]
+    [InlineData(PortDataSchema.NumericVector1D, false)]
+    public void Validate_AcceptsLegacyTsConnectionSchema_ForFsPorts(PortDataSchema savedConnectionSchema, bool expectedValid)
+    {
+        var sourceDefinition = SourceDefinition with
+        {
+            Ports = [new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.FixedRateTimeSeries1D)],
+        };
+        var sinkDefinition = SinkDefinition with
+        {
+            Ports = [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.FixedRateTimeSeries1D)],
+        };
+        var document = new FlowDocument(
+            Guid.NewGuid(),
+            "Saved FS flow",
+            [
+                new NodeInstance("source-1", sourceDefinition.TypeId, 0, 0, "{}"),
+                new NodeInstance("sink-1", sinkDefinition.TypeId, 100, 0, "{}"),
+            ],
+            [new Connection("source-1", "out", "sink-1", "in", PortDataKind.FastStream, DataSchema: savedConnectionSchema)]);
+
+        var result = FlowValidator.Validate(document, [sourceDefinition, sinkDefinition]);
+
+        Assert.Equal(expectedValid, result.IsValid);
+    }
 }

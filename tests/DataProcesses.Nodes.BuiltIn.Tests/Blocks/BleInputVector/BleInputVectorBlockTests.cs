@@ -1,7 +1,7 @@
 using System.Text;
 
 using DataProcesses.Nodes.BuiltIn;
-using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
 using DataProcesses.Plugin.Abstractions;
 
@@ -25,8 +25,8 @@ public sealed class BleInputVectorBlockTests
     {
         var settings = BleInputVectorSettings.Default;
 
-        Assert.Equal(BleInputStSettings.NordicUartServiceUuid, settings.ServiceUuid);
-        Assert.Equal(BleInputStSettings.NordicUartTxCharacteristicUuid, settings.NotifyCharacteristicUuid);
+        Assert.Equal(BleInputTSSettings.NordicUartServiceUuid, settings.ServiceUuid);
+        Assert.Equal(BleInputTSSettings.NordicUartTxCharacteristicUuid, settings.NotifyCharacteristicUuid);
         Assert.Equal(5000, settings.TimeoutMilliseconds);
         Assert.True(settings.AutoConnect);
     }

@@ -8,7 +8,7 @@ Reads one IMU X/Y/Z vector per Arduino USB serial row.
 |---|---|
 | Title | `SerialInputVector` |
 | Subtitle | `IMU XYZ CSV` |
-| Icon | Shared `SerialInputSt` serial-input icon. |
+| Icon | Shared `SerialInputTS` serial-input icon. |
 
 ## Ports
 

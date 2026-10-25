@@ -12,7 +12,23 @@ public sealed class PaletteNodeViewModel : ViewModelBase
 
         Factory = factory;
         IconImage = NodeIconLoader.Load(Definition.IconPath);
+        InputBadges = PalettePortBadgeViewModel.Create(Definition.Ports, PortDirection.Input);
+        OutputBadges = PalettePortBadgeViewModel.Create(Definition.Ports, PortDirection.Output);
     }
+
+    public IReadOnlyList<PalettePortBadgeViewModel> InputBadges { get; }
+
+    public IReadOnlyList<PalettePortBadgeViewModel> OutputBadges { get; }
+
+    public bool HasInputBadges => InputBadges.Count > 0;
+
+    public bool HasOutputBadges => OutputBadges.Count > 0;
+
+    public string PortSummary => $"In: {DescribeBadges(InputBadges)} / Out: {DescribeBadges(OutputBadges)}";
+
+    public string ToolTipText => HasSubtitle ? $"{Title}\n{Subtitle}\n{PortSummary}" : $"{Title}\n{PortSummary}";
+
+    public string AccessibleName => $"{Title}, {PortSummary}";
 
     public INodeFactory Factory { get; }
 
@@ -52,5 +68,10 @@ public sealed class PaletteNodeViewModel : ViewModelBase
             NodeType.Output => "OUTPUT",
             _ => nodeType.ToString(),
         };
+    }
+
+    private static string DescribeBadges(IReadOnlyList<PalettePortBadgeViewModel> badges)
+    {
+        return badges.Count == 0 ? "none" : string.Join(", ", badges.Select(static badge => badge.Description));
     }
 }

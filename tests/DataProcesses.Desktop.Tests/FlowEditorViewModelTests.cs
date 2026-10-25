@@ -5,19 +5,24 @@ using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Desktop.ViewModels;
 using DataProcesses.Engine;
-using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
-using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.AudioOutFS;
+using DataProcesses.Nodes.BuiltIn.Blocks.BreathTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
-using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputVector;
-using DataProcesses.Nodes.BuiltIn.Blocks.FftSt;
-using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.FftTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
+using DataProcesses.Nodes.BuiltIn.Blocks.MicInputFS;
+using DataProcesses.Nodes.BuiltIn.Blocks.MqttIn;
+using DataProcesses.Nodes.BuiltIn.Blocks.MqttOut;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputFS;
-using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
@@ -33,9 +38,9 @@ namespace DataProcesses.Desktop.Tests;
 public sealed class FlowEditorViewModelTests
 {
     [Fact]
-    public void PlacePaletteNode_FilterStUsesInspectableDefaultSettings()
+    public void PlacePaletteNode_FilterTSUsesInspectableDefaultSettings()
     {
-        var factory = new FilterStNodeFactory();
+        var factory = new FilterTSNodeFactory();
         var viewModel = new FlowEditorViewModel(
             [factory],
             new FlowRunner([factory]),
@@ -43,37 +48,103 @@ public sealed class FlowEditorViewModelTests
 
         var node = viewModel.PlacePaletteNode(Assert.Single(viewModel.Palette.FilteredNodes), 0, 0);
 
-        Assert.True(node.IsFilterStNode);
-        Assert.Equal("lowPass", node.FilterStType);
-        Assert.True(node.FilterStIsSingleCutoffVisible);
-        Assert.False(node.FilterStIsBandCutoffVisible);
-        Assert.Equal(5.0, node.FilterStCutoffFrequencyHertz);
-        Assert.Equal(1.0, node.FilterStLowerCutoffFrequencyHertz);
-        Assert.Equal(10.0, node.FilterStUpperCutoffFrequencyHertz);
-        Assert.Equal(2, node.FilterStOrder);
-        Assert.Equal(48, node.FilterStResponsePoints.Count);
+        Assert.True(node.IsFilterTSNode);
+        Assert.Equal("lowPass", node.FilterTSType);
+        Assert.True(node.FilterTSIsSingleCutoffVisible);
+        Assert.False(node.FilterTSIsBandCutoffVisible);
+        Assert.Equal(5.0, node.FilterTSCutoffFrequencyHertz);
+        Assert.Equal(1.0, node.FilterTSLowerCutoffFrequencyHertz);
+        Assert.Equal(10.0, node.FilterTSUpperCutoffFrequencyHertz);
+        Assert.Equal(2, node.FilterTSOrder);
+        Assert.Equal(48, node.FilterTSResponsePoints.Count);
     }
 
     [Fact]
-    public void CanvasNodeViewModel_UpdatesFilterStSettingsJsonFromTypedInspectorProperties()
+    public void CanvasNodeViewModel_UpdatesFilterTSSettingsJsonFromTypedInspectorProperties()
     {
         var node = new CanvasNodeViewModel(
-            new NodeInstance("node-1", FilterStBlock.TypeId, 0, 0, "{}"),
-            FilterStBlock.Definition);
+            new NodeInstance("node-1", FilterTSBlock.TypeId, 0, 0, "{}"),
+            FilterTSBlock.Definition);
 
-        node.FilterStType = "bandPass";
-        node.FilterStLowerCutoffFrequencyHertz = 0.8;
-        node.FilterStUpperCutoffFrequencyHertz = 4.0;
-        node.FilterStOrder = 6;
+        node.FilterTSType = "bandPass";
+        node.FilterTSLowerCutoffFrequencyHertz = 0.8;
+        node.FilterTSUpperCutoffFrequencyHertz = 4.0;
+        node.FilterTSOrder = 6;
 
         using var document = JsonDocument.Parse(node.SettingsJson);
         Assert.Equal("bandPass", document.RootElement.GetProperty("filterType").GetString());
         Assert.Equal(0.8, document.RootElement.GetProperty("lowerCutoffFrequencyHertz").GetDouble());
         Assert.Equal(4.0, document.RootElement.GetProperty("upperCutoffFrequencyHertz").GetDouble());
         Assert.Equal(6, document.RootElement.GetProperty("order").GetInt32());
-        Assert.True(node.FilterStIsBandCutoffVisible);
-        Assert.Equal(["lowPass", "highPass", "bandPass", "bandStop"], node.FilterStTypes);
-        Assert.Equal([2, 3, 4, 5, 6, 7, 8, 9, 10], node.FilterStOrders);
+        Assert.True(node.FilterTSIsBandCutoffVisible);
+        Assert.Equal(["lowPass", "highPass", "bandPass", "bandStop"], node.FilterTSTypes);
+        Assert.Equal([2, 3, 4, 5, 6, 7, 8, 9, 10], node.FilterTSOrders);
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_UpdatesFilterFSNotchSettingsJsonFromInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("filter-fs", FilterFSBlock.TypeId, 0, 0, "{}"),
+            FilterFSBlock.Definition);
+
+        Assert.True(node.IsFilterFSNode);
+        Assert.Equal("lowPass", node.FilterFSFilterType);
+        Assert.True(node.FilterFSIsSingleCutoffVisible);
+        Assert.Equal(["lowPass", "highPass", "bandPass", "bandStop", "notch"], node.FilterFSTypes);
+
+        node.FilterFSFilterType = "notch";
+        node.FilterFSCutoffFrequencyHertz = 50.0;
+        node.FilterFSNotchBandwidthHertz = 4.0;
+        node.FilterFSOrder = 4;
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal("notch", document.RootElement.GetProperty("filterType").GetString());
+        Assert.Equal(50.0, document.RootElement.GetProperty("cutoffFrequencyHertz").GetDouble());
+        Assert.Equal(4.0, document.RootElement.GetProperty("notchBandwidthHertz").GetDouble());
+        Assert.Equal(4, document.RootElement.GetProperty("order").GetInt32());
+        Assert.True(node.FilterFSIsNotchVisible);
+    }
+
+    [Fact]
+    public void CanvasNodeViewModel_UpdatesMqttInspectorSettingsJson()
+    {
+        var mqttIn = new CanvasNodeViewModel(
+            new NodeInstance("mqtt-in", MqttInBlock.TypeId, 0, 0, "{}"),
+            MqttInBlock.Definition);
+        mqttIn.MqttInBrokerHost = "broker.example";
+        mqttIn.MqttInPort = 8883;
+        mqttIn.MqttInClientId = "desktop-in";
+        mqttIn.MqttInUsername = "sensor-user";
+        mqttIn.MqttInPassword = "test-secret";
+        mqttIn.MqttInUseTls = true;
+        mqttIn.MqttInTopic = "sensors/+/state";
+        mqttIn.MqttInQualityOfService = 2;
+
+        using var mqttInSettings = JsonDocument.Parse(mqttIn.SettingsJson);
+        Assert.True(mqttIn.IsMqttInNode);
+        Assert.Equal("broker.example", mqttInSettings.RootElement.GetProperty("brokerHost").GetString());
+        Assert.Equal(8883, mqttInSettings.RootElement.GetProperty("port").GetInt32());
+        Assert.Equal("desktop-in", mqttInSettings.RootElement.GetProperty("clientId").GetString());
+        Assert.Equal("sensor-user", mqttInSettings.RootElement.GetProperty("username").GetString());
+        Assert.Equal("test-secret", mqttInSettings.RootElement.GetProperty("password").GetString());
+        Assert.True(mqttInSettings.RootElement.GetProperty("useTls").GetBoolean());
+        Assert.Equal("sensors/+/state", mqttInSettings.RootElement.GetProperty("topic").GetString());
+        Assert.Equal(2, mqttInSettings.RootElement.GetProperty("qualityOfService").GetInt32());
+
+        var mqttOut = new CanvasNodeViewModel(
+            new NodeInstance("mqtt-out", MqttOutBlock.TypeId, 0, 0, "{}"),
+            MqttOutBlock.Definition);
+        mqttOut.MqttOutTopic = "sensors/output";
+        mqttOut.MqttOutQualityOfService = 1;
+        mqttOut.MqttOutRetain = true;
+
+        using var mqttOutSettings = JsonDocument.Parse(mqttOut.SettingsJson);
+        Assert.True(mqttOut.IsMqttOutNode);
+        Assert.Equal("sensors/output", mqttOutSettings.RootElement.GetProperty("topic").GetString());
+        Assert.Equal(1, mqttOutSettings.RootElement.GetProperty("qualityOfService").GetInt32());
+        Assert.True(mqttOutSettings.RootElement.GetProperty("retain").GetBoolean());
+        Assert.Equal([0, 1, 2], mqttOut.MqttQualityOfServiceLevels);
     }
 
     [Fact]
@@ -711,10 +782,10 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
-    public void PlacePaletteNode_BreathStInitializesInspectableDefaults()
+    public void PlacePaletteNode_BreathTSInitializesInspectableDefaults()
     {
         var mainViewModel = new MainViewModel();
-        var breathSt = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == BreathStBlock.TypeId);
+        var breathSt = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == BreathTSBlock.TypeId);
 
         var node = mainViewModel.FlowEditor.PlacePaletteNode(breathSt, 260, 220);
 
@@ -879,6 +950,127 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void CanvasNodeViewModel_UpdatesMicInputFSSettingsJsonFromTypedInspectorProperties()
+    {
+        var node = new CanvasNodeViewModel(
+            new NodeInstance("mic-1", MicInputFSBlock.TypeId, 0, 0, "{}"),
+            MicInputFSBlock.Definition);
+
+        Assert.True(node.IsMicInputFSNode);
+        Assert.True(node.IsSignalInspectorNode);
+        node.MicInputFSSampleRateHertz = 48_000;
+        node.MicInputFSChannelMode = "Right";
+
+        using var document = JsonDocument.Parse(node.SettingsJson);
+        Assert.Equal(48_000, document.RootElement.GetProperty("sampleRateHertz").GetInt32());
+        Assert.Equal("Right", document.RootElement.GetProperty("channelMode").GetString());
+    }
+
+    [Fact]
+    public void AudioOutFSDashboardControlsToggleMuteAndRecordingWithoutChangingInspectorPaths()
+    {
+        var mainViewModel = new MainViewModel();
+        var audioOutPaletteNode = mainViewModel.FlowEditor.Palette.FilteredNodes
+            .Single(node => node.TypeId == AudioOutFSBlock.TypeId);
+        var audioOutNode = mainViewModel.FlowEditor.PlacePaletteNode(audioOutPaletteNode, 120, 120);
+        audioOutNode.AudioOutFSRecordingFolder = Path.Combine(Path.GetTempPath(), "DataProcessesAudioTests");
+        audioOutNode.AudioOutFSFileNamePrefix = "meeting";
+
+        var widget = Assert.Single(mainViewModel.Dashboard.Widgets);
+        Assert.True(widget.IsAudioOutputContent);
+        Assert.False(widget.IsAudioOutputMuted);
+        Assert.False(widget.IsAudioOutputRecording);
+        Assert.Equal("Mute", widget.AudioOutputMuteButtonLabel);
+        Assert.Equal("Start Recording", widget.AudioOutputRecordButtonLabel);
+
+        mainViewModel.Dashboard.RequestAudioOutputMuteToggle(audioOutNode.Id);
+        mainViewModel.Dashboard.RequestAudioOutputRecordingToggle(audioOutNode.Id);
+
+        Assert.True(audioOutNode.AudioOutFSIsMuted);
+        Assert.True(audioOutNode.AudioOutFSIsRecording);
+        Assert.True(widget.IsAudioOutputMuted);
+        Assert.True(widget.IsAudioOutputRecording);
+        Assert.Equal("Unmute", widget.AudioOutputMuteButtonLabel);
+        Assert.Equal("Stop Recording", widget.AudioOutputRecordButtonLabel);
+
+        using var settings = JsonDocument.Parse(audioOutNode.SettingsJson);
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "DataProcessesAudioTests"), settings.RootElement.GetProperty("recordingFolder").GetString());
+        Assert.Equal("meeting", settings.RootElement.GetProperty("fileNamePrefix").GetString());
+    }
+
+    [Fact]
+    public async Task RunAsync_ResetsAudioOutputMuteAndRecordingToggles()
+    {
+        var mainViewModel = new MainViewModel();
+        var audioOutPaletteNode = mainViewModel.FlowEditor.Palette.FilteredNodes
+            .Single(node => node.TypeId == AudioOutFSBlock.TypeId);
+        var audioOutNode = mainViewModel.FlowEditor.PlacePaletteNode(audioOutPaletteNode, 120, 120);
+        mainViewModel.Dashboard.RequestAudioOutputMuteToggle(audioOutNode.Id);
+        mainViewModel.Dashboard.RequestAudioOutputRecordingToggle(audioOutNode.Id);
+        Assert.True(audioOutNode.AudioOutFSIsMuted);
+        Assert.True(audioOutNode.AudioOutFSIsRecording);
+
+        var runTask = mainViewModel.FlowEditor.StartExecutionAsync(debugMode: false);
+        try
+        {
+            var resetDeadline = DateTimeOffset.UtcNow.AddSeconds(2);
+            while ((audioOutNode.AudioOutFSIsMuted || audioOutNode.AudioOutFSIsRecording)
+                   && DateTimeOffset.UtcNow < resetDeadline)
+            {
+                await Task.Delay(10);
+            }
+        }
+        finally
+        {
+            mainViewModel.FlowEditor.StopExecution();
+            await runTask;
+        }
+
+        Assert.False(audioOutNode.AudioOutFSIsMuted);
+        Assert.False(audioOutNode.AudioOutFSIsRecording);
+    }
+
+    [Fact]
+    public async Task RunAsync_PacesFastStreamFramesForAudioOutputDuration()
+    {
+        var audioFrameCount = 0;
+        INodeFactory[] factories =
+        [
+            new TestSignalFSNodeFactory(),
+            new AudioOutFSNodeFactory((_, _, _) => Interlocked.Increment(ref audioFrameCount)),
+        ];
+        var viewModel = new FlowEditorViewModel(
+            factories,
+            new FlowRunner(factories),
+            new ProjectFileService());
+
+        var signalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalFSBlock.TypeId);
+        var audioPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == AudioOutFSBlock.TypeId);
+        var signalNode = viewModel.PlacePaletteNode(signalPaletteNode, 120, 120);
+        var audioNode = viewModel.PlacePaletteNode(audioPaletteNode, 440, 120);
+        signalNode.ShowOnDashboard = false;
+        audioNode.ShowOnDashboard = false;
+
+        var sourcePort = signalNode.Outputs.Single(port => port.Id == TestSignalFSBlock.StreamOutputPortId);
+        var targetPort = audioNode.Inputs.Single(port => port.Id == AudioOutFSBlock.InputPortId);
+        viewModel.StartPendingConnection(sourcePort);
+        viewModel.HandlePortConnection(sourcePort, targetPort);
+
+        var runTask = viewModel.StartExecutionAsync(debugMode: false);
+        try
+        {
+            await Task.Delay(200);
+        }
+        finally
+        {
+            viewModel.StopExecution();
+            await runTask;
+        }
+
+        Assert.True(Volatile.Read(ref audioFrameCount) > 5);
+    }
+
+    [Fact]
     public void CanvasNodeViewModel_UpdatesTestSignalVecSettingsJsonFromTypedInspectorProperties()
     {
         var node = new CanvasNodeViewModel(
@@ -894,19 +1086,19 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
-    public void CanvasNodeViewModel_UpdatesBreathStSettingsJsonFromTypedInspectorProperties()
+    public void CanvasNodeViewModel_UpdatesBreathTSSettingsJsonFromTypedInspectorProperties()
     {
         var node = new CanvasNodeViewModel(
-            new NodeInstance("node-1", BreathStBlock.TypeId, 0, 0, "{}"),
-            BreathStBlock.Definition);
+            new NodeInstance("node-1", BreathTSBlock.TypeId, 0, 0, "{}"),
+            BreathTSBlock.Definition);
 
-        node.BreathStDetectionMethod = "ledOxygen";
-        node.BreathStEmitAnomalyEvents = false;
+        node.BreathTSDetectionMethod = "ledOxygen";
+        node.BreathTSEmitAnomalyEvents = false;
 
         using var document = JsonDocument.Parse(node.SettingsJson);
         Assert.Equal("ledOxygen", document.RootElement.GetProperty("method").GetString());
         Assert.False(document.RootElement.GetProperty("emitAnomalyEvents").GetBoolean());
-        Assert.Equal(["breathBelt", "ledOxygen"], node.BreathStDetectionMethods);
+        Assert.Equal(["breathBelt", "ledOxygen"], node.BreathTSDetectionMethods);
     }
 
     [Fact]
@@ -1026,21 +1218,21 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
-    public void CanvasNodeViewModel_UpdatesSerialInputStSettingsFromInspectorProperties()
+    public void CanvasNodeViewModel_UpdatesSerialInputTSSettingsFromInspectorProperties()
     {
         var node = new CanvasNodeViewModel(
-            new NodeInstance("node-1", SerialInputStBlock.TypeId, 0, 0, "{}"),
-            SerialInputStBlock.Definition);
+            new NodeInstance("node-1", SerialInputTSBlock.TypeId, 0, 0, "{}"),
+            SerialInputTSBlock.Definition);
 
-        node.SerialInputStComPortName = "COM77";
-        node.SerialInputStBaudRate = 230400;
-        node.SerialInputStChannelCount = 3;
+        node.SerialInputTSComPortName = "COM77";
+        node.SerialInputTSBaudRate = 230400;
+        node.SerialInputTSChannelCount = 3;
 
         using var document = JsonDocument.Parse(node.SettingsJson);
         Assert.Equal("COM77", document.RootElement.GetProperty("comPortName").GetString());
         Assert.Equal(230400, document.RootElement.GetProperty("baudRate").GetInt32());
         Assert.Equal(3, document.RootElement.GetProperty("channelCount").GetInt32());
-        Assert.Contains("COM77", node.SerialInputStComPorts, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("COM77", node.SerialInputTSComPorts, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1056,23 +1248,23 @@ public sealed class FlowEditorViewModelTests
         using var document = JsonDocument.Parse(node.SettingsJson);
         Assert.Equal("COM88", document.RootElement.GetProperty("comPortName").GetString());
         Assert.Equal(230400, document.RootElement.GetProperty("baudRate").GetInt32());
-        Assert.Contains("COM88", node.SerialInputStComPorts, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("COM88", node.SerialInputTSComPorts, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void CanvasNodeViewModel_UpdatesBleInputStSettingsFromInspectorProperties()
+    public void CanvasNodeViewModel_UpdatesBleInputTSSettingsFromInspectorProperties()
     {
         var node = new CanvasNodeViewModel(
-            new NodeInstance("node-1", BleInputStBlock.TypeId, 0, 0, "{}"),
-            BleInputStBlock.Definition);
+            new NodeInstance("node-1", BleInputTSBlock.TypeId, 0, 0, "{}"),
+            BleInputTSBlock.Definition);
 
-        node.BleInputStDeviceId = "ble-device-1";
-        node.BleInputStDeviceName = "Arduino Nano 33 BLE";
-        node.BleInputStAutoConnect = false;
-        node.BleInputStServiceUuid = "0000180d-0000-1000-8000-00805f9b34fb";
-        node.BleInputStNotifyCharacteristicUuid = "00002a37-0000-1000-8000-00805f9b34fb";
-        node.BleInputStChannelCount = 3;
-        node.BleInputStTimeoutMilliseconds = 2500;
+        node.BleInputTSDeviceId = "ble-device-1";
+        node.BleInputTSDeviceName = "Arduino Nano 33 BLE";
+        node.BleInputTSAutoConnect = false;
+        node.BleInputTSServiceUuid = "0000180d-0000-1000-8000-00805f9b34fb";
+        node.BleInputTSNotifyCharacteristicUuid = "00002a37-0000-1000-8000-00805f9b34fb";
+        node.BleInputTSChannelCount = 3;
+        node.BleInputTSTimeoutMilliseconds = 2500;
 
         using var document = JsonDocument.Parse(node.SettingsJson);
         Assert.Equal("ble-device-1", document.RootElement.GetProperty("deviceId").GetString());
@@ -1082,21 +1274,21 @@ public sealed class FlowEditorViewModelTests
         Assert.Equal("00002a37-0000-1000-8000-00805f9b34fb", document.RootElement.GetProperty("notifyCharacteristicUuid").GetString());
         Assert.Equal(3, document.RootElement.GetProperty("channelCount").GetInt32());
         Assert.Equal(2500, document.RootElement.GetProperty("timeoutMilliseconds").GetInt32());
-        Assert.Contains(node.BleInputStDeviceChoices, choice => string.Equals(choice.DeviceId, "ble-device-1", StringComparison.Ordinal));
+        Assert.Contains(node.BleInputTSDeviceChoices, choice => string.Equals(choice.DeviceId, "ble-device-1", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void CanvasNodeViewModel_SelectsBleInputStDeviceChoiceIntoPersistedSettings()
+    public void CanvasNodeViewModel_SelectsBleInputTSDeviceChoiceIntoPersistedSettings()
     {
         var node = new CanvasNodeViewModel(
-            new NodeInstance("node-1", BleInputStBlock.TypeId, 0, 0, "{}"),
-            BleInputStBlock.Definition)
+            new NodeInstance("node-1", BleInputTSBlock.TypeId, 0, 0, "{}"),
+            BleInputTSBlock.Definition)
         {
-            BleInputStDeviceId = "ble-device-1",
-            BleInputStDeviceName = "Arduino Nano 33 BLE",
+            BleInputTSDeviceId = "ble-device-1",
+            BleInputTSDeviceName = "Arduino Nano 33 BLE",
         };
 
-        node.BleInputStSelectedDevice = node.BleInputStDeviceChoices.Single();
+        node.BleInputTSSelectedDevice = node.BleInputTSDeviceChoices.Single();
 
         using var document = JsonDocument.Parse(node.SettingsJson);
         Assert.Equal("ble-device-1", document.RootElement.GetProperty("deviceId").GetString());
@@ -1104,21 +1296,21 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
-    public void CanvasNodeViewModel_ResetBleInputStNordicUuids_RestoresDefaultUuids()
+    public void CanvasNodeViewModel_ResetBleInputTSNordicUuids_RestoresDefaultUuids()
     {
         var node = new CanvasNodeViewModel(
-            new NodeInstance("node-1", BleInputStBlock.TypeId, 0, 0, "{}"),
-            BleInputStBlock.Definition)
+            new NodeInstance("node-1", BleInputTSBlock.TypeId, 0, 0, "{}"),
+            BleInputTSBlock.Definition)
         {
-            BleInputStServiceUuid = "0000180d-0000-1000-8000-00805f9b34fb",
-            BleInputStNotifyCharacteristicUuid = "00002a37-0000-1000-8000-00805f9b34fb",
+            BleInputTSServiceUuid = "0000180d-0000-1000-8000-00805f9b34fb",
+            BleInputTSNotifyCharacteristicUuid = "00002a37-0000-1000-8000-00805f9b34fb",
         };
 
-        node.BleInputStResetNordicUuidsCommand.Execute(null);
+        node.BleInputTSResetNordicUuidsCommand.Execute(null);
 
         using var document = JsonDocument.Parse(node.SettingsJson);
-        Assert.Equal(BleInputStSettings.NordicUartServiceUuid, document.RootElement.GetProperty("serviceUuid").GetString());
-        Assert.Equal(BleInputStSettings.NordicUartTxCharacteristicUuid, document.RootElement.GetProperty("notifyCharacteristicUuid").GetString());
+        Assert.Equal(BleInputTSSettings.NordicUartServiceUuid, document.RootElement.GetProperty("serviceUuid").GetString());
+        Assert.Equal(BleInputTSSettings.NordicUartTxCharacteristicUuid, document.RootElement.GetProperty("notifyCharacteristicUuid").GetString());
     }
 
     [Fact]
@@ -1128,12 +1320,12 @@ public sealed class FlowEditorViewModelTests
             new NodeInstance("node-1", BleInputVectorBlock.TypeId, 0, 0, "{}"),
             BleInputVectorBlock.Definition);
 
-        node.BleInputStDeviceId = "ble-vector-device-1";
-        node.BleInputStDeviceName = "Arduino IMU BLE";
-        node.BleInputStAutoConnect = false;
-        node.BleInputStServiceUuid = "0000180d-0000-1000-8000-00805f9b34fb";
-        node.BleInputStNotifyCharacteristicUuid = "00002a37-0000-1000-8000-00805f9b34fb";
-        node.BleInputStTimeoutMilliseconds = 2500;
+        node.BleInputTSDeviceId = "ble-vector-device-1";
+        node.BleInputTSDeviceName = "Arduino IMU BLE";
+        node.BleInputTSAutoConnect = false;
+        node.BleInputTSServiceUuid = "0000180d-0000-1000-8000-00805f9b34fb";
+        node.BleInputTSNotifyCharacteristicUuid = "00002a37-0000-1000-8000-00805f9b34fb";
+        node.BleInputTSTimeoutMilliseconds = 2500;
 
         using var document = JsonDocument.Parse(node.SettingsJson);
         Assert.Equal("ble-vector-device-1", document.RootElement.GetProperty("deviceId").GetString());
@@ -1250,13 +1442,14 @@ public sealed class FlowEditorViewModelTests
         mainViewModel.Dashboard.DashboardFramesPerSecond = 30;
         var viewModel = mainViewModel.FlowEditor;
 
-        var testSignalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+        var testSignalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalFSBlock.TypeId);
         var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputFSBlock.TypeId);
         var testSignalNode = viewModel.PlacePaletteNode(testSignalPaletteNode, 120, 120);
+        testSignalNode.TestSignalFSSampleRateHertz = 1_000;
         var streamOutputNode = viewModel.PlacePaletteNode(streamOutputPaletteNode, 440, 120);
         streamOutputNode.ShowOnDashboard = true;
 
-        var sourcePort = testSignalNode.Outputs.Single(port => port.Id == TestSignalBlock.StreamOutputPortId);
+        var sourcePort = testSignalNode.Outputs.Single(port => port.Id == TestSignalFSBlock.StreamOutputPortId);
         var targetPort = streamOutputNode.Inputs.Single(port => port.Id == StreamOutputFSBlock.InputPortId);
         viewModel.StartPendingConnection(sourcePort);
         viewModel.HandlePortConnection(sourcePort, targetPort);
@@ -1294,7 +1487,7 @@ public sealed class FlowEditorViewModelTests
         var clock = new ManualTimeProvider();
         INodeFactory[] factories =
         [
-            new TestSignalNodeFactory(),
+            new TestSignalFSNodeFactory(),
             new StreamOutputFSNodeFactory(),
         ];
         var viewModel = new FlowEditorViewModel(
@@ -1310,14 +1503,15 @@ public sealed class FlowEditorViewModelTests
             getDashboardFramesPerSecond: () => 10,
             dashboardTimeProvider: clock);
 
-        var sourcePaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
+        var sourcePaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalFSBlock.TypeId);
         var sinkPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputFSBlock.TypeId);
         var sourceNode = viewModel.PlacePaletteNode(sourcePaletteNode, 120, 120);
+        sourceNode.TestSignalFSSampleRateHertz = 1_000;
         var sinkNode = viewModel.PlacePaletteNode(sinkPaletteNode, 440, 120);
         sourceNode.ShowOnDashboard = false;
         sinkNode.ShowOnDashboard = true;
 
-        var sourcePort = sourceNode.Outputs.Single(port => port.Id == TestSignalBlock.StreamOutputPortId);
+        var sourcePort = sourceNode.Outputs.Single(port => port.Id == TestSignalFSBlock.StreamOutputPortId);
         var targetPort = sinkNode.Inputs.Single(port => port.Id == StreamOutputFSBlock.InputPortId);
         viewModel.StartPendingConnection(sourcePort);
         viewModel.HandlePortConnection(sourcePort, targetPort);
@@ -1462,7 +1656,7 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
-    public async Task RunAsync_RendersFftStDashboardWidgetAsEqualizerImage()
+    public async Task RunAsync_RendersFftTSDashboardWidgetAsEqualizerImage()
     {
         IReadOnlyList<DashboardDocument> dashboards = [];
         INodeFactory[] factories =
@@ -1474,7 +1668,7 @@ public sealed class FlowEditorViewModelTests
                     ChannelNames: ["signal"],
                     Samples: [new double[] { 1.0, 0.0, -1.0, 0.0 }.AsMemory()],
                     SequenceNumber: 5)),
-            new FftStNodeFactory(),
+            new FftTSNodeFactory(),
         ];
         var viewModel = new FlowEditorViewModel(
             factories,
@@ -1484,13 +1678,13 @@ public sealed class FlowEditorViewModelTests
             documents => dashboards = documents);
 
         var sourcePaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == "test.block");
-        var fftPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == FftStBlock.TypeId);
+        var fftPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == FftTSBlock.TypeId);
 
         var sourceNode = viewModel.PlacePaletteNode(sourcePaletteNode, 120, 120);
         var fftNode = viewModel.PlacePaletteNode(fftPaletteNode, 440, 120);
 
         var sourcePort = sourceNode.Outputs.Single(port => port.Id == "out");
-        var targetPort = fftNode.Inputs.Single(port => port.Id == FftStBlock.InputPortId);
+        var targetPort = fftNode.Inputs.Single(port => port.Id == FftTSBlock.InputPortId);
         viewModel.StartPendingConnection(sourcePort);
         viewModel.HandlePortConnection(sourcePort, targetPort);
 
@@ -1520,13 +1714,13 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
-    public async Task RunAsync_UpdatesDashboardWidgetContentForStreamChartSt()
+    public async Task RunAsync_UpdatesDashboardWidgetContentForStreamChartTS()
     {
         IReadOnlyList<DashboardDocument> dashboards = [];
         INodeFactory[] factories =
         [
             new TestSignalNodeFactory(),
-            new StreamChartStNodeFactory(),
+            new StreamChartTSNodeFactory(),
         ];
         var viewModel = new FlowEditorViewModel(
             factories,
@@ -1536,7 +1730,7 @@ public sealed class FlowEditorViewModelTests
             documents => dashboards = documents);
 
         var testSignalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
-        var streamChartStPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamChartStBlock.TypeId);
+        var streamChartStPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamChartTSBlock.TypeId);
 
         var testSignalNode = viewModel.PlacePaletteNode(testSignalPaletteNode, 120, 120);
         var streamChartStNode = viewModel.PlacePaletteNode(streamChartStPaletteNode, 440, 120);
@@ -1562,11 +1756,11 @@ public sealed class FlowEditorViewModelTests
 
         using var streamChartSettings = JsonDocument.Parse(streamChartWidget.SettingsJson);
         Assert.Equal("image", streamChartSettings.RootElement.GetProperty("contentKind").GetString());
-        Assert.Contains("StreamChartSt", streamChartSettings.RootElement.GetProperty("content").GetString(), StringComparison.Ordinal);
+        Assert.Contains("StreamChartTS", streamChartSettings.RootElement.GetProperty("content").GetString(), StringComparison.Ordinal);
 
         var imageData = streamChartSettings.RootElement.GetProperty("displayData").GetProperty("image");
-        Assert.Equal(StreamChartStHistory.DefaultPixelWidth, imageData.GetProperty("width").GetInt32());
-        Assert.Equal(StreamChartStHistory.DefaultPixelHeight, imageData.GetProperty("height").GetInt32());
+        Assert.Equal(StreamChartTSHistory.DefaultPixelWidth, imageData.GetProperty("width").GetInt32());
+        Assert.Equal(StreamChartTSHistory.DefaultPixelHeight, imageData.GetProperty("height").GetInt32());
         Assert.Equal("Rgb24", imageData.GetProperty("pixelFormat").GetString());
         Assert.False(string.IsNullOrWhiteSpace(imageData.GetProperty("pixelsBase64").GetString()));
     }
@@ -1616,8 +1810,8 @@ public sealed class FlowEditorViewModelTests
         Assert.Contains("rate=44100Hz", chartSettings.RootElement.GetProperty("content").GetString(), StringComparison.Ordinal);
 
         var imageData = chartSettings.RootElement.GetProperty("displayData").GetProperty("image");
-        Assert.Equal(StreamChartStHistory.DefaultPixelWidth, imageData.GetProperty("width").GetInt32());
-        Assert.Equal(StreamChartStHistory.DefaultPixelHeight, imageData.GetProperty("height").GetInt32());
+        Assert.Equal(StreamChartTSHistory.DefaultPixelWidth, imageData.GetProperty("width").GetInt32());
+        Assert.Equal(StreamChartTSHistory.DefaultPixelHeight, imageData.GetProperty("height").GetInt32());
         Assert.Equal("Rgb24", imageData.GetProperty("pixelFormat").GetString());
         Assert.False(string.IsNullOrWhiteSpace(imageData.GetProperty("pixelsBase64").GetString()));
     }
@@ -1845,6 +2039,154 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
+    public void Palette_SplitsGroupIntoCategoriesOnlyWhenMultipleCategoriesExist()
+    {
+        var factories = new INodeFactory[]
+        {
+            new TestNodeFactory("input.a", "Input A", NodeType.Input, category: "Sources"),
+            new TestNodeFactory("input.b", "Input B", NodeType.Input, category: "Sources"),
+            new TestNodeFactory("process.fft", "FFT", NodeType.BasicProcess, category: "Signal Processing"),
+            new TestNodeFactory("process.rate", "Rate", NodeType.BasicProcess, category: "Signal Analysis"),
+            new TestNodeFactory("process.other", "Other", NodeType.BasicProcess, category: " "),
+        };
+        var palette = new NodePaletteViewModel(factories);
+
+        var input = palette.Groups.Single(static group => group.NodeType == NodeType.Input);
+        Assert.Equal(2, input.Count);
+        Assert.False(input.ShowCategoryHeaders);
+
+        var process = palette.Groups.Single(static group => group.NodeType == NodeType.BasicProcess);
+        Assert.True(process.ShowCategoryHeaders);
+        Assert.Equal(["Other", "Signal Analysis", "Signal Processing"], process.Categories.Select(static category => category.DisplayName));
+        Assert.Equal(3, process.Count);
+    }
+
+    [Fact]
+    public void Palette_SearchMatchesCategory()
+    {
+        var factories = new INodeFactory[]
+        {
+            new TestNodeFactory("process.fft", "FFT", NodeType.BasicProcess, category: "Signal Processing"),
+            new TestNodeFactory("process.rate", "Rate", NodeType.BasicProcess, category: "Signal Analysis"),
+        };
+        var palette = new NodePaletteViewModel(factories);
+
+        palette.SearchText = "analysis";
+
+        Assert.Equal("process.rate", Assert.Single(palette.FilteredNodes).TypeId);
+    }
+
+    [Fact]
+    public void Palette_PreservesCollapsedGroupsAcrossFilteringButExpandsMatchesWhileFiltering()
+    {
+        var factories = new INodeFactory[]
+        {
+            new TestNodeFactory("input.block", "Input Block", NodeType.Input),
+            new TestNodeFactory("output.block", "Output Block", NodeType.Output),
+        };
+        var palette = new NodePaletteViewModel(factories);
+        Assert.All(palette.Groups, static group => Assert.True(group.IsExpanded));
+
+        palette.Groups.Single(static group => group.NodeType == NodeType.Input).IsExpanded = false;
+
+        palette.SearchText = "Block";
+        Assert.True(palette.IsFilterActive);
+        Assert.All(palette.Groups, static group => Assert.True(group.IsExpanded));
+
+        palette.Groups.Single(static group => group.NodeType == NodeType.Output).IsExpanded = false;
+        palette.SearchText = string.Empty;
+
+        Assert.False(palette.Groups.Single(static group => group.NodeType == NodeType.Input).IsExpanded);
+        Assert.True(palette.Groups.Single(static group => group.NodeType == NodeType.Output).IsExpanded);
+    }
+
+    [Fact]
+    public void Palette_ExpandAndCollapseAllCommandsUpdateEveryGroup()
+    {
+        var factories = new INodeFactory[]
+        {
+            new TestNodeFactory("input.block", "Input Block", NodeType.Input),
+            new TestNodeFactory("output.block", "Output Block", NodeType.Output),
+        };
+        var palette = new NodePaletteViewModel(factories);
+
+        palette.CollapseAllCommand.Execute(null);
+        Assert.All(palette.Groups, static group => Assert.False(group.IsExpanded));
+
+        palette.SearchText = "x";
+        palette.SearchText = string.Empty;
+        Assert.All(palette.Groups, static group => Assert.False(group.IsExpanded));
+
+        palette.ExpandAllCommand.Execute(null);
+        Assert.All(palette.Groups, static group => Assert.True(group.IsExpanded));
+    }
+
+    [Fact]
+    public void Palette_IsCompactByDefault()
+    {
+        var palette = new NodePaletteViewModel([new TestNodeFactory()]);
+
+        Assert.True(palette.IsCompact);
+        palette.IsCompact = false;
+        Assert.False(palette.IsCompact);
+    }
+
+    [Fact]
+    public void PaletteNode_ExposesDistinctPortBadgesByDirection()
+    {
+        var factory = new TestNodeFactory(
+            "process.mixed",
+            "Mixed",
+            NodeType.BasicProcess,
+            ports:
+            [
+                new PortDefinition("ts", "TS", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.TimeSeries1D),
+                new PortDefinition("ts2", "TS 2", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.TimeSeries1D),
+                new PortDefinition("control", "Control", PortDirection.Input, PortDataKind.JsonMessage, DataSchema: PortDataSchema.JsonEnvelope),
+                new PortDefinition("spectrum", "Spectrum", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.Spectrum1D),
+                new PortDefinition("vector", "Vector", PortDirection.Output, PortDataKind.FastStream, DataSchema: PortDataSchema.NumericVector1D),
+            ]);
+
+        var node = new PaletteNodeViewModel(factory);
+
+        Assert.Collection(
+            node.InputBadges,
+            badge =>
+            {
+                Assert.True(badge.IsFastStream);
+                Assert.Equal("S", badge.KindLetter);
+                Assert.Equal("#1D70B8", badge.KindColor);
+                Assert.Equal("TS", badge.SchemaLabel);
+            },
+            badge =>
+            {
+                Assert.True(badge.IsJsonMessage);
+                Assert.Equal("J", badge.KindLetter);
+                Assert.Equal("#C2410C", badge.KindColor);
+                Assert.False(badge.HasSchemaLabel);
+            });
+        var output = Assert.Single(node.OutputBadges);
+        Assert.Equal("VEC", output.SchemaLabel);
+        Assert.Equal("In: Fast Stream TS, JSON Message / Out: Fast Stream VEC", node.PortSummary);
+    }
+
+    [Fact]
+    public void PaletteNode_ReportsNoneForMissingPortDirection()
+    {
+        var factory = new TestNodeFactory(
+            "input.source",
+            "Source",
+            NodeType.Input,
+            ports: [new PortDefinition("out", "Out", PortDirection.Output, PortDataKind.FastStream)]);
+
+        var node = new PaletteNodeViewModel(factory);
+
+        Assert.False(node.HasInputBadges);
+        Assert.True(node.HasOutputBadges);
+        Assert.Equal("In: none / Out: Fast Stream", node.PortSummary);
+    }
+
+    [Fact]
     public void NodeViewModels_ResolveIconPathsFromDefinitionPath()
     {
         var iconPath = GetRepositoryFilePath("src", "DataProcesses.Nodes.BuiltIn", "Blocks", "TestSignalTS", "icon.png");
@@ -1978,7 +2320,7 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
-    public void Palette_FastStreamFilter_MatchesAllFastStreamInputSchemas()
+    public void Palette_FixedRateTimeSeriesFilter_MatchesOnlyFsInputSchemas()
     {
         var factories = new INodeFactory[]
         {
@@ -1989,17 +2331,17 @@ public sealed class FlowEditorViewModelTests
                 "0.1.0",
                 [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.TimeSeries1D)])),
             new StaticDefinitionNodeFactory(new NodeDefinition(
+                "audio.input",
+                "Audio Input",
+                "Test",
+                "0.1.0",
+                [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.FixedRateTimeSeries1D)])),
+            new StaticDefinitionNodeFactory(new NodeDefinition(
                 "image.input",
                 "Image Input",
                 "Test",
                 "0.1.0",
                 [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, DataSchema: PortDataSchema.Image2D)])),
-            new StaticDefinitionNodeFactory(new NodeDefinition(
-                "payload.input",
-                "Payload Input",
-                "Test",
-                "0.1.0",
-                [new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.JsonMessage, DataSchema: PortDataSchema.JsonEnvelope)])),
         };
         var viewModel = new FlowEditorViewModel(
             factories,
@@ -2007,11 +2349,12 @@ public sealed class FlowEditorViewModelTests
             new ProjectFileService());
 
         viewModel.Palette.SelectedInputDataType = "FS";
+        Assert.Equal("audio.input", Assert.Single(viewModel.Palette.FilteredNodes).TypeId);
 
-        Assert.Equal(2, viewModel.Palette.FilteredNodes.Count);
-        Assert.Contains(viewModel.Palette.FilteredNodes, node => node.TypeId == "signal.input");
-        Assert.Contains(viewModel.Palette.FilteredNodes, node => node.TypeId == "image.input");
-        Assert.Contains("FS", viewModel.Palette.DataTypeOptions);
+        viewModel.Palette.SelectedInputDataType = "TS";
+        Assert.Equal("signal.input", Assert.Single(viewModel.Palette.FilteredNodes).TypeId);
+
+        Assert.Equal(["ALL", "JSON", "TS", "FS", "VEC", "IMG"], viewModel.Palette.DataTypeOptions);
     }
 
     [Fact]
@@ -2147,10 +2490,10 @@ public sealed class FlowEditorViewModelTests
 
         var port = Assert.Single(node.Outputs);
 
-        Assert.Equal("P", port.KindLabel);
+        Assert.Equal("J", port.KindLabel);
         Assert.Equal("payload", port.ShapeClass);
-        Assert.Equal("#D92D20", port.KindBadgeBackground);
-        Assert.Equal("#FEE2E2", port.SchemaBadgeBackground);
+        Assert.Equal("#C2410C", port.KindBadgeBackground);
+        Assert.Equal("#FFEDD5", port.SchemaBadgeBackground);
         Assert.Contains("Payload", port.AccessibleName, StringComparison.Ordinal);
     }
 
@@ -2181,7 +2524,7 @@ public sealed class FlowEditorViewModelTests
     }
 
     [Fact]
-    public void CanvasConnectionViewModel_UsesRedDashedPayloadConnection()
+    public void CanvasConnectionViewModel_UsesOrangeDashedPayloadConnection()
     {
         var sourceDefinition = new NodeDefinition(
             "source",
@@ -2205,7 +2548,7 @@ public sealed class FlowEditorViewModelTests
             Assert.Single(target.Inputs));
 
         Assert.Equal("Payload", connection.KindLabel);
-        Assert.Equal("#D92D20", connection.StrokeColor);
+        Assert.Equal("#C2410C", connection.StrokeColor);
         Assert.Equal("6,4", connection.StrokeDashArray);
     }
 
@@ -2505,15 +2848,18 @@ public sealed class FlowEditorViewModelTests
             string? iconPath = null,
             DashboardWidgetDefinition? dashboardWidget = null,
             IDataPacket? packetToEmit = null,
-            Func<IDataPacket?>? packetFactory = null)
+            Func<IDataPacket?>? packetFactory = null,
+            string category = "Legacy Category",
+            IReadOnlyList<PortDefinition>? ports = null)
         {
             this.packetToEmit = packetToEmit;
             this.packetFactory = packetFactory;
             Definition = new NodeDefinition(
                 typeId,
                 displayName,
-                "Legacy Category",
+                category,
                 "0.1.0",
+                ports ??
                 [
                     new PortDefinition("in", "Input", PortDirection.Input, PortDataKind.FastStream, IsRequired: false),
                     new PortDefinition("out", "Output", PortDirection.Output, PortDataKind.FastStream),

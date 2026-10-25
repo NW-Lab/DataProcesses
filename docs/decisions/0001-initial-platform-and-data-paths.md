@@ -1,6 +1,6 @@
 # ADR 0001: Initial platform and two data paths
 
-**Status:** Accepted for the v0.1 scaffold (updated 2026-08-08)  
+**Status:** Accepted for the v0.1 scaffold (updated 2026-10-25)  
 **Date:** 2026-07-12
 
 ## Context
@@ -16,10 +16,12 @@ Block connections expose two visible port families:
 | Family | Internal representation | Visual convention |
 |---|---|---|
 | Fast Stream | Typed frame containing numeric channel buffers and timing metadata | Blue circle, `S`, solid line |
-| JSON Message | Versioned envelope containing a JSON `payload` | Red circle, `P`, dashed line |
+| JSON Message | Versioned envelope containing a JSON `payload` | Orange diamond, `J`, dashed line |
+
+The JSON Message visual convention was changed on 2026-10-25 from a red circle labelled `P` to an orange diamond labelled `J`, aligning the specification, README, repository instructions, and desktop UI. This is a presentation-only change; port contracts and saved Flows are unaffected.
 
 Within each family, ports may declare a detailed schema (`PortDataSchema`) for compatibility checks.
-The current Fast Stream-side schema set includes `TimeSeries1D`, `Spectrum1D`,
+The current Fast Stream-side schema set includes `TimeSeries1D` (TS), `FixedRateTimeSeries1D` (FS, added by ADR 0005), `Spectrum1D`,
 `NumericVector1D`, `NumericMatrix2D`, and `Image2D`. JSON Message uses `JsonEnvelope`.
 
 Current public packet contracts include:

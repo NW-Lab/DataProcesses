@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:DataProcesses.Desktop.ViewModels"
+             xmlns:resources="using:DataProcesses.Desktop.Resources"
              x:Class="DataProcesses.Desktop.Views.FlowEditorView"
              x:CompileBindings="False"
              Focusable="True"
@@ -31,8 +32,31 @@
 
         <Border Grid.Row="1" Grid.Column="0" BorderBrush="#D5D9E2" BorderThickness="0,0,1,0" Padding="12">
             <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
-                <TextBlock Text="Node Library" FontSize="14" FontWeight="SemiBold" />
-                <TextBox Grid.Row="1" PlaceholderText="Search nodes" Text="{Binding Palette.SearchText}" />
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4">
+                    <TextBlock Text="Node Library" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <ToggleButton Grid.Column="1"
+                                  Content="Compact"
+                                  FontSize="11"
+                                  Padding="6,2"
+                                  IsChecked="{Binding Palette.IsCompact}"
+                                  ToolTip.Tip="Show Blocks as single-line rows"
+                                  AutomationProperties.Name="Compact Node Library view" />
+                    <Button Grid.Column="2"
+                            Content="+"
+                            FontSize="11"
+                            Padding="6,2"
+                            Command="{Binding Palette.ExpandAllCommand}"
+                            ToolTip.Tip="Expand all groups"
+                            AutomationProperties.Name="Expand all Node Library groups" />
+                    <Button Grid.Column="3"
+                            Content="-"
+                            FontSize="11"
+                            Padding="6,2"
+                            Command="{Binding Palette.CollapseAllCommand}"
+                            ToolTip.Tip="Collapse all groups"
+                            AutomationProperties.Name="Collapse all Node Library groups" />
+                </Grid>
+                <TextBox Grid.Row="1" PlaceholderText="Search nodes" Text="{Binding Palette.SearchText}" AutomationProperties.Name="Search nodes" />
                 <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="8">
                     <StackPanel Spacing="4">
                         <TextBlock Text="Input" FontSize="11" FontWeight="SemiBold" Foreground="#475569" />
@@ -47,43 +71,171 @@
                                   MinWidth="96" />
                     </StackPanel>
                 </Grid>
-                <ScrollViewer Grid.Row="3">
+                <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer.Resources>
+                        <!-- Inputs enter the Block glyph from the left; outputs leave it to the right.
+                             Column widths are shared within a group so the glyph lines up between its rows. -->
+                        <DataTemplate x:Key="PalettePortFlowTemplate" DataType="vm:PaletteNodeViewModel">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PaletteInputs" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PaletteOutputs" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Right"
+                                            IsVisible="{Binding HasInputBadges}">
+                                    <ItemsControl ItemsSource="{Binding InputBadges}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="3" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                    </ItemsControl>
+                                    <TextBlock Text="&#x2192;" FontSize="10" Foreground="#64748B" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <Border Grid.Column="1"
+                                        Width="8"
+                                        Height="14"
+                                        Margin="1,0"
+                                        CornerRadius="2"
+                                        Background="#475569"
+                                        VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" HorizontalAlignment="Left"
+                                            IsVisible="{Binding HasOutputBadges}">
+                                    <TextBlock Text="&#x2192;" FontSize="10" Foreground="#64748B" VerticalAlignment="Center" />
+                                    <ItemsControl ItemsSource="{Binding OutputBadges}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="3" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ScrollViewer.Resources>
                     <ItemsControl ItemsSource="{Binding Palette.Groups}">
+                        <ItemsControl.DataTemplates>
+                            <DataTemplate DataType="vm:PalettePortBadgeViewModel">
+                                <StackPanel Orientation="Horizontal" Spacing="2" ToolTip.Tip="{Binding Description}">
+                                    <!-- Fast Stream: circle with S; JSON Message: diamond with J. Shape and letter, not color alone. -->
+                                    <Panel Width="13" Height="13" IsVisible="{Binding IsFastStream}" VerticalAlignment="Center">
+                                        <Ellipse Fill="{Binding KindColor}" />
+                                        <TextBlock Text="S" Foreground="White" FontSize="8" FontWeight="Bold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Panel>
+                                    <Panel Width="13" Height="13" IsVisible="{Binding IsJsonMessage}" VerticalAlignment="Center">
+                                        <Path Data="M 6.5,0 L 13,6.5 L 6.5,13 L 0,6.5 Z" Fill="{Binding KindColor}" />
+                                        <TextBlock Text="J" Foreground="White" FontSize="8" FontWeight="Bold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Panel>
+                                    <TextBlock Text="{Binding SchemaLabel}"
+                                               IsVisible="{Binding HasSchemaLabel}"
+                                               FontSize="9"
+                                               FontWeight="SemiBold"
+                                               Foreground="#334155"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.DataTemplates>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:PaletteNodeGroupViewModel">
-                                <StackPanel Margin="0,0,0,12" Spacing="6">
-                                    <TextBlock Text="{Binding DisplayName}"
-                                               Foreground="#334155"
-                                               FontSize="11"
-                                               FontWeight="Bold" />
-                                    <ItemsControl ItemsSource="{Binding Nodes}">
+                                <Expander Margin="0,0,0,6"
+                                          Padding="0,4,0,0"
+                                          HorizontalAlignment="Stretch"
+                                          HorizontalContentAlignment="Stretch"
+                                          IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                          AutomationProperties.Name="{Binding DisplayName}">
+                                    <Expander.Resources>
+                                        <x:Double x:Key="ExpanderMinHeight">30</x:Double>
+                                    </Expander.Resources>
+                                    <Expander.Header>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       FontSize="11"
+                                                       FontWeight="Bold"
+                                                       VerticalAlignment="Center" />
+                                            <Border Background="#E2E8F0" CornerRadius="8" Padding="6,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Count}" FontSize="10" Foreground="#334155" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Expander.Header>
+                                    <ItemsControl ItemsSource="{Binding Categories}" Grid.IsSharedSizeScope="True">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="vm:PaletteNodeViewModel">
-                                                <Border Margin="0,0,0,4"
-                                                        Padding="8,6"
-                                                        Background="#FFFFFF"
-                                                        BorderBrush="#94A3B8"
-                                                        BorderThickness="1"
-                                                        CornerRadius="5"
-                                                        Cursor="Hand">
-                                                    <Grid ColumnDefinitions="30,*" RowDefinitions="Auto,Auto" ColumnSpacing="6">
-                                                        <Border Grid.RowSpan="2"
-                                                                Width="24"
-                                                                Height="24"
-                                                                Background="#E2E8F0"
-                                                                CornerRadius="6"
-                                                                HorizontalAlignment="Left"
-                                                                VerticalAlignment="Center">
-                                                            <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}" Stretch="Uniform" Margin="3" />
-                                                        </Border>
-                                                        <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="#0F172A" FontWeight="SemiBold" FontSize="12" />
-                                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" FontSize="9" Foreground="#475569" />
-                                                    </Grid>
-                                                </Border>
+                                            <DataTemplate DataType="vm:PaletteNodeCategoryViewModel">
+                                                <StackPanel Margin="0,0,0,4" Spacing="2">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               IsVisible="{Binding $parent[Expander].DataContext.ShowCategoryHeaders}"
+                                                               Margin="2,4,0,2"
+                                                               FontSize="10"
+                                                               FontWeight="SemiBold"
+                                                               Opacity="0.75" />
+                                                    <ItemsControl ItemsSource="{Binding Nodes}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate DataType="vm:PaletteNodeViewModel">
+                                                                <Panel ToolTip.Tip="{Binding ToolTipText}"
+                                                                       AutomationProperties.Name="{Binding AccessibleName}"
+                                                                       Cursor="Hand">
+                                                                    <!-- Compact single-line row. -->
+                                                                    <Border IsVisible="{Binding $parent[UserControl].DataContext.Palette.IsCompact}"
+                                                                            Margin="0,0,0,2"
+                                                                            Padding="6,3"
+                                                                            Background="#FFFFFF"
+                                                                            BorderBrush="#CBD5E1"
+                                                                            BorderThickness="1"
+                                                                            CornerRadius="4">
+                                                                        <Grid ColumnDefinitions="18,*,Auto" ColumnSpacing="6">
+                                                                            <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}"
+                                                                                   Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" />
+                                                                            <TextBlock Grid.Column="1"
+                                                                                       Text="{Binding Title}"
+                                                                                       Foreground="#0F172A"
+                                                                                       FontWeight="SemiBold"
+                                                                                       FontSize="12"
+                                                                                       TextTrimming="CharacterEllipsis"
+                                                                                       VerticalAlignment="Center" />
+                                                                            <ContentControl Grid.Column="2"
+                                                                                            Content="{Binding}"
+                                                                                            ContentTemplate="{StaticResource PalettePortFlowTemplate}"
+                                                                                            VerticalAlignment="Center" />
+                                                                        </Grid>
+                                                                    </Border>
+                                                                    <!-- Detailed card. -->
+                                                                    <Border IsVisible="{Binding !$parent[UserControl].DataContext.Palette.IsCompact}"
+                                                                            Margin="0,0,0,4"
+                                                                            Padding="8,6"
+                                                                            Background="#FFFFFF"
+                                                                            BorderBrush="#94A3B8"
+                                                                            BorderThickness="1"
+                                                                            CornerRadius="5">
+                                                                        <Grid ColumnDefinitions="30,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="6">
+                                                                            <Border Grid.RowSpan="3"
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    Background="#E2E8F0"
+                                                                                    CornerRadius="6"
+                                                                                    HorizontalAlignment="Left"
+                                                                                    VerticalAlignment="Center">
+                                                                                <Image IsVisible="{Binding HasIcon}" Source="{Binding IconImage}" Stretch="Uniform" Margin="3" />
+                                                                            </Border>
+                                                                            <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="#0F172A" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" FontSize="9" Foreground="#475569" TextWrapping="Wrap" />
+                                                                            <ContentControl Grid.Row="2" Grid.Column="1"
+                                                                                            Margin="0,3,0,0"
+                                                                                            HorizontalAlignment="Left"
+                                                                                            Content="{Binding}"
+                                                                                            ContentTemplate="{StaticResource PalettePortFlowTemplate}" />
+                                                                        </Grid>
+                                                                    </Border>
+                                                                </Panel>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                </StackPanel>
+                                </Expander>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -353,11 +505,12 @@
                                   IsVisible="{Binding SelectedNode.ShowOnDashboard}" />
                     </StackPanel>
                     <TextBlock Grid.Row="8" Text="TestSignal settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalOrVector}" />
-                    <TextBlock Grid.Row="8" Text="TestSignal settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalInspectorNode}" />
-                    <StackPanel Grid.Row="9" Spacing="5" IsVisible="{Binding SelectedNode.IsTestSignalInspectorNode}">
-                        <TextBlock Text="Wave type" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="8" Text="Signal input settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsSignalInspectorNode}" />
+                    <StackPanel Grid.Row="9" Spacing="5" IsVisible="{Binding SelectedNode.IsSignalInspectorNode}">
+                        <TextBlock Text="Wave type" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalInspectorNode}" />
                         <ComboBox ItemsSource="{Binding SelectedNode.TestSignalWaveTypes}"
-                                  SelectedItem="{Binding SelectedNode.TestSignalWaveType}" />
+                                  SelectedItem="{Binding SelectedNode.TestSignalWaveType}"
+                                  IsVisible="{Binding SelectedNode.IsTestSignalInspectorNode}" />
                         <TextBlock Text="Frequency (Hz)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignalOrVector}" />
                         <NumericUpDown Minimum="0.001"
                                        Increment="1"
@@ -380,6 +533,18 @@
                                        Increment="1000"
                                        Value="{Binding SelectedNode.TestSignalFSSampleRateHertz}"
                                        IsVisible="{Binding SelectedNode.IsTestSignalFSNode}" />
+                        <TextBlock Text="Input sample rate (Hz)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsMicInputFSNode}" />
+                        <NumericUpDown Minimum="8000"
+                                       Maximum="192000"
+                                       Increment="1000"
+                                       Value="{Binding SelectedNode.MicInputFSSampleRateHertz}"
+                                       IsVisible="{Binding SelectedNode.IsMicInputFSNode}" />
+                        <TextBlock Text="Channel mode" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsMicInputFSNode}" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.MicInputFSChannelModes}"
+                                  SelectedItem="{Binding SelectedNode.MicInputFSChannelMode}"
+                                  IsVisible="{Binding SelectedNode.IsMicInputFSNode}"
+                                  AutomationProperties.Name="Microphone channel mode" />
+                        <TextBlock Text="Input device: system default" IsVisible="{Binding SelectedNode.IsMicInputFSNode}" />
                         <TextBlock Text="Sampling time (ms)" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTestSignal}" />
                         <NumericUpDown Minimum="0.001"
                                        Increment="0.1"
@@ -391,6 +556,15 @@
                                        Increment="1"
                                        Value="{Binding SelectedNode.TestSignalVectorLength}"
                                        IsVisible="{Binding SelectedNode.IsTestSignalVec}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="10" Text="Audio output settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsAudioOutFSNode}" />
+                    <StackPanel Grid.Row="11" Spacing="5" IsVisible="{Binding SelectedNode.IsAudioOutFSNode}">
+                        <TextBlock Text="Recording folder" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.AudioOutFSRecordingFolder}"
+                                 PlaceholderText="C:/Users/you/Music/DataProcesses" />
+                        <TextBlock Text="Recording file name prefix" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.AudioOutFSFileNamePrefix}"
+                                 PlaceholderText="audio" />
                     </StackPanel>
                     <TextBlock Grid.Row="10" Text="Trigger settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsTriggerNode}" />
                     <StackPanel Grid.Row="11" Spacing="5" IsVisible="{Binding SelectedNode.IsTriggerNode}">
@@ -551,25 +725,25 @@
                                            Value="{Binding SelectedNode.CsvInputBaudRate}" />
                         </StackPanel>
                     </StackPanel>
-                    <TextBlock Grid.Row="12" Text="Serial Input ST settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsSerialInputStNode}" />
-                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsSerialInputStNode}">
+                    <TextBlock Grid.Row="12" Text="Serial Input TS settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsSerialInputTSNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsSerialInputTSNode}">
                         <TextBlock Text="COM port" FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding SelectedNode.SerialInputStComPorts}"
-                                  SelectedItem="{Binding SelectedNode.SerialInputStComPortName}" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.SerialInputTSComPorts}"
+                                  SelectedItem="{Binding SelectedNode.SerialInputTSComPortName}" />
                         <TextBlock Text="Baud rate" FontWeight="SemiBold" />
                         <NumericUpDown Minimum="1"
                                        Increment="9600"
-                                       Value="{Binding SelectedNode.SerialInputStBaudRate}" />
+                                       Value="{Binding SelectedNode.SerialInputTSBaudRate}" />
                         <TextBlock Text="Channel count" FontWeight="SemiBold" />
                         <NumericUpDown Minimum="1"
                                        Maximum="16"
                                        Increment="1"
-                                       Value="{Binding SelectedNode.SerialInputStChannelCount}" />
+                                       Value="{Binding SelectedNode.SerialInputTSChannelCount}" />
                     </StackPanel>
                     <TextBlock Grid.Row="12" Text="Serial Input Vector settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsSerialInputVectorNode}" />
                     <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsSerialInputVectorNode}">
                         <TextBlock Text="COM port" FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding SelectedNode.SerialInputStComPorts}"
+                        <ComboBox ItemsSource="{Binding SelectedNode.SerialInputTSComPorts}"
                                   SelectedItem="{Binding SelectedNode.SerialInputVectorComPortName}" />
                         <TextBlock Text="Baud rate" FontWeight="SemiBold" />
                         <NumericUpDown Minimum="1"
@@ -581,8 +755,8 @@
                         <TextBlock Text="BLE device" FontWeight="SemiBold" />
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                             <ComboBox Grid.Column="0"
-                                      ItemsSource="{Binding SelectedNode.BleInputStDeviceChoices}"
-                                      SelectedItem="{Binding SelectedNode.BleInputStSelectedDevice}">
+                                      ItemsSource="{Binding SelectedNode.BleInputTSDeviceChoices}"
+                                      SelectedItem="{Binding SelectedNode.BleInputTSSelectedDevice}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
@@ -591,32 +765,52 @@
                             </ComboBox>
                             <Button Grid.Column="1"
                                     Content="Scan"
-                                    Command="{Binding SelectedNode.BleInputStRefreshDevicesCommand}" />
+                                    Command="{Binding SelectedNode.BleInputTSRefreshDevicesCommand}" />
                         </Grid>
                         <TextBlock Text="Device id" FontWeight="SemiBold" />
-                        <TextBox Text="{Binding SelectedNode.BleInputStDeviceId}"
+                        <TextBox Text="{Binding SelectedNode.BleInputTSDeviceId}"
                                  PlaceholderText="Persisted BLE device id" />
                         <TextBlock Text="Device name" FontWeight="SemiBold" />
-                        <TextBox Text="{Binding SelectedNode.BleInputStDeviceName}"
+                        <TextBox Text="{Binding SelectedNode.BleInputTSDeviceName}"
                                  PlaceholderText="Arduino BLE" />
-                        <CheckBox Content="Auto connect next run" IsChecked="{Binding SelectedNode.BleInputStAutoConnect}" />
+                        <CheckBox Content="Auto connect next run" IsChecked="{Binding SelectedNode.BleInputTSAutoConnect}" />
                         <TextBlock Text="Service UUID" FontWeight="SemiBold" />
-                        <TextBox Text="{Binding SelectedNode.BleInputStServiceUuid}" />
+                        <TextBox Text="{Binding SelectedNode.BleInputTSServiceUuid}" />
                         <TextBlock Text="Notify characteristic UUID" FontWeight="SemiBold" />
-                        <TextBox Text="{Binding SelectedNode.BleInputStNotifyCharacteristicUuid}" />
+                        <TextBox Text="{Binding SelectedNode.BleInputTSNotifyCharacteristicUuid}" />
                         <Button Content="Reset Nordic UUIDs"
-                                Command="{Binding SelectedNode.BleInputStResetNordicUuidsCommand}" />
-                        <TextBlock Text="Channel count" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsBleInputStNode}" />
+                                Command="{Binding SelectedNode.BleInputTSResetNordicUuidsCommand}" />
+                        <TextBlock Text="Channel count" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsBleChannelCountVisible}" />
                         <NumericUpDown Minimum="1"
                                        Maximum="16"
                                        Increment="1"
-                                   Value="{Binding SelectedNode.BleInputStChannelCount}"
-                                   IsVisible="{Binding SelectedNode.IsBleInputStNode}" />
+                                   Value="{Binding SelectedNode.BleInputTSChannelCount}"
+                                   IsVisible="{Binding SelectedNode.IsBleChannelCountVisible}" />
+                        <StackPanel Spacing="5" IsVisible="{Binding SelectedNode.IsBleInputFSNode}">
+                            <TextBlock Text="{x:Static resources:BleInputFSStrings.Format}" FontWeight="SemiBold" />
+                            <ComboBox ItemsSource="{Binding SelectedNode.BleInputFSFormats}"
+                                      SelectedItem="{Binding SelectedNode.BleInputFSFormat}"
+                                      AutomationProperties.Name="{x:Static resources:BleInputFSStrings.Format}" />
+                            <TextBlock Text="{x:Static resources:BleInputFSStrings.SampleRate}" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="1" Maximum="1000000" Increment="1"
+                                           Value="{Binding SelectedNode.BleInputFSSampleRateHertz}"
+                                           AutomationProperties.Name="{x:Static resources:BleInputFSStrings.SampleRate}" />
+                            <StackPanel Spacing="5" IsVisible="{Binding SelectedNode.IsBleInputFSBinary}">
+                                <TextBlock Text="{x:Static resources:BleInputFSStrings.NumericType}" FontWeight="SemiBold" />
+                                <ComboBox ItemsSource="{Binding SelectedNode.BleInputFSNumericTypes}"
+                                          SelectedItem="{Binding SelectedNode.BleInputFSNumericType}"
+                                          AutomationProperties.Name="{x:Static resources:BleInputFSStrings.NumericType}" />
+                                <TextBlock Text="{x:Static resources:BleInputFSStrings.ByteOrder}" FontWeight="SemiBold" />
+                                <ComboBox ItemsSource="{Binding SelectedNode.BleInputFSByteOrders}"
+                                          SelectedItem="{Binding SelectedNode.BleInputFSByteOrder}"
+                                          AutomationProperties.Name="{x:Static resources:BleInputFSStrings.ByteOrder}" />
+                            </StackPanel>
+                        </StackPanel>
                         <TextBlock Text="Timeout (ms)" FontWeight="SemiBold" />
                         <NumericUpDown Minimum="1"
                                        Maximum="600000"
                                        Increment="500"
-                                       Value="{Binding SelectedNode.BleInputStTimeoutMilliseconds}" />
+                                       Value="{Binding SelectedNode.BleInputTSTimeoutMilliseconds}" />
                     </StackPanel>
                     <TextBlock Grid.Row="12" Text="CSV Output settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsCsvOutputNode}" />
                     <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsCsvOutputNode}">
@@ -658,38 +852,38 @@
                                        Increment="500"
                                        Value="{Binding SelectedNode.StreamChartVectorTimeSpanMilliseconds}" />
                     </StackPanel>
-                    <TextBlock Grid.Row="12" Text="BreathSt settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsBreathStNode}" />
-                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsBreathStNode}">
+                    <TextBlock Grid.Row="12" Text="BreathTS settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsBreathTSNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsBreathTSNode}">
                         <TextBlock Text="Detection method" FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding SelectedNode.BreathStDetectionMethods}"
-                                  SelectedItem="{Binding SelectedNode.BreathStDetectionMethod}" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.BreathTSDetectionMethods}"
+                                  SelectedItem="{Binding SelectedNode.BreathTSDetectionMethod}" />
                         <CheckBox Content="Emit anomaly events"
-                                  IsChecked="{Binding SelectedNode.BreathStEmitAnomalyEvents}" />
+                                  IsChecked="{Binding SelectedNode.BreathTSEmitAnomalyEvents}" />
                     </StackPanel>
-                    <TextBlock Grid.Row="12" Text="FilterSt settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsFilterStNode}" />
-                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsFilterStNode}">
+                    <TextBlock Grid.Row="12" Text="FilterTS settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsFilterTSNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsFilterTSNode}">
                         <TextBlock Text="Filter type" FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding SelectedNode.FilterStTypes}"
-                                  SelectedItem="{Binding SelectedNode.FilterStType}" />
-                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.FilterStIsSingleCutoffVisible}">
+                        <ComboBox ItemsSource="{Binding SelectedNode.FilterTSTypes}"
+                                  SelectedItem="{Binding SelectedNode.FilterTSType}" />
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.FilterTSIsSingleCutoffVisible}">
                             <TextBlock Text="Cutoff frequency (Hz)" FontWeight="SemiBold" />
                             <NumericUpDown Minimum="0.001"
                                            Increment="0.5"
-                                           Value="{Binding SelectedNode.FilterStCutoffFrequencyHertz}" />
+                                           Value="{Binding SelectedNode.FilterTSCutoffFrequencyHertz}" />
                         </StackPanel>
-                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.FilterStIsBandCutoffVisible}">
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.FilterTSIsBandCutoffVisible}">
                             <TextBlock Text="Lower cutoff (Hz)" FontWeight="SemiBold" />
                             <NumericUpDown Minimum="0.001"
                                            Increment="0.5"
-                                           Value="{Binding SelectedNode.FilterStLowerCutoffFrequencyHertz}" />
+                                           Value="{Binding SelectedNode.FilterTSLowerCutoffFrequencyHertz}" />
                             <TextBlock Text="Upper cutoff (Hz)" FontWeight="SemiBold" />
                             <NumericUpDown Minimum="0.001"
                                            Increment="0.5"
-                                           Value="{Binding SelectedNode.FilterStUpperCutoffFrequencyHertz}" />
+                                           Value="{Binding SelectedNode.FilterTSUpperCutoffFrequencyHertz}" />
                         </StackPanel>
                         <TextBlock Text="Order" FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding SelectedNode.FilterStOrders}"
-                                  SelectedItem="{Binding SelectedNode.FilterStOrder}" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.FilterTSOrders}"
+                                  SelectedItem="{Binding SelectedNode.FilterTSOrder}" />
                         <Border Height="92"
                                 Padding="8"
                                 Background="#F8FAFC"
@@ -701,17 +895,91 @@
                                     <Line StartPoint="0,72" EndPoint="248,72" Stroke="#CBD5E1" StrokeThickness="1" />
                                     <Line StartPoint="0,36" EndPoint="248,36" Stroke="#E2E8F0" StrokeThickness="1" />
                                     <Line StartPoint="0,0" EndPoint="0,72" Stroke="#CBD5E1" StrokeThickness="1" />
-                                    <Polyline Points="{Binding SelectedNode.FilterStResponsePoints}"
+                                    <Polyline Points="{Binding SelectedNode.FilterTSResponsePoints}"
                                               Stroke="#1D70B8"
                                               StrokeThickness="2" />
                                 </Canvas>
                                 <TextBlock Grid.Row="1"
-                                           Text="{Binding SelectedNode.FilterStResponseCaption}"
+                                           Text="{Binding SelectedNode.FilterTSResponseCaption}"
                                            Foreground="#526071"
                                            FontSize="10"
                                            HorizontalAlignment="Right" />
                             </Grid>
                         </Border>
+                    </StackPanel>
+                    <TextBlock Grid.Row="12" Text="FilterFS settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsFilterFSNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsFilterFSNode}">
+                        <TextBlock Text="Filter type" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.FilterFSTypes}"
+                                  SelectedItem="{Binding SelectedNode.FilterFSFilterType}" />
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.FilterFSIsSingleCutoffVisible}">
+                            <TextBlock Text="Cutoff frequency (Hz)" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="0.001"
+                                           Increment="0.5"
+                                           Value="{Binding SelectedNode.FilterFSCutoffFrequencyHertz}" />
+                        </StackPanel>
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.FilterFSIsBandCutoffVisible}">
+                            <TextBlock Text="Lower cutoff (Hz)" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="0.001"
+                                           Increment="0.5"
+                                           Value="{Binding SelectedNode.FilterFSLowerCutoffFrequencyHertz}" />
+                            <TextBlock Text="Upper cutoff (Hz)" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="0.001"
+                                           Increment="0.5"
+                                           Value="{Binding SelectedNode.FilterFSUpperCutoffFrequencyHertz}" />
+                        </StackPanel>
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedNode.FilterFSIsNotchVisible}">
+                            <TextBlock Text="Center frequency (Hz)" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="0.001"
+                                           Increment="0.5"
+                                           Value="{Binding SelectedNode.FilterFSCutoffFrequencyHertz}" />
+                            <TextBlock Text="Notch bandwidth (Hz)" FontWeight="SemiBold" />
+                            <NumericUpDown Minimum="0.001"
+                                           Increment="0.5"
+                                           Value="{Binding SelectedNode.FilterFSNotchBandwidthHertz}" />
+                        </StackPanel>
+                        <TextBlock Text="Order" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.FilterFSOrders}"
+                                  SelectedItem="{Binding SelectedNode.FilterFSOrder}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="12" Text="MQTT_In settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsMqttInNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsMqttInNode}">
+                        <TextBlock Text="Broker host" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.MqttInBrokerHost}" />
+                        <TextBlock Text="Port" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1" Maximum="65535" Value="{Binding SelectedNode.MqttInPort}" />
+                        <TextBlock Text="Client ID (blank = automatic)" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.MqttInClientId}" />
+                        <TextBlock Text="Username" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.MqttInUsername}" />
+                        <TextBlock Text="Password (stored in project settings)" FontWeight="SemiBold" />
+                        <TextBox PasswordChar="*" Text="{Binding SelectedNode.MqttInPassword}" />
+                        <CheckBox Content="Use TLS" IsChecked="{Binding SelectedNode.MqttInUseTls}" />
+                        <TextBlock Text="Topic filter" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.MqttInTopic}" />
+                        <TextBlock Text="Quality of service" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.MqttQualityOfServiceLevels}"
+                                  SelectedItem="{Binding SelectedNode.MqttInQualityOfService}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="12" Text="MQTT_Out settings" FontWeight="SemiBold" IsVisible="{Binding SelectedNode.IsMqttOutNode}" />
+                    <StackPanel Grid.Row="13" Spacing="5" IsVisible="{Binding SelectedNode.IsMqttOutNode}">
+                        <TextBlock Text="Broker host" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.MqttOutBrokerHost}" />
+                        <TextBlock Text="Port" FontWeight="SemiBold" />
+                        <NumericUpDown Minimum="1" Maximum="65535" Value="{Binding SelectedNode.MqttOutPort}" />
+                        <TextBlock Text="Client ID (blank = automatic)" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.MqttOutClientId}" />
+                        <TextBlock Text="Username" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.MqttOutUsername}" />
+                        <TextBlock Text="Password (stored in project settings)" FontWeight="SemiBold" />
+                        <TextBox PasswordChar="*" Text="{Binding SelectedNode.MqttOutPassword}" />
+                        <CheckBox Content="Use TLS" IsChecked="{Binding SelectedNode.MqttOutUseTls}" />
+                        <TextBlock Text="Topic (blank = message topic)" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding SelectedNode.MqttOutTopic}" />
+                        <TextBlock Text="Quality of service" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding SelectedNode.MqttQualityOfServiceLevels}"
+                                  SelectedItem="{Binding SelectedNode.MqttOutQualityOfService}" />
+                        <CheckBox Content="Retain message" IsChecked="{Binding SelectedNode.MqttOutRetain}" />
                     </StackPanel>
                     <TextBox Grid.Row="14"
                              AcceptsReturn="True"

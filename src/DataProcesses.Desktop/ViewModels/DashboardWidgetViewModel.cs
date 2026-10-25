@@ -15,6 +15,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     private const string DefaultContentKind = "text";
     private const string ImageContentKind = "image";
     private const string TriggerButtonContentKind = "button-trigger";
+    private const string AudioOutputContentKind = "audio-output";
 
     private int gridX;
     private int gridY;
@@ -34,6 +35,8 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     private bool isAutoScrollEnabled = true;
     private bool isInteractionAdornerVisible;
     private Bitmap? imageContentBitmap;
+    private bool isAudioOutputMuted;
+    private bool isAudioOutputRecording;
 
     public DashboardWidgetViewModel(
         Guid id,
@@ -87,6 +90,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsTextContent));
                 OnPropertyChanged(nameof(IsImageContent));
                 OnPropertyChanged(nameof(IsTriggerButtonContent));
+                OnPropertyChanged(nameof(IsAudioOutputContent));
                 OnPropertyChanged(nameof(IsTextContentAndWrapEnabled));
                 OnPropertyChanged(nameof(IsTextContentAndNoWrapEnabled));
                 OnPropertyChanged(nameof(IsAutoScrollToggleVisible));
@@ -103,6 +107,36 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
     public bool IsTextContentAndNoWrapEnabled => IsTextContent && IsTextNoWrapEnabled;
 
     public bool IsTriggerButtonContent => string.Equals(ContentKind, TriggerButtonContentKind, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsAudioOutputContent => string.Equals(ContentKind, AudioOutputContentKind, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsAudioOutputMuted
+    {
+        get => isAudioOutputMuted;
+        private set
+        {
+            if (SetProperty(ref isAudioOutputMuted, value))
+            {
+                OnPropertyChanged(nameof(AudioOutputMuteButtonLabel));
+            }
+        }
+    }
+
+    public bool IsAudioOutputRecording
+    {
+        get => isAudioOutputRecording;
+        private set
+        {
+            if (SetProperty(ref isAudioOutputRecording, value))
+            {
+                OnPropertyChanged(nameof(AudioOutputRecordButtonLabel));
+            }
+        }
+    }
+
+    public string AudioOutputMuteButtonLabel => IsAudioOutputMuted ? "Unmute" : "Mute";
+
+    public string AudioOutputRecordButtonLabel => IsAudioOutputRecording ? "Stop Recording" : "Start Recording";
 
     public bool IsAutoScrollToggleVisible => IsTextContent || IsImageContent;
 
@@ -367,6 +401,14 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
             if (document.RootElement.TryGetProperty("displayData", out var displayDataElement))
             {
                 parsedDisplayDataJson = displayDataElement.GetRawText();
+                IsAudioOutputMuted = displayDataElement.ValueKind == JsonValueKind.Object
+                    && displayDataElement.TryGetProperty("isMuted", out var audioMutedElement)
+                    && audioMutedElement.ValueKind is JsonValueKind.True or JsonValueKind.False
+                    && audioMutedElement.GetBoolean();
+                IsAudioOutputRecording = displayDataElement.ValueKind == JsonValueKind.Object
+                    && displayDataElement.TryGetProperty("isRecording", out var audioRecordingElement)
+                    && audioRecordingElement.ValueKind is JsonValueKind.True or JsonValueKind.False
+                    && audioRecordingElement.GetBoolean();
                 if (string.IsNullOrEmpty(parsedContent)
                     && displayDataElement.ValueKind == JsonValueKind.Object
                     && displayDataElement.TryGetProperty("text", out var textElement)

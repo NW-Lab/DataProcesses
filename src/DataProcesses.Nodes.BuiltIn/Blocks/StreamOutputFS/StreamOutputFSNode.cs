@@ -44,9 +44,9 @@ public sealed class StreamOutputFSNode : INode
             throw new ArgumentException("StreamOutputFS accepts Fast Stream input only.", nameof(packet));
         }
 
-        if (!frame.HasValidTiming)
+        if (frame.SampleRateHertz is not int sampleRateHertz || sampleRateHertz <= 0)
         {
-            throw new ArgumentException("StreamOutputFS requires a positive sample period or sample rate.", nameof(packet));
+            throw new ArgumentException("StreamOutputFS requires FS frames with a positive SampleRateHertz.", nameof(packet));
         }
 
         var displayChannels = new ReadOnlyMemory<double>[frame.ChannelCount];
@@ -57,7 +57,7 @@ public sealed class StreamOutputFSNode : INode
 
         LatestSnapshot = new StreamOutputFSSnapshot(
             frame.StartTimeUnixNanoseconds,
-            frame.GetSampleRateHertz(),
+            sampleRateHertz,
             frame.ChannelNames.ToArray(),
             displayChannels,
             frame.SampleCount,

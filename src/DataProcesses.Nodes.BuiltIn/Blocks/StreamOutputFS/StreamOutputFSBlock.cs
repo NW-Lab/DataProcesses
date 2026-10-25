@@ -23,7 +23,7 @@ public static class StreamOutputFSBlock
                 "Input",
                 PortDirection.Input,
                 PortDataKind.FastStream,
-                DataSchema: PortDataSchema.TimeSeries1D),
+                DataSchema: PortDataSchema.FixedRateTimeSeries1D),
         ],
         NodeType: NodeType.Debug,
         Title: "StreamOutputFS",

@@ -45,9 +45,9 @@ public sealed class StreamChartFSNode : INode
             throw new ArgumentException("StreamChartFS accepts Fast Stream input only.", nameof(packet));
         }
 
-        if (!frame.HasValidTiming)
+        if (frame.SampleRateHertz is not > 0)
         {
-            throw new ArgumentException("StreamChartFS requires a positive sample period or sample rate.", nameof(packet));
+            throw new ArgumentException("StreamChartFS requires FS frames with a positive SampleRateHertz.", nameof(packet));
         }
 
         if (frame.ChannelCount == 0 || frame.SampleCount == 0)

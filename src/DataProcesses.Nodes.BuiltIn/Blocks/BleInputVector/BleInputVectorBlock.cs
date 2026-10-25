@@ -9,7 +9,7 @@ public static class BleInputVectorBlock
 {
     public const string TypeId = "dataprocesses.input.ble-vector";
     public const string VectorPortId = "vector";
-    public const string IconPath = "Blocks/BleInputSt/icon.png";
+    public const string IconPath = "Blocks/BleInputTS/icon.png";
 
     public static NodeDefinition Definition { get; } = new(
         TypeId: TypeId,

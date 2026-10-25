@@ -20,12 +20,23 @@ public enum NodeType
 public enum PortDataSchema
 {
     Unspecified = 0,
+
+    /// <summary>
+    /// TS: a time series whose timing comes from source timestamps or a nominal sample period,
+    /// such as Arduino-style <c>millis,data</c> input. <see cref="FastStreamFrame.SampleRateHertz"/> is optional.
+    /// </summary>
     TimeSeries1D = 1,
     Spectrum1D = 2,
     NumericVector1D = 3,
     NumericMatrix2D = 4,
     Image2D = 5,
     JsonEnvelope = 6,
+
+    /// <summary>
+    /// FS: a fixed-rate time series, such as 44.1 kHz audio. Every frame must set
+    /// <see cref="FastStreamFrame.SampleRateHertz"/>. Not interchangeable with <see cref="TimeSeries1D"/>.
+    /// </summary>
+    FixedRateTimeSeries1D = 7,
 }
 
 public sealed record PortDefinition(

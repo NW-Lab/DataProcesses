@@ -1,22 +1,29 @@
 ﻿using DataProcesses.Nodes.BuiltIn;
 using DataProcesses.Nodes.BuiltIn.Blocks.BreathImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
-using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.AudioOutFS;
+using DataProcesses.Nodes.BuiltIn.Blocks.BreathTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.CdTimeResolvedMethodSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.CdTimeResolvedMethodTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovieInputImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.MicInputFS;
+using DataProcesses.Nodes.BuiltIn.Blocks.MqttIn;
+using DataProcesses.Nodes.BuiltIn.Blocks.MqttOut;
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
-using DataProcesses.Nodes.BuiltIn.Blocks.FftSt;
-using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.FftTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.FftFS;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.HartRateImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.HartRateSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.HartRateTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.HumansImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
@@ -48,33 +55,40 @@ public sealed class BuiltInNodePluginTests
             new[]
             {
                 CsvInputBlock.TypeId,
-                SerialInputStBlock.TypeId,
+                SerialInputTSBlock.TypeId,
                 SerialInputVectorBlock.TypeId,
-                BleInputStBlock.TypeId,
+                BleInputTSBlock.TypeId,
+                BleInputFSBlock.TypeId,
                 BleInputVectorBlock.TypeId,
                 CameraInputImageBlock.TypeId,
                 MovieInputImageBlock.TypeId,
                 UVCameraInputImageBlock.TypeId,
+                MicInputFSBlock.TypeId,
+                AudioOutFSBlock.TypeId,
+                MqttInBlock.TypeId,
+                MqttOutBlock.TypeId,
                 TestSignalBlock.TypeId,
                 TestSignalFSBlock.TypeId,
                 TestSignalVecBlock.TypeId,
                 TestSignalImgBlock.TypeId,
                 TriggerBlock.TypeId,
-                FilterStBlock.TypeId,
+                FilterTSBlock.TypeId,
+                FilterFSBlock.TypeId,
                 MovingAverageBlock.TypeId,
                 FastFourierTransformBlock.TypeId,
-                FftStBlock.TypeId,
-                CdTimeResolvedMethodStBlock.TypeId,
-                HartRateStBlock.TypeId,
+                FftFSBlock.TypeId,
+                FftTSBlock.TypeId,
+                CdTimeResolvedMethodTSBlock.TypeId,
+                HartRateTSBlock.TypeId,
                 HartRateImageBlock.TypeId,
                 HumansImageBlock.TypeId,
                 BreathImageBlock.TypeId,
-                BreathStBlock.TypeId,
+                BreathTSBlock.TypeId,
                 StremOutputTSBlock.TypeId,
                 StreamOutputFSBlock.TypeId,
                 StreamOutputVectorBlock.TypeId,
                 StreamChartVectorBlock.TypeId,
-                StreamChartStBlock.TypeId,
+                StreamChartTSBlock.TypeId,
                 StreamChartFSBlock.TypeId,
                 StreamOutputImageBlock.TypeId,
                 PythonOutputBlock.TypeId,
@@ -110,29 +124,35 @@ public sealed class BuiltInNodePluginTests
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalFSBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[CsvInputBlock.TypeId]);
-        Assert.Equal(NodeType.Input, nodeTypesByTypeId[SerialInputStBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[SerialInputTSBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[SerialInputVectorBlock.TypeId]);
-        Assert.Equal(NodeType.Input, nodeTypesByTypeId[BleInputStBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[BleInputTSBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[BleInputVectorBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[CameraInputImageBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[MovieInputImageBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[UVCameraInputImageBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[MicInputFSBlock.TypeId]);
+        Assert.Equal(NodeType.Input, nodeTypesByTypeId[MqttInBlock.TypeId]);
+            Assert.Equal(NodeType.Output, nodeTypesByTypeId[AudioOutFSBlock.TypeId]);
+        Assert.Equal(NodeType.Output, nodeTypesByTypeId[MqttOutBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TestSignalImgBlock.TypeId]);
         Assert.Equal(NodeType.Input, nodeTypesByTypeId[TriggerBlock.TypeId]);
-        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FilterStBlock.TypeId]);
+        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FilterTSBlock.TypeId]);
+            Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FilterFSBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[MovingAverageBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FastFourierTransformBlock.TypeId]);
-        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FftStBlock.TypeId]);
-        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[CdTimeResolvedMethodStBlock.TypeId]);
-        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[HartRateStBlock.TypeId]);
+            Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FftFSBlock.TypeId]);
+        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FftTSBlock.TypeId]);
+        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[CdTimeResolvedMethodTSBlock.TypeId]);
+        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[HartRateTSBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[HartRateImageBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[HumansImageBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[BreathImageBlock.TypeId]);
-        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[BreathStBlock.TypeId]);
+        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[BreathTSBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StremOutputTSBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputFSBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputVectorBlock.TypeId]);
-        Assert.Equal(NodeType.Output, nodeTypesByTypeId[StreamChartStBlock.TypeId]);
+        Assert.Equal(NodeType.Output, nodeTypesByTypeId[StreamChartTSBlock.TypeId]);
             Assert.Equal(NodeType.Output, nodeTypesByTypeId[StreamChartFSBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputImageBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[PythonOutputBlock.TypeId]);
@@ -154,4 +174,3 @@ public sealed class BuiltInNodePluginTests
         }
     }
 }
-

@@ -12,7 +12,7 @@ Predicts heart rate from sequential image frames using a simplified remote photo
 
 ## Dashboard
 
-HartRateImage is not shown on the dashboard by default. Connect `heart-rate` to StreamChartSt or another compatible Fast Stream output Block to inspect the BPM estimate.
+HartRateImage is not shown on the dashboard by default. Connect `heart-rate` to StreamChartTS or another compatible Fast Stream output Block to inspect the BPM estimate.
 
 ## Ports
 

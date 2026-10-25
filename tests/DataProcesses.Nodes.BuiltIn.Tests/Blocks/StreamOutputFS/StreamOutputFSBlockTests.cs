@@ -13,7 +13,7 @@ public sealed class StreamOutputFSBlockTests
         Assert.Equal(StreamOutputFSBlock.InputPortId, port.Id);
         Assert.Equal(PortDirection.Input, port.Direction);
         Assert.Equal(PortDataKind.FastStream, port.DataKind);
-        Assert.Equal(PortDataSchema.TimeSeries1D, port.DataSchema);
+        Assert.Equal(PortDataSchema.FixedRateTimeSeries1D, port.DataSchema);
 
         var dashboardWidget = Assert.IsType<DashboardWidgetDefinition>(StreamOutputFSBlock.Definition.DashboardWidget);
         Assert.True(dashboardWidget.IsVisibleByDefault);
@@ -44,5 +44,17 @@ public sealed class StreamOutputFSBlockTests
         Assert.Equal(0.0, snapshot.Samples[0].Span[0]);
         Assert.Equal(1_023.0, snapshot.Samples[0].Span[^1]);
         Assert.Equal(3, snapshot.SequenceNumber);
+    }
+
+    [Fact]
+    public async Task OnPacketAsync_RejectsFrameWithoutSampleRate()
+    {
+        var node = new StreamOutputFSNode();
+        await node.InitializeAsync(new RecordingNodeContext(), CancellationToken.None);
+        var periodOnlyFrame = new FastStreamFrame(0, 1_000_000, ["signal"], [new double[] { 0.0, 1.0 }.AsMemory()], 0);
+
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+            await node.OnPacketAsync(StreamOutputFSBlock.InputPortId, periodOnlyFrame, CancellationToken.None));
+        Assert.Null(node.LatestSnapshot);
     }
 }

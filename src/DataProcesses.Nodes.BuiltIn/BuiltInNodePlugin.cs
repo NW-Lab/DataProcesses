@@ -1,25 +1,32 @@
 ﻿using DataProcesses.Nodes.BuiltIn.Blocks.BreathImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
-using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
-using DataProcesses.Nodes.BuiltIn.Blocks.CdTimeResolvedMethodSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.AudioOutFS;
+using DataProcesses.Nodes.BuiltIn.Blocks.BreathTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.CdTimeResolvedMethodTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.FastFourierTransform;
-using DataProcesses.Nodes.BuiltIn.Blocks.FftSt;
-using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.FftTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.FftFS;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.HartRateImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.HartRateSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.HartRateTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.HumansImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovieInputImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.MicInputFS;
+using DataProcesses.Nodes.BuiltIn.Blocks.MqttIn;
+using DataProcesses.Nodes.BuiltIn.Blocks.MqttOut;
 using DataProcesses.Nodes.BuiltIn.Blocks.UVCameraInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvInput;
 using DataProcesses.Nodes.BuiltIn.Blocks.CsvOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.SerialInputVector;
-using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
@@ -43,33 +50,40 @@ public sealed class BuiltInNodePlugin : INodePlugin
     private static readonly IReadOnlyCollection<INodeFactory> Factories =
     [
         new CsvInputNodeFactory(),
-        new SerialInputStNodeFactory(),
+        new SerialInputTSNodeFactory(),
         new SerialInputVectorNodeFactory(),
-        new BleInputStNodeFactory(),
+        new BleInputTSNodeFactory(),
+        new BleInputFSNodeFactory(),
         new BleInputVectorNodeFactory(),
         new CameraInputImageNodeFactory(),
         new MovieInputImageNodeFactory(),
         new UVCameraInputImageNodeFactory(),
+        new MicInputFSNodeFactory(),
+        new AudioOutFSNodeFactory(),
+            new MqttInNodeFactory(),
+            new MqttOutNodeFactory(),
         new TestSignalNodeFactory(),
         new TestSignalFSNodeFactory(),
         new TestSignalVecNodeFactory(),
         new TestSignalImgNodeFactory(),
         new TriggerNodeFactory(),
-        new FilterStNodeFactory(),
+        new FilterTSNodeFactory(),
+        new FilterFSNodeFactory(),
         new MovingAverageNodeFactory(),
         new FastFourierTransformNodeFactory(),
-        new FftStNodeFactory(),
-        new CdTimeResolvedMethodStNodeFactory(),
-        new HartRateStNodeFactory(),
+        new FftFSNodeFactory(),
+        new FftTSNodeFactory(),
+        new CdTimeResolvedMethodTSNodeFactory(),
+        new HartRateTSNodeFactory(),
         new HartRateImageNodeFactory(),
         new HumansImageNodeFactory(),
         new BreathImageNodeFactory(),
-        new BreathStNodeFactory(),
+        new BreathTSNodeFactory(),
         new StremOutputTSNodeFactory(),
         new StreamOutputFSNodeFactory(),
         new StreamOutputVectorNodeFactory(),
         new StreamChartVectorNodeFactory(),
-        new StreamChartStNodeFactory(),
+        new StreamChartTSNodeFactory(),
         new StreamChartFSNodeFactory(),
         new StreamOutputImageNodeFactory(),
         new PythonOutputNodeFactory(),
@@ -83,4 +97,3 @@ public sealed class BuiltInNodePlugin : INodePlugin
 
     public IReadOnlyCollection<INodeFactory> NodeFactories => Factories;
 }
-

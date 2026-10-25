@@ -10,18 +10,18 @@ using CommunityToolkit.Mvvm.Input;
 using DataProcesses.Core;
 using DataProcesses.Desktop.Services;
 using DataProcesses.Engine;
-using DataProcesses.Nodes.BuiltIn.Blocks.BleInputSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BleInputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.BleInputVector;
-using DataProcesses.Nodes.BuiltIn.Blocks.BreathSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.BreathTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.FftSt;
-using DataProcesses.Nodes.BuiltIn.Blocks.FilterSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.FftTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.FilterTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovieInputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
-using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartSt;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
@@ -39,6 +39,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private const string CameraInputImageNodeTypeId = "dataprocesses.input.camera-image";
     private const string TriggerButtonContentKind = "button-trigger";
     private const string ImageContentKind = "image";
+    private const string AudioOutputContentKind = "audio-output";
     private const string PayloadOutputNodeTypeId = "dataprocesses.output.payload";
     private const string CsvOutputNodeTypeId = "dataprocesses.output.csv";
     private const string CsvOutputInputPortId = "input";
@@ -70,8 +71,8 @@ public sealed class FlowEditorViewModel : ViewModelBase
     private readonly List<FlowDocument> additionalFlows = [];
     private readonly Dictionary<Guid, FlowWorkspaceState> flowWorkspaceById = [];
     private readonly Dictionary<string, StreamChartVectorHistory> streamChartVectorHistoryByNodeId = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, StreamChartStHistory> streamChartStHistoryByNodeId = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, StreamChartStHistory> streamChartFSHistoryByNodeId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, StreamChartTSHistory> streamChartStHistoryByNodeId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, StreamChartTSHistory> streamChartFSHistoryByNodeId = new(StringComparer.Ordinal);
     private Guid flowId = Guid.NewGuid();
     private FlowListItemViewModel? selectedFlow;
     private bool isLoadingFlows;
@@ -563,6 +564,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
         }
 
         isDebugExecution = debugMode;
+        ResetAudioOutputRuntimeControls();
         await RunAsync().ConfigureAwait(true);
     }
 
@@ -702,17 +704,17 @@ public sealed class FlowEditorViewModel : ViewModelBase
             });
         }
 
-        if (string.Equals(nodeTypeId, BleInputStBlock.TypeId, StringComparison.Ordinal))
+        if (string.Equals(nodeTypeId, BleInputTSBlock.TypeId, StringComparison.Ordinal))
         {
             return JsonSerializer.Serialize(new
             {
                 deviceId = string.Empty,
                 deviceName = string.Empty,
                 autoConnect = true,
-                serviceUuid = BleInputStSettings.NordicUartServiceUuid,
-                notifyCharacteristicUuid = BleInputStSettings.NordicUartTxCharacteristicUuid,
-                channelCount = BleInputStSettings.Default.ChannelCount,
-                timeoutMilliseconds = BleInputStSettings.Default.TimeoutMilliseconds,
+                serviceUuid = BleInputTSSettings.NordicUartServiceUuid,
+                notifyCharacteristicUuid = BleInputTSSettings.NordicUartTxCharacteristicUuid,
+                channelCount = BleInputTSSettings.Default.ChannelCount,
+                timeoutMilliseconds = BleInputTSSettings.Default.TimeoutMilliseconds,
             });
         }
 
@@ -729,7 +731,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
             });
         }
 
-        if (string.Equals(nodeTypeId, BreathStBlock.TypeId, StringComparison.Ordinal))
+        if (string.Equals(nodeTypeId, BreathTSBlock.TypeId, StringComparison.Ordinal))
         {
             return JsonSerializer.Serialize(new
             {
@@ -753,23 +755,28 @@ public sealed class FlowEditorViewModel : ViewModelBase
             });
         }
 
-        if (string.Equals(nodeTypeId, FilterStBlock.TypeId, StringComparison.Ordinal))
+        if (string.Equals(nodeTypeId, FilterTSBlock.TypeId, StringComparison.Ordinal))
         {
             return JsonSerializer.Serialize(new
             {
                 filterType = "lowPass",
-                cutoffFrequencyHertz = FilterStSettings.Default.CutoffFrequencyHertz,
-                lowerCutoffFrequencyHertz = FilterStSettings.Default.LowerCutoffFrequencyHertz,
-                upperCutoffFrequencyHertz = FilterStSettings.Default.UpperCutoffFrequencyHertz,
-                order = FilterStSettings.Default.Order,
+                cutoffFrequencyHertz = FilterTSSettings.Default.CutoffFrequencyHertz,
+                lowerCutoffFrequencyHertz = FilterTSSettings.Default.LowerCutoffFrequencyHertz,
+                upperCutoffFrequencyHertz = FilterTSSettings.Default.UpperCutoffFrequencyHertz,
+                order = FilterTSSettings.Default.Order,
             });
         }
 
         return "{}";
     }
 
-    private int GetRunLoopDelayMilliseconds()
+    private int GetRunLoopDelayMilliseconds(FlowRunResult? result = null)
     {
+        if (Nodes.Any(static node => node.IsEnabled && node.IsMicInputFSNode))
+        {
+            return 1;
+        }
+
         var configuredFramesPerSecond = Nodes
             .Where(static node => node.IsEnabled
                 && (node.IsMovieInputImageNode
@@ -780,7 +787,36 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 : node.CameraInputImageFramesPerSecond)
             .DefaultIfEmpty(1000.0 / RunLoopDelayMilliseconds)
             .Max();
-        return Math.Max(1, (int)Math.Floor(1000.0 / configuredFramesPerSecond));
+        var runLoopDelayMilliseconds = Math.Max(1, (int)Math.Floor(1000.0 / configuredFramesPerSecond));
+        if (result is null)
+        {
+            return runLoopDelayMilliseconds;
+        }
+
+        foreach (var output in result.OutputPackets)
+        {
+            if (output.Packet is not FastStreamFrame frame || frame.SampleCount == 0 || !frame.HasValidTiming)
+            {
+                continue;
+            }
+
+            var feedsAudioOutput = Connections.Any(connection =>
+                string.Equals(connection.Connection.SourceNodeId, output.NodeId, StringComparison.Ordinal)
+                && string.Equals(connection.Connection.SourcePortId, output.OutputPortId, StringComparison.Ordinal)
+                && Nodes.Any(node => node.IsAudioOutFSNode
+                    && string.Equals(node.Id, connection.Connection.TargetNodeId, StringComparison.Ordinal)));
+            if (!feedsAudioOutput)
+            {
+                continue;
+            }
+
+            var frameDurationMilliseconds = Math.Max(
+                1,
+                (int)Math.Ceiling(frame.SampleCount * 1000.0 / frame.GetSampleRateHertz()));
+            runLoopDelayMilliseconds = Math.Min(runLoopDelayMilliseconds, frameDurationMilliseconds);
+        }
+
+        return runLoopDelayMilliseconds;
     }
 
     private bool ShouldUpdateDashboard()
@@ -1030,7 +1066,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
                 ExecutionState = FlowExecutionState.Running;
                 runtimeExecutionStep++;
-                await Task.Delay(GetRunLoopDelayMilliseconds(), cancellationToken).ConfigureAwait(true);
+                await Task.Delay(GetRunLoopDelayMilliseconds(result), cancellationToken).ConfigureAwait(true);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -1070,8 +1106,25 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
     private void StopRun()
     {
+        ResetAudioOutputRuntimeControls();
         runCancellationTokenSource?.Cancel();
         ExecutionState = FlowExecutionState.Stopping;
+    }
+
+    private void ResetAudioOutputRuntimeControls()
+    {
+        foreach (var node in Nodes.Where(static candidate => candidate.IsAudioOutFSNode))
+        {
+            if (!node.AudioOutFSIsMuted && !node.AudioOutFSIsRecording)
+            {
+                continue;
+            }
+
+            var settings = ReadSettingsObject(node.SettingsJson);
+            settings["isMuted"] = false;
+            settings["isRecording"] = false;
+            node.SettingsJson = settings.ToJsonString();
+        }
     }
 
     private void ClearExecutionLogs()
@@ -1328,6 +1381,34 @@ public sealed class FlowEditorViewModel : ViewModelBase
         TriggerNode(node);
     }
 
+    public void ToggleAudioOutputMuteByNodeId(string nodeId)
+    {
+        ToggleAudioOutputSetting(nodeId, static node => node.ToggleAudioOutFSMute());
+    }
+
+    public void ToggleAudioOutputRecordingByNodeId(string nodeId)
+    {
+        ToggleAudioOutputSetting(nodeId, static node => node.ToggleAudioOutFSRecording());
+    }
+
+    private void ToggleAudioOutputSetting(string nodeId, Action<CanvasNodeViewModel> toggle)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return;
+        }
+
+        var node = Nodes.FirstOrDefault(candidate =>
+            candidate.IsAudioOutFSNode
+            && string.Equals(candidate.Id, nodeId, StringComparison.Ordinal));
+        if (node is null)
+        {
+            return;
+        }
+
+        toggle(node);
+    }
+
     private void LoadFlow(FlowDocument flow)
     {
         isApplyingFlowState = true;
@@ -1471,7 +1552,11 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
             if (sourceNode is not null && targetNode is not null && sourcePort is not null && targetPort is not null)
             {
-                Connections.Add(new CanvasConnectionViewModel(connection, sourceNode, sourcePort, targetNode, targetPort));
+                var normalizedConnection = connection.DataSchema == PortDataSchema.TimeSeries1D
+                    && sourcePort.Definition.DataSchema == PortDataSchema.FixedRateTimeSeries1D
+                        ? connection with { DataSchema = PortDataSchema.FixedRateTimeSeries1D }
+                        : connection;
+                Connections.Add(new CanvasConnectionViewModel(normalizedConnection, sourceNode, sourcePort, targetNode, targetPort));
             }
         }
     }
@@ -1563,6 +1648,13 @@ public sealed class FlowEditorViewModel : ViewModelBase
         JsonElement? displayDataOverride = null)
     {
         ArgumentNullException.ThrowIfNull(node);
+
+        if (node.IsAudioOutFSNode)
+        {
+            contentOverride ??= GetAudioOutputStatusText(node);
+            contentKindOverride ??= AudioOutputContentKind;
+            displayDataOverride ??= BuildAudioOutputDisplayData(node);
+        }
 
         var dashboards = getDashboardDocuments().ToList();
         if (dashboards.Count == 0 && node.ShowOnDashboard)
@@ -1684,9 +1776,9 @@ public sealed class FlowEditorViewModel : ViewModelBase
                     continue;
                 }
 
-                if (string.Equals(targetNode.TypeId, StreamChartStBlock.TypeId, StringComparison.Ordinal))
+                if (string.Equals(targetNode.TypeId, StreamChartTSBlock.TypeId, StringComparison.Ordinal))
                 {
-                    UpdateStreamChartStWidget(targetNode, output.OutputPortId, frame);
+                    UpdateStreamChartTSWidget(targetNode, output.OutputPortId, frame);
                     continue;
                 }
 
@@ -1736,7 +1828,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
 
             if (sourceNode.ShowOnDashboard && !sourceNode.IsDashboardActionNode)
             {
-                if (string.Equals(sourceNode.TypeId, FftStBlock.TypeId, StringComparison.Ordinal))
+                if (string.Equals(sourceNode.TypeId, FftTSBlock.TypeId, StringComparison.Ordinal))
                 {
                     var summary = FormatFftEqualizerSummary(vector);
                     SynchronizeDashboardWidgetForNode(sourceNode, summary, ImageContentKind, BuildFftEqualizerDisplayData(vector, summary));
@@ -1926,17 +2018,17 @@ public sealed class FlowEditorViewModel : ViewModelBase
         SynchronizeDashboardWidgetForNode(node, summary, ImageContentKind, BuildStreamChartVectorDisplayData(image, summary));
     }
 
-    private void UpdateStreamChartStWidget(CanvasNodeViewModel node, string sourcePortId, FastStreamFrame frame)
+    private void UpdateStreamChartTSWidget(CanvasNodeViewModel node, string sourcePortId, FastStreamFrame frame)
     {
-        var settings = ReadStreamChartStSettings(node.SettingsJson);
-        if (!StreamChartStBlock.TryGetChannelIndex(sourcePortId, out var channelIndex))
+        var settings = ReadStreamChartTSSettings(node.SettingsJson);
+        if (!StreamChartTSBlock.TryGetChannelIndex(sourcePortId, out var channelIndex))
         {
             channelIndex = 1;
         }
 
         if (!streamChartStHistoryByNodeId.TryGetValue(node.Id, out var history))
         {
-            history = new StreamChartStHistory();
+            history = new StreamChartTSHistory();
             streamChartStHistoryByNodeId[node.Id] = history;
         }
 
@@ -1948,19 +2040,19 @@ public sealed class FlowEditorViewModel : ViewModelBase
             settings,
             frame.SampleRateHertz);
         var image = history.Render(settings);
-        var summary = FormattableString.Invariant($"StreamChartSt channels={StreamChartStBlock.MaxStreamInputs} span={settings.TimeSpanMilliseconds:0}ms");
-        SynchronizeDashboardWidgetForNode(node, summary, ImageContentKind, BuildStreamChartStDisplayData(image, summary));
+        var summary = FormattableString.Invariant($"StreamChartTS channels={StreamChartTSBlock.MaxStreamInputs} span={settings.TimeSpanMilliseconds:0}ms");
+        SynchronizeDashboardWidgetForNode(node, summary, ImageContentKind, BuildStreamChartTSDisplayData(image, summary));
     }
 
     private void UpdateStreamChartFSWidget(CanvasNodeViewModel node, FastStreamFrame frame)
     {
         if (!streamChartFSHistoryByNodeId.TryGetValue(node.Id, out var history))
         {
-            history = new StreamChartStHistory();
+            history = new StreamChartTSHistory();
             streamChartFSHistoryByNodeId[node.Id] = history;
         }
 
-        var settings = StreamChartStSettings.Default;
+        var settings = StreamChartTSSettings.Default;
         for (var channelIndex = 0; channelIndex < frame.ChannelCount; channelIndex++)
         {
             history.Append(
@@ -1980,27 +2072,27 @@ public sealed class FlowEditorViewModel : ViewModelBase
         var image = history.Render(settings);
         var summary = FormattableString.Invariant(
             $"StreamChartFS channels={frame.ChannelCount} rate={frame.GetSampleRateHertz():0.###}Hz span={settings.TimeSpanMilliseconds:0}ms");
-        SynchronizeDashboardWidgetForNode(node, summary, ImageContentKind, BuildStreamChartStDisplayData(image, summary));
+        SynchronizeDashboardWidgetForNode(node, summary, ImageContentKind, BuildStreamChartTSDisplayData(image, summary));
     }
 
-    private static StreamChartStSettings ReadStreamChartStSettings(string? settingsJson)
+    private static StreamChartTSSettings ReadStreamChartTSSettings(string? settingsJson)
     {
         if (string.IsNullOrWhiteSpace(settingsJson))
         {
-            return StreamChartStSettings.Default;
+            return StreamChartTSSettings.Default;
         }
 
         try
         {
-            return StreamChartStSettings.FromJson(settingsJson);
+            return StreamChartTSSettings.FromJson(settingsJson);
         }
         catch (ArgumentException)
         {
-            return StreamChartStSettings.Default;
+            return StreamChartTSSettings.Default;
         }
     }
 
-    private static JsonElement BuildStreamChartStDisplayData(StreamChartStImage image, string summary)
+    private static JsonElement BuildStreamChartTSDisplayData(StreamChartTSImage image, string summary)
     {
         return JsonSerializer.SerializeToElement(new
         {
@@ -2012,6 +2104,23 @@ public sealed class FlowEditorViewModel : ViewModelBase
                 pixelsBase64 = Convert.ToBase64String(image.PixelsRgb24.Span),
             },
             summary,
+        });
+    }
+
+    private static string GetAudioOutputStatusText(CanvasNodeViewModel node)
+    {
+        var outputState = node.AudioOutFSIsMuted ? "Muted" : "Output active";
+        var recordingState = node.AudioOutFSIsRecording ? "Recording" : "Not recording";
+        return $"{outputState} · {recordingState}";
+    }
+
+    private static JsonElement BuildAudioOutputDisplayData(CanvasNodeViewModel node)
+    {
+        return JsonSerializer.SerializeToElement(new
+        {
+            text = GetAudioOutputStatusText(node),
+            isMuted = node.AudioOutFSIsMuted,
+            isRecording = node.AudioOutFSIsRecording,
         });
     }
 
@@ -2134,9 +2243,12 @@ public sealed class FlowEditorViewModel : ViewModelBase
     {
         var isTriggerNode = string.Equals(node.TypeId, TriggerNodeTypeId, StringComparison.Ordinal);
         var isCameraInputImageNode = string.Equals(node.TypeId, CameraInputImageNodeTypeId, StringComparison.Ordinal);
+        var isAudioOutputNode = node.IsAudioOutFSNode;
         var isToggleNode = node.IsDashboardToggleNode;
         var supportsAutoScroll = IsAutoScrollCapableOutputNode(node.TypeId);
-        var contentKind = isTriggerNode || isCameraInputImageNode || isToggleNode
+        var contentKind = isAudioOutputNode
+            ? AudioOutputContentKind
+            : isTriggerNode || isCameraInputImageNode || isToggleNode
             ? TriggerButtonContentKind
             : string.Equals(node.TypeId, StreamOutputImageBlock.TypeId, StringComparison.Ordinal)
                 ? ImageContentKind
@@ -2156,15 +2268,19 @@ public sealed class FlowEditorViewModel : ViewModelBase
             var isEnabled = node.TestSignalIsEnabled;
             textContent = isEnabled ? "ON" : "OFF";
         }
+        else if (isAudioOutputNode)
+        {
+            textContent = GetAudioOutputStatusText(node);
+        }
 
         contentKind = string.IsNullOrWhiteSpace(contentKindOverride)
             ? contentKind
             : contentKindOverride;
 
-        var displayData = displayDataOverride ?? JsonSerializer.SerializeToElement(new
-        {
-            text = textContent,
-        });
+        var displayData = displayDataOverride
+            ?? (isAudioOutputNode
+                ? BuildAudioOutputDisplayData(node)
+                : JsonSerializer.SerializeToElement(new { text = textContent }));
 
         return JsonSerializer.Serialize(new
         {
@@ -2479,7 +2595,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
         return string.Equals(nodeTypeId, StreamChartFSBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputFSBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal)
-            || string.Equals(nodeTypeId, FftStBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(nodeTypeId, FftTSBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamChartVectorBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputImageBlock.TypeId, StringComparison.Ordinal);

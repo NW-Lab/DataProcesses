@@ -19,7 +19,7 @@ No dashboard widget is created by default. Connect `StreamOutputFS` to inspect t
 
 | ID | Direction | Family | Required | Schema |
 |---|---|---|---:|---|
-| `stream` | Output | Fast Stream | Yes | `TimeSeries1D` (`FastStreamFrame`) |
+| `stream` | Output | Fast Stream | Yes | `FixedRateTimeSeries1D` (FS) (`FastStreamFrame`) |
 
 ## Settings
 

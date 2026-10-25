@@ -15,6 +15,8 @@ For example, a 44.1 kHz stream sets `SampleRateHertz` to `44100`; the timestamp 
 
 The Flow Editor exposes `FS` as a palette filter for all Fast Stream ports. Existing detailed schemas and the ST CSV/serial input shape remain unchanged.
 
+> **Note:** ADR 0005 introduces the `FixedRateTimeSeries1D` (FS) schema, separates it from `TimeSeries1D` (TS), and redefines the `FS` palette filter to match only that schema.
+
 ## Compatibility
 
 The new rate fields are optional and appended to the public record constructors with defaults. Existing Add-ins and saved Flow documents remain source- and data-compatible. Producers that omit the new field continue to use `SamplePeriodNanoseconds`. Timing-aware built-in processors preserve and use the rate when provided.

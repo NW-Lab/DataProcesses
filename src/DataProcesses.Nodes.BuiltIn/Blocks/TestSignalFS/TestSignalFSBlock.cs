@@ -23,7 +23,7 @@ public static class TestSignalFSBlock
                 "Signal",
                 PortDirection.Output,
                 PortDataKind.FastStream,
-                DataSchema: PortDataSchema.TimeSeries1D),
+                DataSchema: PortDataSchema.FixedRateTimeSeries1D),
         ],
         NodeType: NodeType.Input,
         Title: "TestSignal(FS)ブロック",
