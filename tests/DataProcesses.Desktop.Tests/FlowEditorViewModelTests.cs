@@ -20,7 +20,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.MicInputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.MqttIn;
 using DataProcesses.Nodes.BuiltIn.Blocks.MqttOut;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
@@ -800,12 +800,12 @@ public sealed class FlowEditorViewModelTests
     public void PlacePaletteNode_StreamOutputTSNodeIsShownOnDashboardByDefault()
     {
         var mainViewModel = new MainViewModel();
-        var streamOutput = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == StremOutputTSBlock.TypeId);
+        var streamOutput = mainViewModel.FlowEditor.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputTSBlock.TypeId);
 
         mainViewModel.FlowEditor.PlacePaletteNode(streamOutput, 260, 220);
 
         var widget = Assert.Single(mainViewModel.Dashboard.Widgets);
-        Assert.Equal("StremOutputTS", widget.Title);
+        Assert.Equal("StreamOutputTS", widget.Title);
         Assert.Equal(3, widget.GridWidth);
         Assert.Equal(3, widget.GridHeight);
     }
@@ -1182,7 +1182,7 @@ public sealed class FlowEditorViewModelTests
         INodeFactory[] factories =
         [
             new CsvInputNodeFactory(),
-            new StremOutputTSNodeFactory(),
+            new StreamOutputTSNodeFactory(),
         ];
 
         var viewModel = new FlowEditorViewModel(
@@ -1191,7 +1191,7 @@ public sealed class FlowEditorViewModelTests
             new ProjectFileService());
 
         var csvInputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == CsvInputBlock.TypeId);
-        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StremOutputTSBlock.TypeId);
+        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputTSBlock.TypeId);
 
         var csvInputNode = viewModel.PlacePaletteNode(csvInputPaletteNode, 100, 100);
         var streamOutputNode1 = viewModel.PlacePaletteNode(streamOutputPaletteNode, 380, 80);
@@ -1388,7 +1388,7 @@ public sealed class FlowEditorViewModelTests
         INodeFactory[] factories =
         [
             new TestSignalNodeFactory(),
-            new StremOutputTSNodeFactory(),
+            new StreamOutputTSNodeFactory(),
         ];
         var viewModel = new FlowEditorViewModel(
             factories,
@@ -1398,7 +1398,7 @@ public sealed class FlowEditorViewModelTests
             documents => dashboards = documents);
 
         var testSignalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
-        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StremOutputTSBlock.TypeId);
+        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputTSBlock.TypeId);
 
         var testSignalNode = viewModel.PlacePaletteNode(testSignalPaletteNode, 120, 120);
         var streamOutputNode = viewModel.PlacePaletteNode(streamOutputPaletteNode, 440, 120);
@@ -1406,7 +1406,7 @@ public sealed class FlowEditorViewModelTests
         streamOutputNode.ShowOnDashboard = true;
 
         var sourcePort = testSignalNode.Outputs.Single(port => port.Id == TestSignalBlock.StreamOutputPortId);
-        var targetPort = streamOutputNode.Inputs.Single(port => port.Id == StremOutputTSBlock.InputPortId);
+        var targetPort = streamOutputNode.Inputs.Single(port => port.Id == StreamOutputTSBlock.InputPortId);
         viewModel.StartPendingConnection(sourcePort);
         viewModel.HandlePortConnection(sourcePort, targetPort);
 
@@ -1823,7 +1823,7 @@ public sealed class FlowEditorViewModelTests
         INodeFactory[] factories =
         [
             new TestSignalNodeFactory(),
-            new StremOutputTSNodeFactory(),
+            new StreamOutputTSNodeFactory(),
         ];
         var viewModel = new FlowEditorViewModel(
             factories,
@@ -1833,14 +1833,14 @@ public sealed class FlowEditorViewModelTests
             documents => dashboards = documents);
 
         var testSignalPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == TestSignalBlock.TypeId);
-        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StremOutputTSBlock.TypeId);
+        var streamOutputPaletteNode = viewModel.Palette.FilteredNodes.Single(node => node.TypeId == StreamOutputTSBlock.TypeId);
 
         var testSignalNode = viewModel.PlacePaletteNode(testSignalPaletteNode, 120, 120);
         var streamOutputNode = viewModel.PlacePaletteNode(streamOutputPaletteNode, 440, 120);
         streamOutputNode.ShowOnDashboard = true;
 
         var sourcePort = testSignalNode.Outputs.Single(port => port.Id == TestSignalBlock.StreamOutputPortId);
-        var targetPort = streamOutputNode.Inputs.Single(port => port.Id == StremOutputTSBlock.InputPortId);
+        var targetPort = streamOutputNode.Inputs.Single(port => port.Id == StreamOutputTSBlock.InputPortId);
         viewModel.StartPendingConnection(sourcePort);
         viewModel.HandlePortConnection(sourcePort, targetPort);
 
@@ -2682,7 +2682,7 @@ public sealed class FlowEditorViewModelTests
     {
         var settingsJson = JsonSerializer.Serialize(new
         {
-            title = "StremOutputTS",
+            title = "StreamOutputTS",
             contentKind = "text",
             content = "millis,value\n0,1",
             displayData = new
@@ -2758,7 +2758,7 @@ public sealed class FlowEditorViewModelTests
     {
         var legacySettingsJson = JsonSerializer.Serialize(new
         {
-            title = "StremOutputTS",
+            title = "StreamOutputTS",
             contentKind = "text",
             content = "millis,value\n1289,-0.1874",
             displayData = new

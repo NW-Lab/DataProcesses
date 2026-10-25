@@ -1,4 +1,4 @@
-# HartRateImage Block
+# HeartRateImage Block
 
 Predicts heart rate from sequential image frames using a simplified remote photoplethysmography pipeline inspired by `NW-Lab/face_blood`.
 
@@ -6,13 +6,15 @@ Predicts heart rate from sequential image frames using a simplified remote photo
 
 | Field | Value |
 |---|---|
-| Title | `HartRateImage` |
+| Title | `HeartRateImage` |
 | Subtitle | `rPPG heart rate` |
 | Icon | `icon.png`, 64 x 64 PNG source rendered at 32 x 32 in the Node Library and 28 x 28 on the canvas. |
 
 ## Dashboard
 
-HartRateImage is not shown on the dashboard by default. Connect `heart-rate` to StreamChartTS or another compatible Fast Stream output Block to inspect the BPM estimate.
+HeartRateImage is not shown on the dashboard by default. Connect `heart-rate` to StreamChartTS or another compatible Fast Stream output Block to inspect the BPM estimate.
+
+The type ID is `dataprocesses.analysis.heart-rate-image`. Flows saved with the earlier misspelled ID `dataprocesses.analysis.hart-rate-image` are migrated when the project is loaded.
 
 ## Ports
 

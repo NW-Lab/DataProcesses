@@ -1,25 +1,25 @@
 using DataProcesses.Plugin.Abstractions;
 
-namespace DataProcesses.Nodes.BuiltIn.Blocks.HartRateImage;
+namespace DataProcesses.Nodes.BuiltIn.Blocks.HeartRateImage;
 
 /// <summary>
 /// Estimates heart rate from sequential image frames using a simplified rPPG POS pipeline.
 /// </summary>
-public sealed class HartRateImageNode : INode
+public sealed class HeartRateImageNode : INode
 {
-    private readonly HartRateImageSettings settings;
+    private readonly HeartRateImageSettings settings;
     private readonly List<ColorSample> samples = [];
 
     private INodeContext? _context;
     private long? _lastImageTimestampNanoseconds;
 
-    public HartRateImageNode(HartRateImageSettings? settings = null)
+    public HeartRateImageNode(HeartRateImageSettings? settings = null)
     {
-        this.settings = settings ?? HartRateImageSettings.Default;
+        this.settings = settings ?? HeartRateImageSettings.Default;
         this.settings.Validate();
     }
 
-    public NodeDefinition Definition => HartRateImageBlock.Definition;
+    public NodeDefinition Definition => HeartRateImageBlock.Definition;
 
     public ValueTask InitializeAsync(
         INodeContext context,
@@ -39,14 +39,14 @@ public sealed class HartRateImageNode : INode
         ArgumentNullException.ThrowIfNull(packet);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!string.Equals(inputPortId, HartRateImageBlock.InputPortId, StringComparison.Ordinal))
+        if (!string.Equals(inputPortId, HeartRateImageBlock.InputPortId, StringComparison.Ordinal))
         {
             throw new ArgumentException($"Unknown input port '{inputPortId}'.", nameof(inputPortId));
         }
 
         if (packet is not ImageFrame image)
         {
-            throw new ArgumentException("HartRateImage accepts Image input only.", nameof(packet));
+            throw new ArgumentException("HeartRateImage accepts Image input only.", nameof(packet));
         }
 
         var context = _context
@@ -67,7 +67,7 @@ public sealed class HartRateImageNode : INode
             image.SequenceNumber);
 
         _lastImageTimestampNanoseconds = timestampNanoseconds;
-        await context.EmitAsync(HartRateImageBlock.OutputPortId, outputFrame, cancellationToken);
+        await context.EmitAsync(HeartRateImageBlock.OutputPortId, outputFrame, cancellationToken);
     }
 
     public ValueTask StartAsync(CancellationToken cancellationToken)

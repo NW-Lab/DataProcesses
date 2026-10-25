@@ -1,9 +1,9 @@
-﻿namespace DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+﻿namespace DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputTS;
 
 /// <summary>
-/// Immutable display-oriented view of the latest Fast Stream frame received by a StremOutputTS Block.
+/// Immutable display-oriented view of the latest Fast Stream frame received by a StreamOutputTS Block.
 /// </summary>
-public sealed record StremOutputTSSnapshot(
+public sealed record StreamOutputTSSnapshot(
     long StartTimeUnixNanoseconds,
     long SamplePeriodNanoseconds,
     IReadOnlyList<string> ChannelNames,

@@ -1,30 +1,33 @@
 using DataProcesses.Plugin.Abstractions;
 
-namespace DataProcesses.Nodes.BuiltIn.Blocks.HartRateTS;
+namespace DataProcesses.Nodes.BuiltIn.Blocks.HeartRateImage;
 
 /// <summary>
-/// Declares the stable identity and Fast Stream port contract for the HartRateTS Block.
+/// Declares the stable identity and image-to-heart-rate contract for the HeartRateImage Block.
 /// </summary>
-public static class HartRateTSBlock
+public static class HeartRateImageBlock
 {
-    public const string TypeId = "dataprocesses.analysis.hart-rate-st";
-    public const string InputPortId = "stream-in";
+    public const string TypeId = "dataprocesses.analysis.heart-rate-image";
+
+    // Misspelled ID persisted by older Flows; migrated to TypeId on load.
+    public const string LegacyTypeId = "dataprocesses.analysis.hart-rate-image";
+    public const string InputPortId = "image-in";
     public const string OutputPortId = "heart-rate";
-    public const string IconPath = "Blocks/HartRateTS/icon.png";
+    public const string IconPath = "Blocks/HeartRateImage/icon.png";
 
     public static readonly NodeDefinition Definition = new(
         TypeId: TypeId,
-        DisplayName: "HartRateTS",
+        DisplayName: "HeartRateImage",
         Category: "Signal Analysis",
         Version: "0.1.0",
         Ports:
         [
             new PortDefinition(
                 InputPortId,
-                "Stream In",
+                "Image In",
                 PortDirection.Input,
                 PortDataKind.FastStream,
-                DataSchema: PortDataSchema.TimeSeries1D),
+                DataSchema: PortDataSchema.Image2D),
             new PortDefinition(
                 OutputPortId,
                 "Heart Rate",
@@ -33,7 +36,7 @@ public static class HartRateTSBlock
                 DataSchema: PortDataSchema.TimeSeries1D),
         ],
         NodeType: NodeType.BasicProcess,
-        Title: "HartRateTS",
-        Subtitle: "Heart rate",
+        Title: "HeartRateImage",
+        Subtitle: "rPPG heart rate",
         IconPath: IconPath);
 }

@@ -450,6 +450,7 @@ public sealed class DashboardWidgetViewModel : ViewModelBase
 
             if (!parsedSupportsAutoScroll)
             {
+                // "StremOutputTS" is the misspelled title persisted by older dashboards.
                 parsedSupportsAutoScrollFallback =
                     string.Equals(parsedTitle, "StremOutputTS", StringComparison.Ordinal)
                     || string.Equals(parsedTitle, "StreamOutputTS", StringComparison.Ordinal)

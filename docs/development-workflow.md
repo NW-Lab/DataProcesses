@@ -57,6 +57,21 @@ Use F5 to debug or Ctrl+F5 to run without attaching the debugger. Reproduce the 
 5. **Lock in the behavior.** Add or update a deterministic regression test where practical. For UI work, verify keyboard access, focus, accessible naming, light/dark themes, and non-color cues in addition to the visual result.
 6. **Validate and document.** Run the complete Release validation commands. Update user documentation, localization resources, and an ADR when the change affects product behavior, public compatibility, or architecture.
 
+### Flow Editor selection-clear regression
+
+The FilterTS response preview must receive an empty point collection, not `null`,
+when the selected node is cleared. Hidden inspector controls can still participate
+in Avalonia layout work; hiding the settings panel alone does not protect a
+`Polyline` from an invalid `Points` binding.
+
+The desktop tests use `Avalonia.Headless` to exercise the actual view bindings and
+measure the response preview after deleting CameraInputIMG and FilterTS nodes.
+For a visual check, place and select either Block, then delete it using the Delete
+key and repeat using the node context menu. Confirm that the Block and its
+connections disappear, the inspector clears, and no layout exception occurs.
+Select a FilterTS Block again and confirm its response curve still updates when
+filter settings change.
+
 ## Information to include in a Copilot request
 
 A useful request names the user-visible goal, the smallest reproducible case, the expected and actual behavior, affected paths, and acceptance tests. Use this compact template when the cause is unknown:

@@ -1,4 +1,4 @@
-# HartRateTS Block
+# HeartRateTS Block
 
 Detects heart-beat peaks from a Fast Stream time-series signal and emits a Fast Stream BPM series.
 
@@ -6,13 +6,15 @@ Detects heart-beat peaks from a Fast Stream time-series signal and emits a Fast 
 
 | Field | Value |
 |---|---|
-| Title | `HartRateTS` |
+| Title | `HeartRateTS` |
 | Subtitle | `Heart rate` |
 | Icon | `icon.png`, 64 x 64 PNG source rendered at 32 x 32 in the Node Library and 28 x 28 on the canvas. |
 
 ## Dashboard
 
-HartRateTS is not shown on the dashboard by default. Connect `heart-rate` to a StreamChartTS or compatible Fast Stream output Block to inspect the detected BPM series.
+HeartRateTS is not shown on the dashboard by default. Connect `heart-rate` to a StreamChartTS or compatible Fast Stream output Block to inspect the detected BPM series.
+
+The type ID is `dataprocesses.analysis.heart-rate-st`. Flows saved with the earlier misspelled ID `dataprocesses.analysis.hart-rate-st` are migrated when the project is loaded.
 
 ## Ports
 
@@ -23,7 +25,7 @@ HartRateTS is not shown on the dashboard by default. Connect `heart-rate` to a S
 
 ## Settings
 
-HartRateTS currently has no Block-specific settings. Detection uses a local maximum above 60% of the current frame amplitude range, a 300 ms refractory interval, and a 2,000 ms maximum interval for accepted BPM estimates.
+HeartRateTS currently has no Block-specific settings. Detection uses a local maximum above 60% of the current frame amplitude range, a 300 ms refractory interval, and a 2,000 ms maximum interval for accepted BPM estimates.
 
 ## Fast Stream output / processing
 

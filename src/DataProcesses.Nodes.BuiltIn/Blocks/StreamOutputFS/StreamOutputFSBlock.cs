@@ -9,7 +9,7 @@ public static class StreamOutputFSBlock
 {
     public const string TypeId = "dataprocesses.output.stream-fs";
     public const string InputPortId = "input";
-    public const string IconPath = "Blocks/StremOutputTS/icon.png";
+    public const string IconPath = "Blocks/StreamOutputTS/icon.png";
 
     public static readonly NodeDefinition Definition = new(
         TypeId: TypeId,

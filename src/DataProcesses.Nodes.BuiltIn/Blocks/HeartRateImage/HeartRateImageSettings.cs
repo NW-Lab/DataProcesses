@@ -1,11 +1,11 @@
 using System.Text.Json;
 
-namespace DataProcesses.Nodes.BuiltIn.Blocks.HartRateImage;
+namespace DataProcesses.Nodes.BuiltIn.Blocks.HeartRateImage;
 
 /// <summary>
-/// Immutable configuration for the HartRateImage Block.
+/// Immutable configuration for the HeartRateImage Block.
 /// </summary>
-public sealed record HartRateImageSettings(
+public sealed record HeartRateImageSettings(
     double RegionScale = 0.55,
     int MinimumSampleCount = 64,
     double WindowSeconds = 12.0,
@@ -13,9 +13,9 @@ public sealed record HartRateImageSettings(
     double MaximumHeartRateBpm = 210.0,
     double DefaultFrameRateHertz = 30.0)
 {
-    public static HartRateImageSettings Default { get; } = new();
+    public static HeartRateImageSettings Default { get; } = new();
 
-    public static HartRateImageSettings FromJson(string settingsJson)
+    public static HeartRateImageSettings FromJson(string settingsJson)
     {
         if (string.IsNullOrWhiteSpace(settingsJson))
         {
@@ -25,17 +25,17 @@ public sealed record HartRateImageSettings(
         using var document = JsonDocument.Parse(settingsJson);
         if (document.RootElement.ValueKind != JsonValueKind.Object)
         {
-            throw new ArgumentException("HartRateImage settings must be a JSON object.", nameof(settingsJson));
+            throw new ArgumentException("HeartRateImage settings must be a JSON object.", nameof(settingsJson));
         }
 
         return Default.ApplyPayload(document.RootElement);
     }
 
-    public HartRateImageSettings ApplyPayload(JsonElement payload)
+    public HeartRateImageSettings ApplyPayload(JsonElement payload)
     {
         if (payload.ValueKind != JsonValueKind.Object)
         {
-            throw new ArgumentException("HartRateImage payload must be a JSON object.", nameof(payload));
+            throw new ArgumentException("HeartRateImage payload must be a JSON object.", nameof(payload));
         }
 
         var settings = this;
@@ -123,7 +123,7 @@ public sealed record HartRateImageSettings(
     {
         if (element.ValueKind != JsonValueKind.Number || !element.TryGetInt32(out var value))
         {
-            throw new ArgumentException($"HartRateImage setting '{propertyName}' must be an integer.", propertyName);
+            throw new ArgumentException($"HeartRateImage setting '{propertyName}' must be an integer.", propertyName);
         }
 
         return value;
@@ -133,7 +133,7 @@ public sealed record HartRateImageSettings(
     {
         if (element.ValueKind != JsonValueKind.Number || !element.TryGetDouble(out var value))
         {
-            throw new ArgumentException($"HartRateImage setting '{propertyName}' must be a number.", propertyName);
+            throw new ArgumentException($"HeartRateImage setting '{propertyName}' must be a number.", propertyName);
         }
 
         return value;

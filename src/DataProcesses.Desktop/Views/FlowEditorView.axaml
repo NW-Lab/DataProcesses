@@ -7,6 +7,9 @@
              Focusable="True"
              FontSize="13"
              KeyDown="FlowEditorKeyDown">
+    <UserControl.Resources>
+        <Points x:Key="EmptyResponsePoints" />
+    </UserControl.Resources>
     <Grid RowDefinitions="Auto,*,160" ColumnDefinitions="250,*,300">
         <Border Grid.Row="0" Grid.ColumnSpan="3" Background="#172033" Padding="12,8">
             <Grid ColumnDefinitions="200,170,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
@@ -895,7 +898,7 @@
                                     <Line StartPoint="0,72" EndPoint="248,72" Stroke="#CBD5E1" StrokeThickness="1" />
                                     <Line StartPoint="0,36" EndPoint="248,36" Stroke="#E2E8F0" StrokeThickness="1" />
                                     <Line StartPoint="0,0" EndPoint="0,72" Stroke="#CBD5E1" StrokeThickness="1" />
-                                    <Polyline Points="{Binding SelectedNode.FilterTSResponsePoints}"
+                                    <Polyline Points="{Binding SelectedNode.FilterTSResponsePoints, TargetNullValue={StaticResource EmptyResponsePoints}, FallbackValue={StaticResource EmptyResponsePoints}}"
                                               Stroke="#1D70B8"
                                               StrokeThickness="2" />
                                 </Canvas>

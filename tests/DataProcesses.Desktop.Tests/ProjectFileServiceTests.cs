@@ -179,6 +179,33 @@ public sealed class ProjectFileServiceTests : IDisposable
                 Assert.Equal(PortDataSchema.Unspecified, loadedConnection.DataSchema);
         }
 
+    [Fact]
+    public async Task LoadAsync_MigratesMisspelledHeartRateTypeIds()
+    {
+        var service = new ProjectFileService();
+        var flow = new FlowDocument(
+            Guid.NewGuid(),
+            "Legacy heart rate",
+            [
+                new NodeInstance("ts-1", "dataprocesses.analysis.hart-rate-st", 0, 0, "{}"),
+                new NodeInstance("image-1", "dataprocesses.analysis.hart-rate-image", 100, 0, "{}"),
+            ],
+            []);
+        await service.SaveAsync(projectDirectory, "Legacy", [flow], [], CancellationToken.None);
+
+        var loadedFlow = Assert.Single((await service.LoadAsync(projectDirectory, CancellationToken.None)).Flows);
+
+        Assert.Equal(
+            ["dataprocesses.analysis.heart-rate-st", "dataprocesses.analysis.heart-rate-image"],
+            loadedFlow.Nodes.Select(static node => node.TypeId));
+
+        await service.SaveAsync(projectDirectory, "Legacy", [loadedFlow], [], CancellationToken.None);
+        var savedJson = await File.ReadAllTextAsync(
+            Directory.EnumerateFiles(Path.Combine(projectDirectory, "flows"), "*.flow.json").Single(),
+            CancellationToken.None);
+        Assert.DoesNotContain("hart-rate", savedJson, StringComparison.Ordinal);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(projectDirectory))

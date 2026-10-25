@@ -1,11 +1,11 @@
 using DataProcesses.Plugin.Abstractions;
 
-namespace DataProcesses.Nodes.BuiltIn.Blocks.HartRateTS;
+namespace DataProcesses.Nodes.BuiltIn.Blocks.HeartRateTS;
 
 /// <summary>
 /// Detects local peaks in the first Fast Stream channel and emits a BPM time series.
 /// </summary>
-public sealed class HartRateTSNode : INode
+public sealed class HeartRateTSNode : INode
 {
     private const long MinPeakIntervalNanoseconds = 300_000_000;
     private const long MaxPeakIntervalNanoseconds = 2_000_000_000;
@@ -20,7 +20,7 @@ public sealed class HartRateTSNode : INode
     private long? _lastPeakTimestampNanoseconds;
     private double _lastHeartRateBpm = double.NaN;
 
-    public NodeDefinition Definition => HartRateTSBlock.Definition;
+    public NodeDefinition Definition => HeartRateTSBlock.Definition;
 
     public ValueTask InitializeAsync(
         INodeContext context,
@@ -40,24 +40,24 @@ public sealed class HartRateTSNode : INode
         ArgumentNullException.ThrowIfNull(packet);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!string.Equals(inputPortId, HartRateTSBlock.InputPortId, StringComparison.Ordinal))
+        if (!string.Equals(inputPortId, HeartRateTSBlock.InputPortId, StringComparison.Ordinal))
         {
             throw new ArgumentException($"Unknown input port '{inputPortId}'.", nameof(inputPortId));
         }
 
         if (packet is not FastStreamFrame inputFrame)
         {
-            throw new ArgumentException("HartRateTS accepts Fast Stream input only.", nameof(packet));
+            throw new ArgumentException("HeartRateTS accepts Fast Stream input only.", nameof(packet));
         }
 
         if (!inputFrame.HasValidTiming)
         {
-            throw new ArgumentException("HartRateTS requires a positive sample period or sample rate.", nameof(packet));
+            throw new ArgumentException("HeartRateTS requires a positive sample period or sample rate.", nameof(packet));
         }
 
         if (inputFrame.ChannelCount == 0)
         {
-            throw new ArgumentException("HartRateTS requires at least one Fast Stream channel.", nameof(packet));
+            throw new ArgumentException("HeartRateTS requires at least one Fast Stream channel.", nameof(packet));
         }
 
         if (inputFrame.ChannelNames.Count != inputFrame.ChannelCount)
@@ -111,7 +111,7 @@ public sealed class HartRateTSNode : INode
             inputFrame.SequenceNumber,
             inputFrame.SampleRateHertz);
 
-        await context.EmitAsync(HartRateTSBlock.OutputPortId, outputFrame, cancellationToken);
+        await context.EmitAsync(HeartRateTSBlock.OutputPortId, outputFrame, cancellationToken);
     }
 
     public ValueTask StartAsync(CancellationToken cancellationToken)

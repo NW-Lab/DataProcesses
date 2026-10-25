@@ -16,7 +16,7 @@ Each built-in Block has one self-contained directory under `Blocks/<BlockName>/`
 
 Mirror the same structure under `tests/DataProcesses.Nodes.BuiltIn.Tests/Blocks/<BlockName>/`. Keep tests deterministic and use synthetic data only.
 
-For time-series Blocks, use the `TS` suffix for `TimeSeries1D` (timestamp or nominal-period timing, such as Arduino `millis,data` input) and the `FS` suffix for `FixedRateTimeSeries1D` (exact `SampleRateHertz`, such as 44.1 kHz audio). TS and FS ports do not connect to each other; see ADR 0005. Keep existing type IDs such as `dataprocesses.filter.filter-st` unchanged when renaming.
+For time-series Blocks, use the `TS` suffix for `TimeSeries1D` (timestamp or nominal-period timing, such as Arduino `millis,data` input) and the `FS` suffix for `FixedRateTimeSeries1D` (exact `SampleRateHertz`, such as 44.1 kHz audio). TS and FS ports do not connect to each other; see ADR 0005. Keep existing type IDs such as `dataprocesses.filter.filter-st` unchanged when renaming. If a persisted type ID itself must change, such as the spelling fix from `hart-rate` to `heart-rate`, keep the old ID as a `LegacyTypeId` constant and register it in `BuiltInNodePlugin.LegacyTypeIdAliases`; `ProjectFileService` rewrites aliased IDs when a project is loaded, and the next save persists the current ID.
 
 ## README Template
 
@@ -95,12 +95,12 @@ Block-specific settings use this JSON shape:
 | `FftFS/` | `dataprocesses.analysis.fft-fs` | Fast Stream FFT entry point preserving exact integer sample-rate metadata in the spectrum. |
 | `FftTS/` | `dataprocesses.analysis.fft-st` | `FFT_TS`: Fast Stream to one-sided `NumericVectorFrame` spectrum processor for dashboard vector-chart display. |
 | `CdTimeResolvedMethodTS/` | `dataprocesses.analysis.cd-time-resolved-method-st` | Fast Stream central-difference processor that emits a time-resolved numeric vector. |
-| `HartRateTS/` | `dataprocesses.analysis.hart-rate-st` | Fast Stream heart-beat peak detector that emits BPM as a one-channel time-series frame. |
-| `HartRateImage/` | `dataprocesses.analysis.hart-rate-image` | Image-frame rPPG processor that predicts BPM from central ROI color changes and emits a one-channel time-series frame. |
+| `HeartRateTS/` | `dataprocesses.analysis.heart-rate-st` (legacy alias `hart-rate-st`) | Fast Stream heart-beat peak detector that emits BPM as a one-channel time-series frame. |
+| `HeartRateImage/` | `dataprocesses.analysis.heart-rate-image` (legacy alias `hart-rate-image`) | Image-frame rPPG processor that predicts BPM from central ROI color changes and emits a one-channel time-series frame. |
 | `HumansImage/` | `dataprocesses.analysis.humans-image` | Image-frame face-region detector that emits a one-channel person-count time-series frame. |
 | `BreathImage/` | `dataprocesses.analysis.breath-image` | Image-frame respiration estimator that predicts breaths per minute from central ROI Cg changes. |
 | `BreathTS/` | `dataprocesses.analysis.breath-st` | Fast Stream respiration detector that emits breaths per minute and optional JSON anomaly events. |
-| `StremOutputTS/` | `dataprocesses.output.stream` | Debug-oriented Fast Stream output adapter with bounded downsampling. |
+| `StreamOutputTS/` | `dataprocesses.output.stream` | Debug-oriented Fast Stream output adapter with bounded downsampling. |
 | `StreamOutputFS/` | `dataprocesses.output.stream-fs` | Fast Stream diagnostic sink that shows sample frequency and Dashboard-rate values. |
 | `StreamOutputVector/` | `dataprocesses.output.numeric-vector` | Debug-oriented Fast Stream vector sink for `NumericVectorFrame` snapshots. |
 | `StreamChartVector/` | `dataprocesses.output.vector-chart` | Debug-oriented Fast Stream vector sink that renders a color-mapped intensity chart over a millisecond time axis. |

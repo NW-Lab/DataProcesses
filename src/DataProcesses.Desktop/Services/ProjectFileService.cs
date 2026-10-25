@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using DataProcesses.Core;
+using DataProcesses.Nodes.BuiltIn;
 
 namespace DataProcesses.Desktop.Services;
 
@@ -18,6 +19,18 @@ public sealed class ProjectFileService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = true,
     };
+
+    private readonly IReadOnlyDictionary<string, string> legacyTypeIdAliases;
+
+    public ProjectFileService()
+        : this(BuiltInNodePlugin.LegacyTypeIdAliases)
+    {
+    }
+
+    public ProjectFileService(IReadOnlyDictionary<string, string> legacyTypeIdAliases)
+    {
+        this.legacyTypeIdAliases = legacyTypeIdAliases ?? throw new ArgumentNullException(nameof(legacyTypeIdAliases));
+    }
 
     public async ValueTask SaveAsync(
         string projectDirectory,
@@ -94,7 +107,7 @@ public sealed class ProjectFileService
         {
             var flowPath = Path.Combine(projectDirectory, flowReference.Path);
             var flow = await ReadJsonAsync<FlowDocument>(flowPath, cancellationToken).ConfigureAwait(false);
-            flows.Add(flow);
+            flows.Add(FlowDocumentMigration.MigrateNodeTypeIds(flow, legacyTypeIdAliases));
         }
 
         foreach (var dashboardReference in dashboardReferences)

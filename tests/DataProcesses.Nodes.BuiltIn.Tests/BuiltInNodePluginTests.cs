@@ -20,8 +20,8 @@ using DataProcesses.Nodes.BuiltIn.Blocks.FftTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.FftFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.FilterTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.FilterFS;
-using DataProcesses.Nodes.BuiltIn.Blocks.HartRateImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.HartRateTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.HeartRateImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.HeartRateTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.HumansImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartFS;
@@ -32,7 +32,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.PayloadOutput;
 using DataProcesses.Nodes.BuiltIn.Blocks.PythonOutput;
-using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalFS;
@@ -79,12 +79,12 @@ public sealed class BuiltInNodePluginTests
                 FftFSBlock.TypeId,
                 FftTSBlock.TypeId,
                 CdTimeResolvedMethodTSBlock.TypeId,
-                HartRateTSBlock.TypeId,
-                HartRateImageBlock.TypeId,
+                HeartRateTSBlock.TypeId,
+                HeartRateImageBlock.TypeId,
                 HumansImageBlock.TypeId,
                 BreathImageBlock.TypeId,
                 BreathTSBlock.TypeId,
-                StremOutputTSBlock.TypeId,
+                StreamOutputTSBlock.TypeId,
                 StreamOutputFSBlock.TypeId,
                 StreamOutputVectorBlock.TypeId,
                 StreamChartVectorBlock.TypeId,
@@ -144,12 +144,12 @@ public sealed class BuiltInNodePluginTests
             Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FftFSBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[FftTSBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[CdTimeResolvedMethodTSBlock.TypeId]);
-        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[HartRateTSBlock.TypeId]);
-        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[HartRateImageBlock.TypeId]);
+        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[HeartRateTSBlock.TypeId]);
+        Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[HeartRateImageBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[HumansImageBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[BreathImageBlock.TypeId]);
         Assert.Equal(NodeType.BasicProcess, nodeTypesByTypeId[BreathTSBlock.TypeId]);
-        Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StremOutputTSBlock.TypeId]);
+        Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputTSBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputFSBlock.TypeId]);
         Assert.Equal(NodeType.Debug, nodeTypesByTypeId[StreamOutputVectorBlock.TypeId]);
         Assert.Equal(NodeType.Output, nodeTypesByTypeId[StreamChartTSBlock.TypeId]);
@@ -171,6 +171,22 @@ public sealed class BuiltInNodePluginTests
             Assert.False(string.IsNullOrWhiteSpace(factory.Definition.Subtitle));
             Assert.False(string.IsNullOrWhiteSpace(factory.Definition.IconPath));
             Assert.EndsWith("icon.png", factory.Definition.IconPath, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void LegacyTypeIdAliases_MapRetiredHeartRateIdsToRegisteredBlocks()
+    {
+        var registeredTypeIds = new BuiltInNodePlugin().NodeFactories
+            .Select(static factory => factory.Definition.TypeId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Equal(HeartRateTSBlock.TypeId, BuiltInNodePlugin.LegacyTypeIdAliases["dataprocesses.analysis.hart-rate-st"]);
+        Assert.Equal(HeartRateImageBlock.TypeId, BuiltInNodePlugin.LegacyTypeIdAliases["dataprocesses.analysis.hart-rate-image"]);
+        foreach (var (legacyTypeId, currentTypeId) in BuiltInNodePlugin.LegacyTypeIdAliases)
+        {
+            Assert.DoesNotContain(legacyTypeId, registeredTypeIds);
+            Assert.Contains(currentTypeId, registeredTypeIds);
         }
     }
 }

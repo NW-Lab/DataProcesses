@@ -1,4 +1,4 @@
-﻿# StremOutputTS Block
+﻿# StreamOutputTS Block
 
 Receives Fast Stream time-series input and stores a bounded latest snapshot for diagnostics.
 
@@ -6,7 +6,7 @@ Receives Fast Stream time-series input and stores a bounded latest snapshot for 
 
 | Field | Value |
 |---|---|
-| Title | `StremOutputTS` |
+| Title | `StreamOutputTS` |
 | Subtitle | `Debug stream` |
 | Icon | `icon.png`, 64 x 64 PNG source rendered at 32 x 32 in the Node Library and 28 x 28 on the canvas. |
 
@@ -16,7 +16,7 @@ Receives Fast Stream time-series input and stores a bounded latest snapshot for 
 |---|---|---|---:|---|
 | `input` | Input | Fast Stream | Yes | `TimeSeries1D` (`FastStreamFrame`) |
 
-StremOutputTS is a sink Block and has no output ports.
+StreamOutputTS is a sink Block and has no output ports.
 
 ## Settings
 

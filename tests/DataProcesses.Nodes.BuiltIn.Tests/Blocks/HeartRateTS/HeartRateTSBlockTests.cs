@@ -1,27 +1,27 @@
-using DataProcesses.Nodes.BuiltIn.Blocks.HartRateTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.HeartRateTS;
 using DataProcesses.Plugin.Abstractions;
 
-namespace DataProcesses.Nodes.BuiltIn.Tests.Blocks.HartRateTS;
+namespace DataProcesses.Nodes.BuiltIn.Tests.Blocks.HeartRateTS;
 
-public sealed class HartRateTSBlockTests
+public sealed class HeartRateTSBlockTests
 {
     [Fact]
     public void Definition_UsesFastStreamInputAndOutput()
     {
-        var ports = HartRateTSBlock.Definition.Ports;
+        var ports = HeartRateTSBlock.Definition.Ports;
 
         Assert.Collection(
             ports,
             input =>
             {
-                Assert.Equal(HartRateTSBlock.InputPortId, input.Id);
+                Assert.Equal(HeartRateTSBlock.InputPortId, input.Id);
                 Assert.Equal(PortDirection.Input, input.Direction);
                 Assert.Equal(PortDataKind.FastStream, input.DataKind);
                 Assert.Equal(PortDataSchema.TimeSeries1D, input.DataSchema);
             },
             output =>
             {
-                Assert.Equal(HartRateTSBlock.OutputPortId, output.Id);
+                Assert.Equal(HeartRateTSBlock.OutputPortId, output.Id);
                 Assert.Equal(PortDirection.Output, output.Direction);
                 Assert.Equal(PortDataKind.FastStream, output.DataKind);
                 Assert.Equal(PortDataSchema.TimeSeries1D, output.DataSchema);
@@ -32,7 +32,7 @@ public sealed class HartRateTSBlockTests
     public async Task OnPacketAsync_EmitsBpmAfterTwoDetectedPeaks()
     {
         var context = new RecordingNodeContext();
-        var node = new HartRateTSNode();
+        var node = new HeartRateTSNode();
         await node.InitializeAsync(context, CancellationToken.None);
         var input = new FastStreamFrame(
             StartTimeUnixNanoseconds: 0,
@@ -41,10 +41,10 @@ public sealed class HartRateTSBlockTests
             Samples: [new double[] { 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0 }.AsMemory()],
             SequenceNumber: 3);
 
-        await node.OnPacketAsync(HartRateTSBlock.InputPortId, input, CancellationToken.None);
+        await node.OnPacketAsync(HeartRateTSBlock.InputPortId, input, CancellationToken.None);
 
         var emitted = Assert.Single(context.EmittedPackets);
-        Assert.Equal(HartRateTSBlock.OutputPortId, emitted.OutputPortId);
+        Assert.Equal(HeartRateTSBlock.OutputPortId, emitted.OutputPortId);
         var output = Assert.IsType<FastStreamFrame>(emitted.Packet);
         Assert.Equal(0, output.StartTimeUnixNanoseconds);
         Assert.Equal(100_000_000, output.SamplePeriodNanoseconds);
@@ -60,7 +60,7 @@ public sealed class HartRateTSBlockTests
     public async Task OnPacketAsync_RejectsNonPositiveSamplePeriod()
     {
         var context = new RecordingNodeContext();
-        var node = new HartRateTSNode();
+        var node = new HeartRateTSNode();
         await node.InitializeAsync(context, CancellationToken.None);
         var input = new FastStreamFrame(
             StartTimeUnixNanoseconds: 0,
@@ -70,7 +70,7 @@ public sealed class HartRateTSBlockTests
             SequenceNumber: 0);
 
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await node.OnPacketAsync(HartRateTSBlock.InputPortId, input, CancellationToken.None));
+            async () => await node.OnPacketAsync(HeartRateTSBlock.InputPortId, input, CancellationToken.None));
 
         Assert.Contains("positive sample period", exception.Message, StringComparison.Ordinal);
     }

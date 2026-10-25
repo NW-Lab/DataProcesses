@@ -10,8 +10,8 @@ using DataProcesses.Nodes.BuiltIn.Blocks.FftTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.FftFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.FilterTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.FilterFS;
-using DataProcesses.Nodes.BuiltIn.Blocks.HartRateImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.HartRateTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.HeartRateImage;
+using DataProcesses.Nodes.BuiltIn.Blocks.HeartRateTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.HumansImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.CameraInputImage;
@@ -32,7 +32,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputImage;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputVector;
-using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.TestSignalImg;
@@ -74,12 +74,12 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new FftFSNodeFactory(),
         new FftTSNodeFactory(),
         new CdTimeResolvedMethodTSNodeFactory(),
-        new HartRateTSNodeFactory(),
-        new HartRateImageNodeFactory(),
+        new HeartRateTSNodeFactory(),
+        new HeartRateImageNodeFactory(),
         new HumansImageNodeFactory(),
         new BreathImageNodeFactory(),
         new BreathTSNodeFactory(),
-        new StremOutputTSNodeFactory(),
+        new StreamOutputTSNodeFactory(),
         new StreamOutputFSNodeFactory(),
         new StreamOutputVectorNodeFactory(),
         new StreamChartVectorNodeFactory(),
@@ -90,6 +90,16 @@ public sealed class BuiltInNodePlugin : INodePlugin
         new PayloadOutputNodeFactory(),
         new CsvOutputNodeFactory(),
     ];
+
+    /// <summary>
+    /// Maps retired built-in type IDs found in saved Flows to their current type IDs.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> LegacyTypeIdAliases { get; } =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [HeartRateTSBlock.LegacyTypeId] = HeartRateTSBlock.TypeId,
+            [HeartRateImageBlock.LegacyTypeId] = HeartRateImageBlock.TypeId,
+        };
 
     public string Id => "dataprocesses.built-in";
 

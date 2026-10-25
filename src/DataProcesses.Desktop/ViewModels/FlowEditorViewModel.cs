@@ -18,7 +18,7 @@ using DataProcesses.Nodes.BuiltIn.Blocks.FftTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.FilterTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovingAverage;
 using DataProcesses.Nodes.BuiltIn.Blocks.MovieInputImage;
-using DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputTS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputFS;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartVector;
 using DataProcesses.Nodes.BuiltIn.Blocks.StreamChartTS;
@@ -1796,7 +1796,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
                     continue;
                 }
 
-                if (!string.Equals(targetNode.TypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal))
+                if (!string.Equals(targetNode.TypeId, StreamOutputTSBlock.TypeId, StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -2594,7 +2594,7 @@ public sealed class FlowEditorViewModel : ViewModelBase
     {
         return string.Equals(nodeTypeId, StreamChartFSBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputFSBlock.TypeId, StringComparison.Ordinal)
-            || string.Equals(nodeTypeId, StremOutputTSBlock.TypeId, StringComparison.Ordinal)
+            || string.Equals(nodeTypeId, StreamOutputTSBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, FftTSBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamOutputVectorBlock.TypeId, StringComparison.Ordinal)
             || string.Equals(nodeTypeId, StreamChartVectorBlock.TypeId, StringComparison.Ordinal)

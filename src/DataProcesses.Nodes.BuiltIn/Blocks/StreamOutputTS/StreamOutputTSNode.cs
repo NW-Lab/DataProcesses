@@ -1,23 +1,23 @@
 ﻿using DataProcesses.Plugin.Abstractions;
 
-namespace DataProcesses.Nodes.BuiltIn.Blocks.StremOutputTS;
+namespace DataProcesses.Nodes.BuiltIn.Blocks.StreamOutputTS;
 
 /// <summary>
 /// Maintains a bounded, downsampled view of the latest Fast Stream frame for dashboard rendering.
 /// </summary>
-public sealed class StremOutputTSNode : INode
+public sealed class StreamOutputTSNode : INode
 {
     public const int MaximumSamplesPerChannel = 512;
 
     private bool _isInitialized;
 
-    public NodeDefinition Definition => StremOutputTSBlock.Definition;
+    public NodeDefinition Definition => StreamOutputTSBlock.Definition;
 
     /// <summary>
     /// Gets the most recent display-oriented snapshot. A dashboard renderer can bind to this state
     /// without retaining the source frame's full sample buffers.
     /// </summary>
-    public StremOutputTSSnapshot? LatestSnapshot { get; private set; }
+    public StreamOutputTSSnapshot? LatestSnapshot { get; private set; }
 
     public ValueTask InitializeAsync(
         INodeContext context,
@@ -43,14 +43,14 @@ public sealed class StremOutputTSNode : INode
             throw new InvalidOperationException("The node must be initialized before it receives packets.");
         }
 
-        if (!string.Equals(inputPortId, StremOutputTSBlock.InputPortId, StringComparison.Ordinal))
+        if (!string.Equals(inputPortId, StreamOutputTSBlock.InputPortId, StringComparison.Ordinal))
         {
             throw new ArgumentException($"Unknown input port '{inputPortId}'.", nameof(inputPortId));
         }
 
         if (packet is not FastStreamFrame inputFrame)
         {
-            throw new ArgumentException("StremOutputTS accepts Fast Stream input only.", nameof(packet));
+            throw new ArgumentException("StreamOutputTS accepts Fast Stream input only.", nameof(packet));
         }
 
         var displayChannels = new ReadOnlyMemory<double>[inputFrame.ChannelCount];
@@ -59,7 +59,7 @@ public sealed class StremOutputTSNode : INode
             displayChannels[channelIndex] = Downsample(inputFrame.Samples[channelIndex].Span);
         }
 
-        LatestSnapshot = new StremOutputTSSnapshot(
+        LatestSnapshot = new StreamOutputTSSnapshot(
             inputFrame.StartTimeUnixNanoseconds,
             inputFrame.SamplePeriodNanoseconds,
             inputFrame.ChannelNames.ToArray(),
